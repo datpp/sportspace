@@ -1269,9 +1269,181 @@
           "lng"
         ]
       },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "PLAYER",
+              "MERCHANT",
+              "ADMIN"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "fullName",
+          "role",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PriceRule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "dayOfWeek": {
+            "type": "number",
+            "description": "0 = Chủ nhật ... 6 = Thứ 7"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "price",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Court": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "priceRules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceRule"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "sport": {
+            "type": "string"
+          },
+          "basePrice": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "priceRules",
+          "name",
+          "sport",
+          "basePrice",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "Venue": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/User"
+          },
+          "courts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Court"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "owner",
+          "courts",
+          "name",
+          "address",
+          "lat",
+          "lng",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
       },
       "UpdateVenueDto": {
         "type": "object",
@@ -1315,10 +1487,6 @@
           "sport",
           "basePrice"
         ]
-      },
-      "Court": {
-        "type": "object",
-        "properties": {}
       },
       "SlotDto": {
         "type": "object",
@@ -1381,10 +1549,6 @@
           "price"
         ]
       },
-      "PriceRule": {
-        "type": "object",
-        "properties": {}
-      },
       "CreateBookingDto": {
         "type": "object",
         "properties": {
@@ -1410,7 +1574,57 @@
       },
       "Booking": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "court": {
+            "$ref": "#/components/schemas/Court"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "bookingDate": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "CANCELLED"
+            ]
+          },
+          "totalAmount": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "court",
+          "user",
+          "bookingDate",
+          "startTime",
+          "endTime",
+          "status",
+          "totalAmount",
+          "createdAt",
+          "updatedAt"
+        ]
       },
       "UpdateBookingDto": {
         "type": "object",

@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { User } from '../../user/entities/user.entity';
 import { Court } from './court.entity';
 import {
@@ -13,37 +14,48 @@ import {
 
 @Entity('venues')
 export class Venue {
+  @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @ApiProperty({ type: () => User })
   @ManyToOne(() => User)
   @JoinColumn({ name: 'owner_id' })
   owner: User;
 
+  @ApiProperty({ type: () => [Court] })
   @OneToMany(() => Court, (court) => court.venue)
   courts: Court[];
 
+  @ApiProperty()
   @Column()
   name: string;
 
+  @ApiProperty()
   @Column()
   address: string;
 
+  @ApiProperty()
   @Column({ type: 'decimal', precision: 10, scale: 7 })
   lat: number;
 
+  @ApiProperty()
   @Column({ type: 'decimal', precision: 10, scale: 7 })
   lng: number;
 
+  @ApiProperty({ required: false, nullable: true })
   @Column({ nullable: true })
   description: string;
 
+  @ApiProperty()
   @Column({ default: 'PENDING' })
   status: string;
 
+  @ApiProperty()
   @CreateDateColumn()
   createdAt: Date;
 
+  @ApiProperty()
   @UpdateDateColumn()
   updatedAt: Date;
 }

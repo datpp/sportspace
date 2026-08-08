@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Role } from '@sportspace/shared';
 import {
   Column,
@@ -9,27 +10,35 @@ import {
 
 @Entity('users')
 export class User {
+  @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @ApiProperty()
   @Column({ unique: true })
   email: string;
 
+  // No @ApiProperty() — must never appear in Swagger docs/responses.
   @Column({ select: false })
   passwordHash: string;
 
+  @ApiProperty()
   @Column()
   fullName: string;
 
+  @ApiProperty({ required: false, nullable: true })
   @Column({ nullable: true })
   phone: string;
 
+  @ApiProperty({ enum: Role })
   @Column({ type: 'enum', enum: Role, default: Role.PLAYER })
   role: Role;
 
+  @ApiProperty()
   @CreateDateColumn()
   createdAt: Date;
 
+  @ApiProperty()
   @UpdateDateColumn()
   updatedAt: Date;
 }
