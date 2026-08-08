@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -12,7 +20,7 @@ export class BookingController {
   @Post()
   @ApiOperation({ summary: 'Đặt sân (⭐ race condition)' })
   create(@Body() dto: CreateBookingDto) {
-    return this.bookingService.create('', dto);
+    return this.bookingService.create(dto.userId, dto);
   }
 
   @Get()

@@ -11,7 +11,7 @@ export class MerchantController {
 
   @Get('revenue')
   @ApiOperation({ summary: 'Thống kê doanh thu chủ sân' })
-  getRevenue(@Query() query: RevenueQueryDto): RevenueDto {
+  getRevenue(@Query() query: RevenueQueryDto): Promise<RevenueDto> {
     return this.bookingService.getMerchantRevenue('', query);
   }
 }

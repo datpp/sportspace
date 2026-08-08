@@ -10,6 +10,7 @@ import { BookingModule } from './booking/booking.module';
 import { PaymentModule } from './payment/payment.module';
 import { NotificationModule } from './notification/notification.module';
 import { RealtimeGateway } from './realtime/realtime.gateway';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { RealtimeGateway } from './realtime/realtime.gateway';
     BookingModule,
     PaymentModule,
     NotificationModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [AppService, RealtimeGateway],

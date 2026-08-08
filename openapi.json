@@ -899,6 +899,9 @@
       "CreateBookingDto": {
         "type": "object",
         "properties": {
+          "userId": {
+            "type": "string"
+          },
           "courtId": {
             "type": "string"
           },
@@ -913,6 +916,7 @@
           }
         },
         "required": [
+          "userId",
           "courtId",
           "bookingDate",
           "startTime",
@@ -922,6 +926,9 @@
       "UpdateBookingDto": {
         "type": "object",
         "properties": {
+          "userId": {
+            "type": "string"
+          },
           "courtId": {
             "type": "string"
           },

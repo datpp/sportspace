@@ -1,20 +1,55 @@
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import { faker } from '@faker-js/faker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BookingController } from './booking.controller';
 import { BookingService } from './booking.service';
+import { Booking } from './entities/booking.entity';
 
 describe('BookingController', () => {
   let controller: BookingController;
+  let service: DeepMocked<BookingService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BookingController],
-      providers: [BookingService],
+      providers: [
+        { provide: BookingService, useValue: createMock<BookingService>() },
+      ],
     }).compile();
 
     controller = module.get<BookingController>(BookingController);
+    service = module.get(BookingService);
   });
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('create() forwards dto.userId to BookingService.create', async () => {
+    const dto = {
+      userId: faker.string.uuid(),
+      courtId: faker.string.uuid(),
+      bookingDate: '2026-08-10',
+      startTime: '09:00',
+      endTime: '10:00',
+    };
+    const expected = createMock<Booking>();
+    service.create.mockResolvedValue(expected);
+
+    const result = await controller.create(dto);
+
+    expect(service.create).toHaveBeenCalledWith(dto.userId, dto);
+    expect(result).toBe(expected);
+  });
+
+  it('cancel() delegates to BookingService.cancel', async () => {
+    const id = faker.string.uuid();
+    const expected = createMock<Booking>();
+    service.cancel.mockResolvedValue(expected);
+
+    const result = await controller.cancel(id);
+
+    expect(service.cancel).toHaveBeenCalledWith(id);
+    expect(result).toBe(expected);
   });
 });
