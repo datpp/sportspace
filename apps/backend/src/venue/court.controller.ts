@@ -9,13 +9,22 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Role } from '@sportspace/shared';
 import { CourtService } from './court.service';
 import { CreateCourtDto } from './dto/create-court.dto';
 import { UpdateCourtDto } from './dto/update-court.dto';
 import { CreatePriceRuleDto } from './dto/create-price-rule.dto';
 import { SlotQueryDto } from './dto/slot-query.dto';
+import { SlotDto } from './dto/slot.dto';
+import { Court } from './entities/court.entity';
+import { PriceRule } from './entities/price-rule.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -32,23 +41,27 @@ export class CourtController {
   @Roles(Role.MERCHANT, Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Tạo sân con trong cụm sân' })
+  @ApiCreatedResponse({ type: Court })
   create(@Body() dto: CreateCourtDto, @CurrentUser() user: AuthenticatedUser) {
     return this.courtService.create(dto, user);
   }
 
   @Get()
   @ApiOperation({ summary: 'Danh sách sân con (lọc theo venueId)' })
+  @ApiOkResponse({ type: [Court] })
   findAll(@Query('venueId') venueId?: string) {
     return this.courtService.findAll(venueId);
   }
 
   @Get(':id')
+  @ApiOkResponse({ type: Court })
   findOne(@Param('id') id: string) {
     return this.courtService.findOne(id);
   }
 
   @Get(':id/slots')
   @ApiOperation({ summary: 'Danh sách ô giờ còn trống theo ngày' })
+  @ApiOkResponse({ type: [SlotDto] })
   getSlots(@Param('id') id: string, @Query() query: SlotQueryDto) {
     return this.courtService.getSlots(id, query);
   }
@@ -57,6 +70,7 @@ export class CourtController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.MERCHANT, Role.ADMIN)
   @ApiBearerAuth()
+  @ApiOkResponse({ type: Court })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateCourtDto,
@@ -78,6 +92,7 @@ export class CourtController {
   @Roles(Role.MERCHANT, Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Thêm giá theo khung giờ / ngày trong tuần' })
+  @ApiCreatedResponse({ type: PriceRule })
   addPriceRule(
     @Param('id') id: string,
     @Body() dto: CreatePriceRuleDto,
@@ -88,6 +103,7 @@ export class CourtController {
 
   @Get(':id/price-rules')
   @ApiOperation({ summary: 'Danh sách giá theo khung giờ' })
+  @ApiOkResponse({ type: [PriceRule] })
   listPriceRules(@Param('id') id: string) {
     return this.courtService.listPriceRules(id);
   }

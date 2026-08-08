@@ -1,5 +1,10 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Role } from '@sportspace/shared';
 import { BookingService } from './booking.service';
 import { RevenueQueryDto } from './dto/revenue-query.dto';
@@ -19,6 +24,7 @@ export class MerchantController {
   @Roles(Role.MERCHANT, Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Thống kê doanh thu chủ sân' })
+  @ApiOkResponse({ type: RevenueDto })
   getRevenue(
     @CurrentUser('id') merchantId: string,
     @Query() query: RevenueQueryDto,

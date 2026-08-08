@@ -241,7 +241,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -284,7 +291,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Venue"
+                  }
+                }
+              }
+            }
           }
         },
         "summary": "Tìm sân theo vị trí + bộ môn",
@@ -308,7 +325,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -339,7 +363,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -394,7 +425,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Court"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -421,7 +459,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Court"
+                  }
+                }
+              }
+            }
           }
         },
         "summary": "Danh sách sân con (lọc theo venueId)",
@@ -445,7 +493,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Court"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -476,7 +531,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Court"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -538,7 +600,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SlotDto"
+                  }
+                }
+              }
+            }
           }
         },
         "summary": "Danh sách ô giờ còn trống theo ngày",
@@ -572,7 +644,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceRule"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -599,7 +678,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PriceRule"
+                  }
+                }
+              }
+            }
           }
         },
         "summary": "Danh sách giá theo khung giờ",
@@ -660,7 +749,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -678,7 +774,17 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Booking"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -701,7 +807,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -732,7 +845,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -776,7 +896,14 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
           }
         },
         "summary": "Hủy đơn đặt sân",
@@ -806,7 +933,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1135,6 +1269,10 @@
           "lng"
         ]
       },
+      "Venue": {
+        "type": "object",
+        "properties": {}
+      },
       "UpdateVenueDto": {
         "type": "object",
         "properties": {
@@ -1178,6 +1316,33 @@
           "basePrice"
         ]
       },
+      "Court": {
+        "type": "object",
+        "properties": {}
+      },
+      "SlotDto": {
+        "type": "object",
+        "properties": {
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "available": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "startTime",
+          "endTime",
+          "price",
+          "available"
+        ]
+      },
       "UpdateCourtDto": {
         "type": "object",
         "properties": {
@@ -1216,6 +1381,10 @@
           "price"
         ]
       },
+      "PriceRule": {
+        "type": "object",
+        "properties": {}
+      },
       "CreateBookingDto": {
         "type": "object",
         "properties": {
@@ -1239,6 +1408,10 @@
           "endTime"
         ]
       },
+      "Booking": {
+        "type": "object",
+        "properties": {}
+      },
       "UpdateBookingDto": {
         "type": "object",
         "properties": {
@@ -1255,6 +1428,21 @@
             "type": "string"
           }
         }
+      },
+      "RevenueDto": {
+        "type": "object",
+        "properties": {
+          "totalRevenue": {
+            "type": "number"
+          },
+          "totalBookings": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "totalRevenue",
+          "totalBookings"
+        ]
       },
       "CreatePaymentDto": {
         "type": "object",
