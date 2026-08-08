@@ -89,6 +89,31 @@ describe('VenueService', () => {
     });
   });
 
+  describe('findByOwner', () => {
+    it('queries venues filtered by owner id, newest first', async () => {
+      const ownerId = faker.string.uuid();
+      const owned = [buildVenue({ owner: buildUser({ id: ownerId }) })];
+      venueRepo.find.mockResolvedValue(owned);
+
+      const result = await service.findByOwner(ownerId);
+
+      expect(venueRepo.find).toHaveBeenCalledWith({
+        where: { owner: { id: ownerId } },
+        relations: { courts: true },
+        order: { createdAt: 'DESC' },
+      });
+      expect(result).toBe(owned);
+    });
+
+    it("does not return another merchant's venues", async () => {
+      venueRepo.find.mockResolvedValue([]);
+
+      const result = await service.findByOwner(faker.string.uuid());
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('findAll', () => {
     it('sorts by distance and binds lat/lng params when both are given', async () => {
       await service.findAll({ lat: 10.76, lng: 106.66 });

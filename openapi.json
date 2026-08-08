@@ -954,6 +954,36 @@
         ]
       }
     },
+    "/merchant/venues": {
+      "get": {
+        "operationId": "MerchantController_getVenues",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Venue"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Danh sách cụm sân của chủ sân hiện tại",
+        "tags": [
+          "merchant"
+        ]
+      }
+    },
     "/payments": {
       "post": {
         "operationId": "PaymentController_create",

@@ -27,6 +27,14 @@ export class VenueService {
     return this.venueRepo.save(venue);
   }
 
+  findByOwner(ownerId: string): Promise<Venue[]> {
+    return this.venueRepo.find({
+      where: { owner: { id: ownerId } },
+      relations: { courts: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   findAll(query: FindVenuesQueryDto): Promise<Venue[]> {
     const qb = this.venueRepo.createQueryBuilder('venue');
 

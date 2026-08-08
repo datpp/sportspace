@@ -13,11 +13,16 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { VenueService } from '../venue/venue.service';
+import { Venue } from '../venue/entities/venue.entity';
 
 @ApiTags('merchant')
 @Controller('merchant')
 export class MerchantController {
-  constructor(private readonly bookingService: BookingService) {}
+  constructor(
+    private readonly bookingService: BookingService,
+    private readonly venueService: VenueService,
+  ) {}
 
   @Get('revenue')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,5 +35,15 @@ export class MerchantController {
     @Query() query: RevenueQueryDto,
   ): Promise<RevenueDto> {
     return this.bookingService.getMerchantRevenue(merchantId, query);
+  }
+
+  @Get('venues')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.MERCHANT, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Danh sách cụm sân của chủ sân hiện tại' })
+  @ApiOkResponse({ type: [Venue] })
+  getVenues(@CurrentUser('id') merchantId: string): Promise<Venue[]> {
+    return this.venueService.findByOwner(merchantId);
   }
 }

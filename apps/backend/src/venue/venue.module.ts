@@ -13,5 +13,6 @@ import { CourtService } from './court.service';
   imports: [TypeOrmModule.forFeature([Venue, Court, PriceRule, Review])],
   controllers: [VenueController, CourtController],
   providers: [VenueService, CourtService],
+  exports: [VenueService],
 })
 export class VenueModule {}
