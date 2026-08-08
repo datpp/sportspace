@@ -990,6 +990,53 @@
         ]
       }
     },
+    "/payments/ipn": {
+      "get": {
+        "operationId": "PaymentController_ipn",
+        "parameters": [
+          {
+            "name": "vnp_SecureHash",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "vnp_ResponseCode",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "vnp_Amount",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "vnp_TxnRef",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpnResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Webhook IPN từ VNPAY (GET, query string)",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/payments/{id}": {
       "get": {
         "operationId": "PaymentController_findOne",
@@ -1090,35 +1137,22 @@
         },
         "responses": {
           "201": {
-            "description": ""
-          }
-        },
-        "summary": "Sinh link thanh toán VNPAY (Sandbox)",
-        "tags": [
-          "payments"
-        ]
-      }
-    },
-    "/payments/ipn": {
-      "post": {
-        "operationId": "PaymentController_ipn",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/IpnPayloadDto"
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutResponseDto"
+                }
               }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
+        "security": [
+          {
+            "bearer": []
           }
-        },
-        "summary": "Webhook IPN từ cổng thanh toán",
+        ],
+        "summary": "Sinh link thanh toán VNPAY (Sandbox), chỉ chủ booking",
         "tags": [
           "payments"
         ]
@@ -1677,6 +1711,21 @@
           "amount"
         ]
       },
+      "IpnResponseDto": {
+        "type": "object",
+        "properties": {
+          "RspCode": {
+            "type": "string"
+          },
+          "Message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "RspCode",
+          "Message"
+        ]
+      },
       "UpdatePaymentDto": {
         "type": "object",
         "properties": {
@@ -1699,23 +1748,15 @@
           }
         }
       },
-      "IpnPayloadDto": {
+      "CheckoutResponseDto": {
         "type": "object",
         "properties": {
-          "transactionRef": {
-            "type": "string"
-          },
-          "amount": {
-            "type": "number"
-          },
-          "signature": {
+          "paymentUrl": {
             "type": "string"
           }
         },
         "required": [
-          "transactionRef",
-          "amount",
-          "signature"
+          "paymentUrl"
         ]
       }
     }

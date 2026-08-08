@@ -6,13 +6,26 @@ import {
   Param,
   Patch,
   Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { CheckoutDto } from './dto/checkout.dto';
-import { IpnPayloadDto } from './dto/ipn-payload.dto';
+import { CheckoutResponseDto } from './dto/checkout-response.dto';
+import { IpnResponseDto } from './dto/ipn-response.dto';
+import { VnpayIpnQuery } from './dto/vnpay-ipn-query.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('payments')
 @Controller('payments')
@@ -27,6 +40,24 @@ export class PaymentController {
   @Get()
   findAll() {
     return this.paymentService.findAll();
+  }
+
+  /**
+   * VNPAY calls this as a GET with every vnp_* field in the query string
+   * (never a JSON body). Bound as a raw Record so the global ValidationPipe's
+   * `whitelist` doesn't strip fields before signature verification runs —
+   * see dto/vnpay-ipn-query.dto.ts. Must stay registered before `:id` below,
+   * otherwise Nest matches `/payments/ipn` as `findOne('ipn')` first.
+   */
+  @Get('ipn')
+  @ApiOperation({ summary: 'Webhook IPN từ VNPAY (GET, query string)' })
+  @ApiQuery({ name: 'vnp_TxnRef', required: true })
+  @ApiQuery({ name: 'vnp_Amount', required: true })
+  @ApiQuery({ name: 'vnp_ResponseCode', required: true })
+  @ApiQuery({ name: 'vnp_SecureHash', required: true })
+  @ApiOkResponse({ type: IpnResponseDto })
+  ipn(@Query() query: Record<string, string>) {
+    return this.paymentService.handleIpn(query as VnpayIpnQuery);
   }
 
   @Get(':id')
@@ -45,14 +76,17 @@ export class PaymentController {
   }
 
   @Post(':bookingId/checkout')
-  @ApiOperation({ summary: 'Sinh link thanh toán VNPAY (Sandbox)' })
-  checkout(@Param('bookingId') bookingId: string, @Body() dto: CheckoutDto) {
-    return this.paymentService.checkout(bookingId, dto);
-  }
-
-  @Post('ipn')
-  @ApiOperation({ summary: 'Webhook IPN từ cổng thanh toán' })
-  ipn(@Body() payload: IpnPayloadDto) {
-    return this.paymentService.handleIpn(payload);
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Sinh link thanh toán VNPAY (Sandbox), chỉ chủ booking',
+  })
+  @ApiCreatedResponse({ type: CheckoutResponseDto })
+  checkout(
+    @CurrentUser('id') userId: string,
+    @Param('bookingId') bookingId: string,
+    @Body() dto: CheckoutDto,
+  ) {
+    return this.paymentService.checkout(bookingId, userId, dto);
   }
 }
