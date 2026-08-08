@@ -17,7 +17,7 @@ async function generate() {
 
   const outPath = join(__dirname, '../../../../openapi.json');
   writeFileSync(outPath, JSON.stringify(document, null, 2));
-  // eslint-disable-next-line no-console
+
   console.log(`OpenAPI document written to ${outPath}`);
 
   await app.close();

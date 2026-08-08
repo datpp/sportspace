@@ -244,6 +244,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tạo cụm sân",
         "tags": [
           "venues"
@@ -337,6 +342,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "venues"
         ]
@@ -358,8 +368,150 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "venues"
+        ]
+      }
+    },
+    "/courts": {
+      "post": {
+        "operationId": "CourtController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCourtDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tạo sân con trong cụm sân",
+        "tags": [
+          "courts"
+        ]
+      },
+      "get": {
+        "operationId": "CourtController_findAll",
+        "parameters": [
+          {
+            "name": "venueId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Danh sách sân con (lọc theo venueId)",
+        "tags": [
+          "courts"
+        ]
+      }
+    },
+    "/courts/{id}": {
+      "get": {
+        "operationId": "CourtController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "courts"
+        ]
+      },
+      "patch": {
+        "operationId": "CourtController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCourtDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "courts"
+        ]
+      },
+      "delete": {
+        "operationId": "CourtController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "courts"
         ]
       }
     },
@@ -390,6 +542,103 @@
           }
         },
         "summary": "Danh sách ô giờ còn trống theo ngày",
+        "tags": [
+          "courts"
+        ]
+      }
+    },
+    "/courts/{id}/price-rules": {
+      "post": {
+        "operationId": "CourtController_addPriceRule",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePriceRuleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Thêm giá theo khung giờ / ngày trong tuần",
+        "tags": [
+          "courts"
+        ]
+      },
+      "get": {
+        "operationId": "CourtController_listPriceRules",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Danh sách giá theo khung giờ",
+        "tags": [
+          "courts"
+        ]
+      }
+    },
+    "/courts/{id}/price-rules/{priceRuleId}": {
+      "delete": {
+        "operationId": "CourtController_removePriceRule",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "priceRuleId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "courts"
         ]
@@ -905,6 +1154,67 @@
             "type": "string"
           }
         }
+      },
+      "CreateCourtDto": {
+        "type": "object",
+        "properties": {
+          "venueId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sport": {
+            "type": "string"
+          },
+          "basePrice": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "venueId",
+          "name",
+          "sport",
+          "basePrice"
+        ]
+      },
+      "UpdateCourtDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "sport": {
+            "type": "string"
+          },
+          "basePrice": {
+            "type": "number"
+          }
+        }
+      },
+      "CreatePriceRuleDto": {
+        "type": "object",
+        "properties": {
+          "dayOfWeek": {
+            "type": "number",
+            "description": "0 = Chủ nhật ... 6 = Thứ 7 (theo Date.getUTCDay())"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "price"
+        ]
       },
       "CreateBookingDto": {
         "type": "object",

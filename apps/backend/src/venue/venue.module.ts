@@ -7,10 +7,11 @@ import { Venue } from './entities/venue.entity';
 import { Court } from './entities/court.entity';
 import { PriceRule } from './entities/price-rule.entity';
 import { Review } from './entities/review.entity';
+import { CourtService } from './court.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Venue, Court, PriceRule, Review])],
   controllers: [VenueController, CourtController],
-  providers: [VenueService],
+  providers: [VenueService, CourtService],
 })
 export class VenueModule {}

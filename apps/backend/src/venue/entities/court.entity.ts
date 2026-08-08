@@ -1,10 +1,12 @@
 import { Venue } from './venue.entity';
+import { PriceRule } from './price-rule.entity';
 import {
   Column,
   CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -17,6 +19,9 @@ export class Court {
   @ManyToOne(() => Venue)
   @JoinColumn({ name: 'venue_id' })
   venue: Venue;
+
+  @OneToMany(() => PriceRule, (priceRule) => priceRule.court)
+  priceRules: PriceRule[];
 
   @Column()
   name: string;

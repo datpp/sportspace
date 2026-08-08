@@ -1,10 +1,12 @@
 import { User } from '../../user/entities/user.entity';
+import { Court } from './court.entity';
 import {
   Column,
   CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -17,6 +19,9 @@ export class Venue {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'owner_id' })
   owner: User;
+
+  @OneToMany(() => Court, (court) => court.venue)
+  courts: Court[];
 
   @Column()
   name: string;
