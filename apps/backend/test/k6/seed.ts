@@ -1,9 +1,12 @@
 import 'reflect-metadata';
+import * as bcrypt from 'bcrypt';
 import { Role } from '@sportspace/shared';
 import dataSource from '../../src/database/data-source';
 import { Court } from '../../src/venue/entities/court.entity';
 import { User } from '../../src/user/entities/user.entity';
 import { Venue } from '../../src/venue/entities/venue.entity';
+
+const PLAYER_PASSWORD = 'K6Password123!';
 
 async function main() {
   await dataSource.initialize();
@@ -17,7 +20,7 @@ async function main() {
   });
   const player = await dataSource.getRepository(User).save({
     email: `k6-player-${stamp}@sportspace.test`,
-    passwordHash: 'k6-seed',
+    passwordHash: await bcrypt.hash(PLAYER_PASSWORD, 10),
     fullName: 'K6 Player',
     role: Role.PLAYER,
   });
@@ -39,6 +42,8 @@ async function main() {
 
   const env = {
     PLAYER_ID: player.id,
+    PLAYER_EMAIL: player.email,
+    PLAYER_PASSWORD,
     COURT_ID: court.id,
     VENUE_ID: venue.id,
     OWNER_ID: owner.id,

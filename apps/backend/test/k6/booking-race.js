@@ -2,7 +2,7 @@ import http from 'k6/http';
 import { check } from 'k6';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
-const PLAYER_ID = __ENV.PLAYER_ID;
+const ACCESS_TOKEN = __ENV.ACCESS_TOKEN;
 const COURT_ID = __ENV.COURT_ID;
 const BOOKING_DATE = __ENV.BOOKING_DATE;
 const START_TIME = __ENV.START_TIME;
@@ -26,7 +26,6 @@ export const options = {
 
 export default function bookSameSlot() {
   const payload = JSON.stringify({
-    userId: PLAYER_ID,
     courtId: COURT_ID,
     bookingDate: BOOKING_DATE,
     startTime: START_TIME,
@@ -34,7 +33,10 @@ export default function bookSameSlot() {
   });
 
   const res = http.post(`${BASE_URL}/bookings`, payload, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+    },
   });
 
   check(res, {

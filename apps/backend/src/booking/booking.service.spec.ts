@@ -49,7 +49,6 @@ function buildCreateDto(
   overrides: Partial<CreateBookingDto> = {},
 ): CreateBookingDto {
   return {
-    userId: faker.string.uuid(),
     courtId: faker.string.uuid(),
     bookingDate: '2026-08-10',
     startTime: '09:00',
@@ -101,7 +100,7 @@ describe('BookingService', () => {
     it('creates a PENDING booking when the slot is free (happy path)', async () => {
       const court = buildCourt();
       const user = buildUser();
-      const dto = buildCreateDto({ courtId: court.id, userId: user.id });
+      const dto = buildCreateDto({ courtId: court.id });
 
       manager.findOne.mockImplementation((entity: unknown) => {
         if (entity === Court) return Promise.resolve(court);
@@ -131,25 +130,25 @@ describe('BookingService', () => {
       redisService.acquireLock.mockResolvedValue(null);
       const dto = buildCreateDto();
 
-      await expect(service.create(dto.userId, dto)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.create(faker.string.uuid(), dto),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(dataSource.createQueryRunner).not.toHaveBeenCalled();
       expect(redisService.releaseLock).not.toHaveBeenCalled();
     });
 
     it('throws 409 when the pessimistic-locked row check finds an existing active booking (layer 2)', async () => {
       const court = buildCourt();
+      const userId = faker.string.uuid();
       const dto = buildCreateDto({ courtId: court.id });
       manager.findOne.mockImplementation((entity: unknown) => {
         if (entity === Court) return Promise.resolve(court);
-        if (entity === User)
-          return Promise.resolve(buildUser({ id: dto.userId }));
+        if (entity === User) return Promise.resolve(buildUser({ id: userId }));
         return Promise.resolve(null);
       });
       queryBuilder.getOne.mockResolvedValue(buildBookingRow());
 
-      await expect(service.create(dto.userId, dto)).rejects.toBeInstanceOf(
+      await expect(service.create(userId, dto)).rejects.toBeInstanceOf(
         ConflictException,
       );
       expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
@@ -159,7 +158,7 @@ describe('BookingService', () => {
     it('converts a 23505 unique-violation from the insert into a 409 (layer 3)', async () => {
       const court = buildCourt();
       const user = buildUser();
-      const dto = buildCreateDto({ courtId: court.id, userId: user.id });
+      const dto = buildCreateDto({ courtId: court.id });
       manager.findOne.mockImplementation((entity: unknown) => {
         if (entity === Court) return Promise.resolve(court);
         if (entity === User) return Promise.resolve(user);
@@ -178,18 +177,18 @@ describe('BookingService', () => {
       const dto = buildCreateDto();
       manager.findOne.mockResolvedValue(null);
 
-      await expect(service.create(dto.userId, dto)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.create(faker.string.uuid(), dto),
+      ).rejects.toBeInstanceOf(NotFoundException);
       expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     });
 
     it('rejects when endTime is not after startTime, without touching Redis/DB', async () => {
       const dto = buildCreateDto({ startTime: '10:00', endTime: '09:00' });
 
-      await expect(service.create(dto.userId, dto)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.create(faker.string.uuid(), dto),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(redisService.acquireLock).not.toHaveBeenCalled();
     });
   });

@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -13,14 +13,15 @@ export class AuthController {
   @Post('register')
   @ApiOperation({ summary: 'Đăng ký tài khoản' })
   @ApiResponse({ status: 201, type: AuthResponseDto })
-  register(@Body() dto: RegisterDto): AuthResponseDto {
+  register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
     return this.authService.register(dto);
   }
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đăng nhập' })
   @ApiResponse({ status: 200, type: AuthResponseDto })
-  login(@Body() dto: LoginDto): AuthResponseDto {
+  login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
     return this.authService.login(dto);
   }
 }

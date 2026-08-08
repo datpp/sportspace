@@ -13,6 +13,19 @@ set -a
 source "$ENV_FILE"
 set +a
 
+BASE_URL="${BASE_URL:-http://localhost:3000}"
+
+echo "--- Logging in as the seeded player to get a JWT ---"
+LOGIN_RES=$(curl -s -X POST "$BASE_URL/auth/login" \
+  -H 'Content-Type: application/json' \
+  -d "{\"email\":\"$PLAYER_EMAIL\",\"password\":\"$PLAYER_PASSWORD\"}")
+ACCESS_TOKEN=$(node -e "console.log(JSON.parse(process.argv[1]).accessToken)" "$LOGIN_RES")
+if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "undefined" ]; then
+  echo "Login failed: $LOGIN_RES" >&2
+  exit 1
+fi
+export ACCESS_TOKEN
+
 echo "--- Running k6: 50 parallel POST /bookings for the same slot ---"
 k6 run test/k6/booking-race.js
 

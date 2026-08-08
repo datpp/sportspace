@@ -6,11 +6,14 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('bookings')
 @Controller('bookings')
@@ -18,9 +21,11 @@ export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Đặt sân (⭐ race condition)' })
-  create(@Body() dto: CreateBookingDto) {
-    return this.bookingService.create(dto.userId, dto);
+  create(@CurrentUser('id') userId: string, @Body() dto: CreateBookingDto) {
+    return this.bookingService.create(userId, dto);
   }
 
   @Get()

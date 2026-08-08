@@ -4,12 +4,6 @@ import { IsDateString, IsUUID, Matches } from 'class-validator';
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 
 export class CreateBookingDto {
-  // TODO(auth): remove once JwtAuthGuard supplies req.user.id — tracked as an
-  // interim contract change reported to lead, to drop when auth guard lands.
-  @ApiProperty()
-  @IsUUID()
-  userId: string;
-
   @ApiProperty()
   @IsUUID()
   courtId: string;

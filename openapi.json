@@ -414,6 +414,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Đặt sân (⭐ race condition)",
         "tags": [
           "bookings"
@@ -555,6 +560,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Thống kê doanh thu chủ sân",
         "tags": [
           "merchant"
@@ -899,9 +909,6 @@
       "CreateBookingDto": {
         "type": "object",
         "properties": {
-          "userId": {
-            "type": "string"
-          },
           "courtId": {
             "type": "string"
           },
@@ -916,7 +923,6 @@
           }
         },
         "required": [
-          "userId",
           "courtId",
           "bookingDate",
           "startTime",
@@ -926,9 +932,6 @@
       "UpdateBookingDto": {
         "type": "object",
         "properties": {
-          "userId": {
-            "type": "string"
-          },
           "courtId": {
             "type": "string"
           },

@@ -25,9 +25,9 @@ describe('BookingController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('create() forwards dto.userId to BookingService.create', async () => {
+  it('create() forwards the authenticated userId to BookingService.create', async () => {
+    const userId = faker.string.uuid();
     const dto = {
-      userId: faker.string.uuid(),
       courtId: faker.string.uuid(),
       bookingDate: '2026-08-10',
       startTime: '09:00',
@@ -36,9 +36,9 @@ describe('BookingController', () => {
     const expected = createMock<Booking>();
     service.create.mockResolvedValue(expected);
 
-    const result = await controller.create(dto);
+    const result = await controller.create(userId, dto);
 
-    expect(service.create).toHaveBeenCalledWith(dto.userId, dto);
+    expect(service.create).toHaveBeenCalledWith(userId, dto);
     expect(result).toBe(expected);
   });
 
