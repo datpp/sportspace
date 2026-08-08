@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.next/
+.expo/
+.expo-shared/
+*.env
+!*.env.example
+.DS_Store
+*.log
+coverage/
+packages/shared/src/generated/
+.rtk/
+/CLAUDE.md
+/.claude/
