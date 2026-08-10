@@ -3,6 +3,23 @@ export type AuthStackParamList = {
   Register: undefined;
 };
 
+export type VenuesStackParamList = {
+  VenueList: undefined;
+  VenueDetail: { venueId: string; venueName: string };
+  CourtSlots: { courtId: string; courtName: string; venueName: string };
+  BookingConfirm: {
+    courtId: string;
+    courtName: string;
+    venueName: string;
+    bookingDate: string;
+    startTime: string;
+    endTime: string;
+    price: number;
+  };
+};
+
 export type RootTabParamList = {
-  Home: undefined;
+  Venues: undefined;
+  MyBookings: undefined;
+  Account: undefined;
 };

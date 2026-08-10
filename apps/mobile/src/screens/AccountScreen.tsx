@@ -2,14 +2,14 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 
-export function HomeScreen() {
+export function AccountScreen() {
   const { user, logout } = useAuth();
 
   return (
-    <View style={styles.container} testID="home-screen">
-      <Text style={styles.title}>Chào mừng đến SportSpace</Text>
+    <View style={styles.container} testID="account-screen">
+      <Text style={styles.title}>Tài khoản</Text>
       <Text>Vai trò: {user?.role}</Text>
-      <Pressable testID="home-logout" style={styles.button} onPress={() => void logout()}>
+      <Pressable testID="account-logout" style={styles.button} onPress={() => void logout()}>
         <Text style={styles.buttonText}>Đăng xuất</Text>
       </Pressable>
     </View>

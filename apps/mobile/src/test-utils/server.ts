@@ -2,10 +2,14 @@
 // 'react-native'), nên phải import từ 'msw/native' — 'msw/node' export map tự
 // null hoá dưới điều kiện 'react-native' vì dùng module `http` không tồn tại ở RN.
 import { setupServer } from 'msw/native';
-import { getAuthMock } from '@sportspace/shared/mocks';
+import { getAuthMock, getBookingsMock, getCourtsMock, getVenuesMock } from '@sportspace/shared/mocks';
 
-// getAuthMock() trả về HttpHandler[] được type từ gói con 'msw' (qua auth.msw.ts),
+// Các getXMock() trả về HttpHandler[] được type từ gói con 'msw' (qua *.msw.ts),
 // còn setupServer ở đây đến từ 'msw/native' — hai điều kiện export khác nhau của
 // cùng 1 package khiến TS coi lớp RequestHandler là hai identity khác nhau dù cùng
 // runtime. Ép kiểu tại đây, không ảnh hưởng hành vi lúc chạy.
-export const server = setupServer(...(getAuthMock() as unknown as Parameters<typeof setupServer>));
+export const server = setupServer(
+  ...([...getAuthMock(), ...getVenuesMock(), ...getCourtsMock(), ...getBookingsMock()] as unknown as Parameters<
+    typeof setupServer
+  >),
+);

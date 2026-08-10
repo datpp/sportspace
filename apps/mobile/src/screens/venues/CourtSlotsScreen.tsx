@@ -1,0 +1,149 @@
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { SlotDto } from '@sportspace/shared';
+import { courtsApi } from '../../api/client';
+import { toDateOnlyString } from '../../utils/date';
+import type { VenuesStackParamList } from '../../navigation/types';
+
+type Props = NativeStackScreenProps<VenuesStackParamList, 'CourtSlots'>;
+
+const DAY_OPTIONS = Array.from({ length: 4 }, (_, i) => {
+  const date = new Date();
+  date.setDate(date.getDate() + i);
+  return date;
+});
+
+export function CourtSlotsScreen({ route, navigation }: Props) {
+  const { courtId, courtName, venueName } = route.params;
+  const [selectedDate, setSelectedDate] = useState<Date>(DAY_OPTIONS[0]);
+  const [slots, setSlots] = useState<SlotDto[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const dateString = useMemo(() => toDateOnlyString(selectedDate), [selectedDate]);
+
+  const fetchSlots = useCallback(async () => {
+    setSlots(null);
+    setError(null);
+    try {
+      const { data } = await courtsApi.courtControllerGetSlots(courtId, { date: dateString });
+      setSlots(data);
+    } catch {
+      setError('Không tải được danh sách ô giờ');
+    }
+  }, [courtId, dateString]);
+
+  // Ô giờ có thể bị người khác đặt mất giữa chừng — refetch mỗi khi màn hình
+  // được focus lại (vd sau khi quay về từ BookingConfirm do gặp 409), không
+  // chỉ khi courtId/ngày đổi.
+  useFocusEffect(
+    useCallback(() => {
+      void fetchSlots();
+    }, [fetchSlots]),
+  );
+
+  return (
+    <View style={styles.container} testID="court-slots-screen">
+      <Text style={styles.title}>{courtName}</Text>
+      <Text style={styles.subtitle}>{venueName}</Text>
+
+      <View style={styles.dayRow}>
+        {DAY_OPTIONS.map((date) => {
+          const iso = toDateOnlyString(date);
+          const isSelected = iso === dateString;
+          return (
+            <Pressable
+              key={iso}
+              testID={`date-option-${iso}`}
+              style={[styles.dayButton, isSelected && styles.dayButtonSelected]}
+              onPress={() => setSelectedDate(date)}
+            >
+              <Text style={isSelected ? styles.dayButtonTextSelected : styles.dayButtonText}>
+                {date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {error ? (
+        <View style={styles.centerFill} testID="court-slots-error">
+          <Text style={styles.errorText}>{error}</Text>
+          <Pressable testID="court-slots-retry" onPress={() => void fetchSlots()}>
+            <Text style={styles.link}>Thử lại</Text>
+          </Pressable>
+        </View>
+      ) : slots === null ? (
+        <View style={styles.centerFill} testID="court-slots-loading">
+          <ActivityIndicator />
+        </View>
+      ) : slots.length === 0 ? (
+        <View style={styles.centerFill} testID="court-slots-empty">
+          <Text>Không có ô giờ nào trong ngày này</Text>
+        </View>
+      ) : (
+        <FlatList
+          testID="slot-list"
+          data={slots}
+          numColumns={3}
+          keyExtractor={(item) => item.startTime}
+          renderItem={({ item }) => (
+            <Pressable
+              testID={`slot-${item.startTime}`}
+              disabled={!item.available}
+              style={[styles.slot, !item.available && styles.slotDisabled]}
+              onPress={() =>
+                navigation.navigate('BookingConfirm', {
+                  courtId,
+                  courtName,
+                  venueName,
+                  bookingDate: dateString,
+                  startTime: item.startTime,
+                  endTime: item.endTime,
+                  price: item.price,
+                })
+              }
+            >
+              <Text style={!item.available ? styles.slotTextDisabled : styles.slotText}>
+                {item.startTime}
+              </Text>
+            </Pressable>
+          )}
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 16, gap: 8 },
+  title: { fontSize: 18, fontWeight: '700' },
+  subtitle: { color: '#555' },
+  dayRow: { flexDirection: 'row', gap: 8, marginVertical: 8 },
+  dayButton: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  dayButtonSelected: { backgroundColor: '#1d4ed8', borderColor: '#1d4ed8' },
+  dayButtonText: { color: '#111' },
+  dayButtonTextSelected: { color: '#fff', fontWeight: '600' },
+  centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  errorText: { color: '#dc2626' },
+  link: { color: '#1d4ed8', fontWeight: '600' },
+  slot: {
+    flex: 1,
+    margin: 4,
+    borderWidth: 1,
+    borderColor: '#1d4ed8',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  slotDisabled: { borderColor: '#ccc', backgroundColor: '#f3f4f6' },
+  slotText: { color: '#1d4ed8', fontWeight: '600' },
+  slotTextDisabled: { color: '#999' },
+});

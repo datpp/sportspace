@@ -6,11 +6,17 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../auth/AuthContext';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
-import { HomeScreen } from '../screens/HomeScreen';
-import type { AuthStackParamList, RootTabParamList } from './types';
+import { VenueListScreen } from '../screens/venues/VenueListScreen';
+import { VenueDetailScreen } from '../screens/venues/VenueDetailScreen';
+import { CourtSlotsScreen } from '../screens/venues/CourtSlotsScreen';
+import { BookingConfirmScreen } from '../screens/venues/BookingConfirmScreen';
+import { MyBookingsScreen } from '../screens/bookings/MyBookingsScreen';
+import { AccountScreen } from '../screens/AccountScreen';
+import type { AuthStackParamList, RootTabParamList, VenuesStackParamList } from './types';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const RootTab = createBottomTabNavigator<RootTabParamList>();
+const VenuesStack = createNativeStackNavigator<VenuesStackParamList>();
 
 function AuthNavigator() {
   return (
@@ -21,10 +27,35 @@ function AuthNavigator() {
   );
 }
 
+function VenuesNavigator() {
+  return (
+    <VenuesStack.Navigator>
+      <VenuesStack.Screen name="VenueList" component={VenueListScreen} options={{ title: 'Tìm sân' }} />
+      <VenuesStack.Screen
+        name="VenueDetail"
+        component={VenueDetailScreen}
+        options={({ route }) => ({ title: route.params.venueName })}
+      />
+      <VenuesStack.Screen
+        name="CourtSlots"
+        component={CourtSlotsScreen}
+        options={({ route }) => ({ title: route.params.courtName })}
+      />
+      <VenuesStack.Screen
+        name="BookingConfirm"
+        component={BookingConfirmScreen}
+        options={{ title: 'Xác nhận đặt sân' }}
+      />
+    </VenuesStack.Navigator>
+  );
+}
+
 function AppTabs() {
   return (
     <RootTab.Navigator>
-      <RootTab.Screen name="Home" component={HomeScreen} />
+      <RootTab.Screen name="Venues" component={VenuesNavigator} options={{ headerShown: false, title: 'Tìm sân' }} />
+      <RootTab.Screen name="MyBookings" component={MyBookingsScreen} options={{ title: 'Lịch của tôi' }} />
+      <RootTab.Screen name="Account" component={AccountScreen} options={{ title: 'Tài khoản' }} />
     </RootTab.Navigator>
   );
 }
