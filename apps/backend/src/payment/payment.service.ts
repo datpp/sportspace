@@ -9,6 +9,7 @@ import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { BookingStatus, PaymentStatus } from '@sportspace/shared';
 import { DataSource, Repository } from 'typeorm';
 import { Booking } from '../booking/entities/booking.entity';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { CheckoutDto } from './dto/checkout.dto';
@@ -50,6 +51,7 @@ export class PaymentService {
     private readonly bookingRepo: Repository<Booking>,
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly config: ConfigService,
+    private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -172,6 +174,7 @@ export class PaymentService {
         .createQueryBuilder(Payment, 'payment')
         .setLock('pessimistic_write')
         .innerJoinAndSelect('payment.booking', 'booking')
+        .innerJoinAndSelect('booking.court', 'court')
         .where('payment.transactionRef = :txnRef', { txnRef: query.vnp_TxnRef })
         .getOne();
 
@@ -207,6 +210,12 @@ export class PaymentService {
         payment.status = PaymentStatus.PAID;
         await queryRunner.manager.save(Payment, payment);
         await queryRunner.manager.update(Booking, payment.booking.id, {
+          status: BookingStatus.CONFIRMED,
+        });
+        this.realtimeGateway.broadcastSlotUpdate({
+          courtId: payment.booking.court.id,
+          bookingDate: payment.booking.bookingDate,
+          startTime: payment.booking.startTime,
           status: BookingStatus.CONFIRMED,
         });
       } else {

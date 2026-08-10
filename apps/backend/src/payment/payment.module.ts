@@ -4,9 +4,10 @@ import { PaymentService } from './payment.service';
 import { PaymentController } from './payment.controller';
 import { Payment } from './entities/payment.entity';
 import { Booking } from '../booking/entities/booking.entity';
+import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Payment, Booking])],
+  imports: [TypeOrmModule.forFeature([Payment, Booking]), RealtimeModule],
   controllers: [PaymentController],
   providers: [PaymentService],
 })

@@ -9,8 +9,8 @@ import { VenueModule } from './venue/venue.module';
 import { BookingModule } from './booking/booking.module';
 import { PaymentModule } from './payment/payment.module';
 import { NotificationModule } from './notification/notification.module';
-import { RealtimeGateway } from './realtime/realtime.gateway';
 import { RedisModule } from './redis/redis.module';
+import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
   imports: [
@@ -35,8 +35,9 @@ import { RedisModule } from './redis/redis.module';
     PaymentModule,
     NotificationModule,
     RedisModule,
+    RealtimeModule,
   ],
   controllers: [AppController],
-  providers: [AppService, RealtimeGateway],
+  providers: [AppService],
 })
 export class AppModule {}

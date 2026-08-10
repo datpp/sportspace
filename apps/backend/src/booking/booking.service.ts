@@ -17,6 +17,7 @@ import { RedisService } from '../redis/redis.service';
 import { Court } from '../venue/entities/court.entity';
 import { PriceRule } from '../venue/entities/price-rule.entity';
 import { User } from '../user/entities/user.entity';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { RevenueQueryDto } from './dto/revenue-query.dto';
@@ -41,12 +42,13 @@ export class BookingService {
     private readonly bookingRepo: Repository<Booking>,
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly redisService: RedisService,
+    private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
   async create(userId: string, dto: CreateBookingDto): Promise<Booking> {
     this.assertValidTimeRange(dto.startTime, dto.endTime);
 
-    return this.withSlotLock(
+    const booking = await this.withSlotLock(
       dto.courtId,
       dto.bookingDate,
       dto.startTime,
@@ -88,6 +90,15 @@ export class BookingService {
         return manager.save(Booking, booking);
       },
     );
+
+    this.realtimeGateway.broadcastSlotUpdate({
+      courtId: dto.courtId,
+      bookingDate: dto.bookingDate,
+      startTime: dto.startTime,
+      status: BookingStatus.PENDING,
+    });
+
+    return booking;
   }
 
   findAll(): Promise<Booking[]> {
@@ -152,6 +163,19 @@ export class BookingService {
       },
     );
 
+    this.realtimeGateway.broadcastSlotUpdate({
+      courtId: current.court.id,
+      bookingDate: current.bookingDate,
+      startTime: current.startTime,
+      status: BookingStatus.CANCELLED,
+    });
+    this.realtimeGateway.broadcastSlotUpdate({
+      courtId,
+      bookingDate,
+      startTime,
+      status: current.status,
+    });
+
     return this.findOne(id);
   }
 
@@ -160,6 +184,12 @@ export class BookingService {
     if (booking.status !== BookingStatus.CANCELLED) {
       booking.status = BookingStatus.CANCELLED;
       await this.bookingRepo.save(booking);
+      this.realtimeGateway.broadcastSlotUpdate({
+        courtId: booking.court.id,
+        bookingDate: booking.bookingDate,
+        startTime: booking.startTime,
+        status: BookingStatus.CANCELLED,
+      });
     }
     return booking;
   }

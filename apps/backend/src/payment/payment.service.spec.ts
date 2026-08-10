@@ -17,7 +17,9 @@ import {
 import { PaymentService } from './payment.service';
 import { Payment } from './entities/payment.entity';
 import { Booking } from '../booking/entities/booking.entity';
+import { Court } from '../venue/entities/court.entity';
 import { User } from '../user/entities/user.entity';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { VnpayIpnQuery } from './dto/vnpay-ipn-query.dto';
 import { signVnpayParams, toVnpayAmount } from './vnpay.util';
 
@@ -42,10 +44,22 @@ function buildUser(overrides: Partial<User> = {}): User {
   } as User;
 }
 
+function buildCourt(overrides: Partial<Court> = {}): Court {
+  return {
+    id: faker.string.uuid(),
+    name: faker.word.words(2),
+    sport: 'football',
+    basePrice: 200000,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  } as Court;
+}
+
 function buildBooking(overrides: Partial<Booking> = {}): Booking {
   return {
     id: faker.string.uuid(),
-    court: undefined as never,
+    court: buildCourt(),
     user: buildUser(),
     bookingDate: '2026-09-01',
     startTime: '09:00',
@@ -104,12 +118,14 @@ describe('PaymentService', () => {
   let queryRunner: DeepMocked<QueryRunner>;
   let manager: DeepMocked<EntityManager>;
   let queryBuilder: DeepMocked<SelectQueryBuilder<Payment>>;
+  let realtimeGateway: DeepMocked<RealtimeGateway>;
 
   beforeEach(() => {
     paymentRepo = createMock<Repository<Payment>>();
     bookingRepo = createMock<Repository<Booking>>();
     dataSource = createMock<DataSource>();
     config = createMock<ConfigService>();
+    realtimeGateway = createMock<RealtimeGateway>();
     queryRunner = createMock<QueryRunner>();
     manager = createMock<EntityManager>();
     queryBuilder = createMock<SelectQueryBuilder<Payment>>();
@@ -135,7 +151,13 @@ describe('PaymentService', () => {
       Promise.resolve(data as Payment),
     );
 
-    service = new PaymentService(paymentRepo, bookingRepo, dataSource, config);
+    service = new PaymentService(
+      paymentRepo,
+      bookingRepo,
+      dataSource,
+      config,
+      realtimeGateway,
+    );
   });
 
   describe('checkout', () => {
@@ -295,6 +317,12 @@ describe('PaymentService', () => {
         status: BookingStatus.CONFIRMED,
       });
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      expect(realtimeGateway.broadcastSlotUpdate).toHaveBeenCalledWith({
+        courtId: booking.court.id,
+        bookingDate: booking.bookingDate,
+        startTime: booking.startTime,
+        status: BookingStatus.CONFIRMED,
+      });
     });
 
     it('marks payment FAILED (but still replies RspCode 00) when VNPAY reports a failed transaction', async () => {
@@ -319,6 +347,7 @@ describe('PaymentService', () => {
         expect.objectContaining({ status: PaymentStatus.FAILED }),
       );
       expect(manager.update).not.toHaveBeenCalled();
+      expect(realtimeGateway.broadcastSlotUpdate).not.toHaveBeenCalled();
     });
   });
 });

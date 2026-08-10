@@ -18,6 +18,7 @@ import { Booking } from './entities/booking.entity';
 import { Court } from '../venue/entities/court.entity';
 import { User } from '../user/entities/user.entity';
 import { RedisService } from '../redis/redis.service';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
 function buildCourt(overrides: Partial<Court> = {}): Court {
@@ -62,6 +63,7 @@ describe('BookingService', () => {
   let bookingRepo: DeepMocked<Repository<Booking>>;
   let dataSource: DeepMocked<DataSource>;
   let redisService: DeepMocked<RedisService>;
+  let realtimeGateway: DeepMocked<RealtimeGateway>;
   let queryRunner: DeepMocked<QueryRunner>;
   let manager: DeepMocked<EntityManager>;
   let queryBuilder: DeepMocked<SelectQueryBuilder<Booking>>;
@@ -72,6 +74,7 @@ describe('BookingService', () => {
     bookingRepo = createMock<Repository<Booking>>();
     dataSource = createMock<DataSource>();
     redisService = createMock<RedisService>();
+    realtimeGateway = createMock<RealtimeGateway>();
     queryRunner = createMock<QueryRunner>();
     manager = createMock<EntityManager>();
     queryBuilder = createMock<SelectQueryBuilder<Booking>>();
@@ -93,7 +96,12 @@ describe('BookingService', () => {
     dataSource.createQueryRunner.mockReturnValue(queryRunner);
     redisService.acquireLock.mockResolvedValue(LOCK_TOKEN);
 
-    service = new BookingService(bookingRepo, dataSource, redisService);
+    service = new BookingService(
+      bookingRepo,
+      dataSource,
+      redisService,
+      realtimeGateway,
+    );
   });
 
   describe('create', () => {
@@ -124,6 +132,12 @@ describe('BookingService', () => {
         `lock:court:${dto.courtId}:${dto.bookingDate}:${dto.startTime}`,
         LOCK_TOKEN,
       );
+      expect(realtimeGateway.broadcastSlotUpdate).toHaveBeenCalledWith({
+        courtId: dto.courtId,
+        bookingDate: dto.bookingDate,
+        startTime: dto.startTime,
+        status: BookingStatus.PENDING,
+      });
     });
 
     it('throws 409 immediately when the Redis lock cannot be acquired (layer 1)', async () => {
@@ -194,7 +208,7 @@ describe('BookingService', () => {
   });
 
   describe('cancel', () => {
-    it('sets status to CANCELLED and saves', async () => {
+    it('sets status to CANCELLED, saves, and broadcasts the freed slot', async () => {
       const booking = buildBookingRow({ status: BookingStatus.CONFIRMED });
       bookingRepo.findOne.mockResolvedValue(booking);
       bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
@@ -205,6 +219,12 @@ describe('BookingService', () => {
       expect(bookingRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ status: BookingStatus.CANCELLED }),
       );
+      expect(realtimeGateway.broadcastSlotUpdate).toHaveBeenCalledWith({
+        courtId: booking.court.id,
+        bookingDate: booking.bookingDate,
+        startTime: booking.startTime,
+        status: BookingStatus.CANCELLED,
+      });
     });
 
     it('throws NotFoundException for a missing booking', async () => {
@@ -212,6 +232,57 @@ describe('BookingService', () => {
       await expect(service.cancel(faker.string.uuid())).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('update', () => {
+    it('reschedules to a new slot: broadcasts the old slot freed and the new slot taken', async () => {
+      const court = buildCourt();
+      const newCourt = buildCourt();
+      const current = buildBookingRow({
+        court,
+        bookingDate: '2026-08-10',
+        startTime: '09:00',
+        endTime: '10:00',
+        status: BookingStatus.CONFIRMED,
+      });
+      bookingRepo.findOne.mockResolvedValue(current);
+      manager.findOne.mockImplementation((entity: unknown) => {
+        if (entity === Court) return Promise.resolve(newCourt);
+        return Promise.resolve(null);
+      });
+
+      await service.update(current.id, {
+        courtId: newCourt.id,
+        bookingDate: '2026-08-11',
+        startTime: '14:00',
+        endTime: '15:00',
+      });
+
+      expect(realtimeGateway.broadcastSlotUpdate).toHaveBeenCalledWith({
+        courtId: court.id,
+        bookingDate: '2026-08-10',
+        startTime: '09:00',
+        status: BookingStatus.CANCELLED,
+      });
+      expect(realtimeGateway.broadcastSlotUpdate).toHaveBeenCalledWith({
+        courtId: newCourt.id,
+        bookingDate: '2026-08-11',
+        startTime: '14:00',
+        status: BookingStatus.CONFIRMED,
+      });
+    });
+
+    it('does not broadcast when the slot is unchanged', async () => {
+      const current = buildBookingRow({
+        bookingDate: '2026-08-10',
+        startTime: '09:00',
+      });
+      bookingRepo.findOne.mockResolvedValue(current);
+
+      await service.update(current.id, { bookingDate: '2026-08-10' });
+
+      expect(realtimeGateway.broadcastSlotUpdate).not.toHaveBeenCalled();
     });
   });
 
