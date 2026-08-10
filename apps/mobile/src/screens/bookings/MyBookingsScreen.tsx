@@ -1,5 +1,14 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Booking } from '@sportspace/shared';
 import { BookingStatus } from '@sportspace/shared';
@@ -15,6 +24,7 @@ export function MyBookingsScreen() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     setError(null);
@@ -23,6 +33,8 @@ export function MyBookingsScreen() {
       setBookings(data);
     } catch {
       setError('Không tải được lịch đặt sân');
+    } finally {
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -33,6 +45,11 @@ export function MyBookingsScreen() {
       void fetchBookings();
     }, [fetchBookings]),
   );
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    void fetchBookings();
+  }, [fetchBookings]);
 
   const performCancel = useCallback(async (id: string) => {
     setCancellingId(id);
@@ -89,6 +106,7 @@ export function MyBookingsScreen() {
       data={bookings}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
+      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
       renderItem={({ item }) => {
         const cancellable = item.status !== BookingStatus.CANCELLED;
         return (

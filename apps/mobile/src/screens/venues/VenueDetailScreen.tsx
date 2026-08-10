@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Venue } from '@sportspace/shared';
 import { venuesApi } from '../../api/client';
@@ -11,6 +11,7 @@ export function VenueDetailScreen({ route, navigation }: Props) {
   const { venueId, venueName } = route.params;
   const [venue, setVenue] = useState<Venue | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchVenue = useCallback(async () => {
     setError(null);
@@ -19,10 +20,17 @@ export function VenueDetailScreen({ route, navigation }: Props) {
       setVenue(data);
     } catch {
       setError('Không tải được thông tin sân');
+    } finally {
+      setIsRefreshing(false);
     }
   }, [venueId]);
 
   useEffect(() => {
+    void fetchVenue();
+  }, [fetchVenue]);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
     void fetchVenue();
   }, [fetchVenue]);
 
@@ -61,6 +69,7 @@ export function VenueDetailScreen({ route, navigation }: Props) {
           testID="court-list"
           data={venue.courts}
           keyExtractor={(item) => item.id}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
           renderItem={({ item }) => (
             <Pressable
               testID={`court-item-${item.id}`}

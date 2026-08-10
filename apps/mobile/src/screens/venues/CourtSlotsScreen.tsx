@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { SlotDto } from '@sportspace/shared';
@@ -20,19 +20,27 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date>(DAY_OPTIONS[0]);
   const [slots, setSlots] = useState<SlotDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const dateString = useMemo(() => toDateOnlyString(selectedDate), [selectedDate]);
 
-  const fetchSlots = useCallback(async () => {
-    setSlots(null);
-    setError(null);
-    try {
-      const { data } = await courtsApi.courtControllerGetSlots(courtId, { date: dateString });
-      setSlots(data);
-    } catch {
-      setError('Không tải được danh sách ô giờ');
-    }
-  }, [courtId, dateString]);
+  const fetchSlots = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!opts?.silent) {
+        setSlots(null);
+      }
+      setError(null);
+      try {
+        const { data } = await courtsApi.courtControllerGetSlots(courtId, { date: dateString });
+        setSlots(data);
+      } catch {
+        setError('Không tải được danh sách ô giờ');
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [courtId, dateString],
+  );
 
   // Ô giờ có thể bị người khác đặt mất giữa chừng — refetch mỗi khi màn hình
   // được focus lại (vd sau khi quay về từ BookingConfirm do gặp 409), không
@@ -42,6 +50,11 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
       void fetchSlots();
     }, [fetchSlots]),
   );
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    void fetchSlots({ silent: true });
+  }, [fetchSlots]);
 
   return (
     <View style={styles.container} testID="court-slots-screen">
@@ -88,6 +101,7 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
           data={slots}
           numColumns={3}
           keyExtractor={(item) => item.startTime}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
           renderItem={({ item }) => (
             <Pressable
               testID={`slot-${item.startTime}`}
@@ -107,6 +121,9 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
             >
               <Text style={!item.available ? styles.slotTextDisabled : styles.slotText}>
                 {item.startTime}
+              </Text>
+              <Text style={!item.available ? styles.slotTextDisabled : styles.slotPrice}>
+                {item.price.toLocaleString('vi-VN')} đ
               </Text>
             </Pressable>
           )}
@@ -145,5 +162,6 @@ const styles = StyleSheet.create({
   },
   slotDisabled: { borderColor: '#ccc', backgroundColor: '#f3f4f6' },
   slotText: { color: '#1d4ed8', fontWeight: '600' },
+  slotPrice: { color: '#555', fontSize: 12, marginTop: 2 },
   slotTextDisabled: { color: '#999' },
 });
