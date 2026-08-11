@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { http, HttpResponse } from 'msw';
 import { BookingStatus } from '@sportspace/shared';
@@ -144,11 +144,13 @@ describe('CourtSlotsScreen', () => {
       expect.any(Function),
     );
     const handleSlotUpdate = mockedUseCourtSlotUpdates.mock.calls[0][2];
-    handleSlotUpdate({
-      courtId: 'court-1',
-      bookingDate: mockedUseCourtSlotUpdates.mock.calls[0][1],
-      startTime: '06:00',
-      status: BookingStatus.CANCELLED,
+    await act(async () => {
+      handleSlotUpdate({
+        courtId: 'court-1',
+        bookingDate: mockedUseCourtSlotUpdates.mock.calls[0][1],
+        startTime: '06:00',
+        status: BookingStatus.CANCELLED,
+      });
     });
 
     await waitFor(() =>
