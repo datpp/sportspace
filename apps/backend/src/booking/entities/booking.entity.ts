@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { BookingStatus } from '@sportspace/shared';
 import { Court } from '../../venue/entities/court.entity';
 import { User } from '../../user/entities/user.entity';
+import { decimalTransformer } from '../../database/decimal.transformer';
 import {
   Column,
   CreateDateColumn,
@@ -50,7 +51,12 @@ export class Booking {
   status: BookingStatus;
 
   @ApiProperty()
-  @Column({ type: 'decimal', precision: 12, scale: 2 })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    transformer: decimalTransformer,
+  })
   totalAmount: number;
 
   @ApiProperty()

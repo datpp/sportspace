@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { User } from '../../user/entities/user.entity';
 import { Court } from './court.entity';
+import { decimalTransformer } from '../../database/decimal.transformer';
 import {
   Column,
   CreateDateColumn,
@@ -36,11 +37,21 @@ export class Venue {
   address: string;
 
   @ApiProperty()
-  @Column({ type: 'decimal', precision: 10, scale: 7 })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 7,
+    transformer: decimalTransformer,
+  })
   lat: number;
 
   @ApiProperty()
-  @Column({ type: 'decimal', precision: 10, scale: 7 })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 7,
+    transformer: decimalTransformer,
+  })
   lng: number;
 
   @ApiProperty({ required: false, nullable: true })

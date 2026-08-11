@@ -111,7 +111,8 @@ describe('Booking (e2e)', () => {
       .expect(201);
 
     expect(res.body.status).toBe('PENDING');
-    expect(Number(res.body.totalAmount)).toBe(200000);
+    expect(res.body.totalAmount).toBe(200000);
+    expect(typeof res.body.totalAmount).toBe('number');
     expect(res.body.user.id).toBe(playerId);
     createdBookingIds.push(res.body.id);
   });

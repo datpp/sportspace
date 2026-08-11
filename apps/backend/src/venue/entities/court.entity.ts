@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Venue } from './venue.entity';
 import { PriceRule } from './price-rule.entity';
+import { decimalTransformer } from '../../database/decimal.transformer';
 import {
   Column,
   CreateDateColumn,
@@ -38,7 +39,12 @@ export class Court {
   sport: string;
 
   @ApiProperty()
-  @Column({ type: 'decimal', precision: 12, scale: 2 })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    transformer: decimalTransformer,
+  })
   basePrice: number;
 
   @ApiProperty()

@@ -119,6 +119,10 @@ describe('Venue + Court (e2e)', () => {
     venueId = res.body.id;
     expect(res.body.owner.id).toBe(merchant.id);
     expect(res.body.owner.passwordHash).toBeUndefined();
+    expect(res.body.lat).toBe(10.762622);
+    expect(res.body.lng).toBe(106.660172);
+    expect(typeof res.body.lat).toBe('number');
+    expect(typeof res.body.lng).toBe('number');
   });
 
   it('lets the owning MERCHANT create a court in that venue (201)', async () => {
@@ -129,6 +133,8 @@ describe('Venue + Court (e2e)', () => {
       .expect(201);
 
     courtId = res.body.id;
+    expect(res.body.basePrice).toBe(200000);
+    expect(typeof res.body.basePrice).toBe('number');
   });
 
   it('denies a different MERCHANT from updating the venue (403)', async () => {

@@ -1,5 +1,6 @@
 import { PaymentStatus } from '@sportspace/shared';
 import { Booking } from '../../booking/entities/booking.entity';
+import { decimalTransformer } from '../../database/decimal.transformer';
 import {
   Column,
   CreateDateColumn,
@@ -22,7 +23,12 @@ export class Payment {
   @Column()
   provider: string;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2 })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    transformer: decimalTransformer,
+  })
   amount: number;
 
   @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
