@@ -436,6 +436,93 @@ describe('BookingService', () => {
     });
   });
 
+  describe('getMerchantRevenueTimeseries', () => {
+    let revenueQueryBuilder: DeepMocked<SelectQueryBuilder<Booking>>;
+
+    beforeEach(() => {
+      revenueQueryBuilder = createMock<SelectQueryBuilder<Booking>>();
+      revenueQueryBuilder.innerJoin.mockReturnValue(revenueQueryBuilder);
+      revenueQueryBuilder.where.mockReturnValue(revenueQueryBuilder);
+      revenueQueryBuilder.andWhere.mockReturnValue(revenueQueryBuilder);
+      revenueQueryBuilder.select.mockReturnValue(revenueQueryBuilder);
+      revenueQueryBuilder.addSelect.mockReturnValue(revenueQueryBuilder);
+      revenueQueryBuilder.groupBy.mockReturnValue(revenueQueryBuilder);
+      revenueQueryBuilder.getRawMany.mockResolvedValue([]);
+      bookingRepo.createQueryBuilder.mockReturnValue(revenueQueryBuilder);
+    });
+
+    it('zero-fills all 7 day-buckets for range=week when there is no revenue', async () => {
+      const merchantId = faker.string.uuid();
+
+      const result = await service.getMerchantRevenueTimeseries(merchantId, {
+        range: 'week',
+      });
+
+      expect(result).toHaveLength(7);
+      expect(result.every((p) => p.revenue === 0 && p.bookings === 0)).toBe(
+        true,
+      );
+      expect(result.every((p) => /^\d{4}-\d{2}-\d{2}$/.test(p.bucket))).toBe(
+        true,
+      );
+      expect(revenueQueryBuilder.where).toHaveBeenCalledWith(
+        'venue.owner = :merchantId',
+        { merchantId },
+      );
+      expect(revenueQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'booking.status = :status',
+        { status: BookingStatus.CONFIRMED },
+      );
+    });
+
+    it('merges a real row into the matching day bucket, leaving the rest zero', async () => {
+      const buckets = (
+        service as unknown as {
+          buildTimeseriesBuckets: (range: 'week' | 'month' | 'year') => {
+            buckets: string[];
+          };
+        }
+      ).buildTimeseriesBuckets('week').buckets;
+      const targetBucket = buckets[3];
+      revenueQueryBuilder.getRawMany.mockResolvedValue([
+        { bucket: targetBucket, revenue: '450000.00', bookings: '2' },
+      ]);
+
+      const result = await service.getMerchantRevenueTimeseries(
+        faker.string.uuid(),
+        { range: 'week' },
+      );
+
+      expect(result.find((p) => p.bucket === targetBucket)).toEqual({
+        bucket: targetBucket,
+        revenue: 450000,
+        bookings: 2,
+      });
+      expect(
+        result
+          .filter((p) => p.bucket !== targetBucket)
+          .every((p) => p.revenue === 0 && p.bookings === 0),
+      ).toBe(true);
+    });
+
+    it('produces 30 day-buckets for range=month (default)', async () => {
+      const result = await service.getMerchantRevenueTimeseries(
+        faker.string.uuid(),
+        {},
+      );
+      expect(result).toHaveLength(30);
+    });
+
+    it('produces 12 YYYY-MM month-buckets for range=year', async () => {
+      const result = await service.getMerchantRevenueTimeseries(
+        faker.string.uuid(),
+        { range: 'year' },
+      );
+      expect(result).toHaveLength(12);
+      expect(result.every((p) => /^\d{4}-\d{2}$/.test(p.bucket))).toBe(true);
+    });
+  });
+
   function buildBookingRow(overrides: Partial<Booking> = {}): Booking {
     return {
       id: faker.string.uuid(),

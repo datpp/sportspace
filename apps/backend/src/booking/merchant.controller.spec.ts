@@ -6,6 +6,7 @@ import { BookingService } from './booking.service';
 import { VenueService } from '../venue/venue.service';
 import { Venue } from '../venue/entities/venue.entity';
 import { RevenueDto } from './dto/revenue.dto';
+import { RevenueTimeseriesPointDto } from './dto/revenue-timeseries-point.dto';
 
 describe('MerchantController', () => {
   let controller: MerchantController;
@@ -39,6 +40,23 @@ describe('MerchantController', () => {
     const result = await controller.getRevenue(merchantId, query);
 
     expect(bookingService.getMerchantRevenue).toHaveBeenCalledWith(
+      merchantId,
+      query,
+    );
+    expect(result).toBe(expected);
+  });
+
+  it('getRevenueTimeseries() forwards the authenticated merchantId and query to BookingService', async () => {
+    const merchantId = faker.string.uuid();
+    const query = { range: 'week' as const };
+    const expected: RevenueTimeseriesPointDto[] = [
+      { bucket: '2026-09-01', revenue: 200000, bookings: 1 },
+    ];
+    bookingService.getMerchantRevenueTimeseries.mockResolvedValue(expected);
+
+    const result = await controller.getRevenueTimeseries(merchantId, query);
+
+    expect(bookingService.getMerchantRevenueTimeseries).toHaveBeenCalledWith(
       merchantId,
       query,
     );

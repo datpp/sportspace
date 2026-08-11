@@ -980,6 +980,50 @@
         ]
       }
     },
+    "/merchant/revenue/timeseries": {
+      "get": {
+        "operationId": "MerchantController_getRevenueTimeseries",
+        "parameters": [
+          {
+            "name": "range",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "week",
+                "month",
+                "year"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RevenueTimeseriesPointDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Doanh thu theo thời gian (chart xu hướng), zero-filled",
+        "tags": [
+          "merchant"
+        ]
+      }
+    },
     "/merchant/venues": {
       "get": {
         "operationId": "MerchantController_getVenues",
@@ -1746,6 +1790,26 @@
         "required": [
           "totalRevenue",
           "totalBookings"
+        ]
+      },
+      "RevenueTimeseriesPointDto": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "'YYYY-MM-DD' cho range week/month, 'YYYY-MM' cho range year"
+          },
+          "revenue": {
+            "type": "number"
+          },
+          "bookings": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "bucket",
+          "revenue",
+          "bookings"
         ]
       },
       "CreatePaymentDto": {

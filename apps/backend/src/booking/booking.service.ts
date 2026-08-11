@@ -24,6 +24,8 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { RevenueQueryDto } from './dto/revenue-query.dto';
 import { RevenueDto } from './dto/revenue.dto';
+import { RevenueTimeseriesQueryDto } from './dto/revenue-timeseries-query.dto';
+import { RevenueTimeseriesPointDto } from './dto/revenue-timeseries-point.dto';
 import { Booking } from './entities/booking.entity';
 
 const SLOT_LOCK_TTL_SECONDS = 10;
@@ -245,6 +247,55 @@ export class BookingService {
   }
 
   /**
+   * Revenue broken down per bucket (day for week/month, calendar month for
+   * year) so the frontend can plot a real trend line. Zero-filled: buckets
+   * with no CONFIRMED bookings still appear with revenue/bookings = 0,
+   * otherwise a gap in the data reads as a broken chart rather than "no
+   * activity that day".
+   */
+  async getMerchantRevenueTimeseries(
+    merchantId: string,
+    query: RevenueTimeseriesQueryDto,
+  ): Promise<RevenueTimeseriesPointDto[]> {
+    const { since, granularity, buckets } = this.buildTimeseriesBuckets(
+      query.range ?? 'month',
+    );
+    // Always cast through to_char: selecting the raw `date` column via
+    // getRawMany() (unlike hydrated entities) comes back as a JS Date built
+    // from local-timezone components, which drifts a day off the UTC-based
+    // bucket keys below whenever the server's TZ isn't UTC. to_char forces
+    // Postgres to hand back plain text, sidestepping that entirely.
+    const bucketExpr =
+      granularity === 'month'
+        ? "to_char(booking.bookingDate, 'YYYY-MM')"
+        : "to_char(booking.bookingDate, 'YYYY-MM-DD')";
+
+    const rows = await this.bookingRepo
+      .createQueryBuilder('booking')
+      .innerJoin('booking.court', 'court')
+      .innerJoin('court.venue', 'venue')
+      .where('venue.owner = :merchantId', { merchantId })
+      .andWhere('booking.status = :status', { status: BookingStatus.CONFIRMED })
+      .andWhere('booking.bookingDate >= :since', { since })
+      .select(bucketExpr, 'bucket')
+      .addSelect('COALESCE(SUM(booking.totalAmount), 0)', 'revenue')
+      .addSelect('COUNT(booking.id)', 'bookings')
+      .groupBy(bucketExpr)
+      .getRawMany<{ bucket: string; revenue: string; bookings: string }>();
+
+    const byBucket = new Map(rows.map((row) => [row.bucket, row]));
+
+    return buckets.map((bucket) => {
+      const row = byBucket.get(bucket);
+      return {
+        bucket,
+        revenue: row ? Number(row.revenue) : 0,
+        bookings: row ? Number(row.bookings) : 0,
+      };
+    });
+  }
+
+  /**
    * Layer 1 (Redis SET NX EX) + Layer 2 (pessimistic DB lock, inside `work`) +
    * Layer 3 (UNIQUE partial index, caught as 23505 here) — see CLAUDE.md §6.
    */
@@ -365,5 +416,43 @@ export class BookingService {
         break;
     }
     return start.toISOString().slice(0, 10);
+  }
+
+  /**
+   * Fixed point counts per range so the frontend always gets a predictable
+   * series length: 7 days for `week`, 30 days for `month`, 12 calendar
+   * months for `year`. `since` is the first bucket's start date, used to
+   * scope the DB query so the query and the zero-fill list can never drift
+   * out of sync.
+   */
+  private buildTimeseriesBuckets(range: 'week' | 'month' | 'year'): {
+    since: string;
+    granularity: 'day' | 'month';
+    buckets: string[];
+  } {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    if (range === 'year') {
+      const buckets: string[] = [];
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(
+          Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - i, 1),
+        );
+        buckets.push(
+          `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`,
+        );
+      }
+      return { since: `${buckets[0]}-01`, granularity: 'month', buckets };
+    }
+
+    const days = range === 'week' ? 7 : 30;
+    const buckets: string[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setUTCDate(d.getUTCDate() - i);
+      buckets.push(d.toISOString().slice(0, 10));
+    }
+    return { since: buckets[0], granularity: 'day', buckets };
   }
 }
