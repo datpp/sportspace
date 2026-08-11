@@ -2,7 +2,7 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { faker } from '@faker-js/faker';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Repository, SelectQueryBuilder } from 'typeorm';
-import { Role } from '@sportspace/shared';
+import { Role, VenueStatus } from '@sportspace/shared';
 import { VenueService } from './venue.service';
 import { Venue } from './entities/venue.entity';
 import { User } from '../user/entities/user.entity';
@@ -28,7 +28,7 @@ function buildVenue(overrides: Partial<Venue> = {}): Venue {
     address: faker.location.streetAddress(),
     lat: 10.76,
     lng: 106.66,
-    status: 'PENDING',
+    status: VenueStatus.PENDING,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -55,6 +55,7 @@ describe('VenueService', () => {
     venueRepo = createMock<Repository<Venue>>();
     queryBuilder = createMock<SelectQueryBuilder<Venue>>();
 
+    queryBuilder.where.mockReturnValue(queryBuilder);
     queryBuilder.innerJoin.mockReturnValue(queryBuilder);
     queryBuilder.distinct.mockReturnValue(queryBuilder);
     queryBuilder.addSelect.mockReturnValue(queryBuilder);
@@ -115,6 +116,15 @@ describe('VenueService', () => {
   });
 
   describe('findAll', () => {
+    it('only searches APPROVED venues', async () => {
+      await service.findAll({});
+
+      expect(queryBuilder.where).toHaveBeenCalledWith(
+        'venue.status = :status',
+        { status: VenueStatus.APPROVED },
+      );
+    });
+
     it('sorts by distance and binds lat/lng params when both are given', async () => {
       await service.findAll({ lat: 10.76, lng: 106.66 });
 
@@ -208,6 +218,41 @@ describe('VenueService', () => {
         service.remove(venue.id, buildAuthUser({ role: Role.PLAYER })),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(venueRepo.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('approve', () => {
+    it('sets status to APPROVED and saves', async () => {
+      const venue = buildVenue({ status: VenueStatus.PENDING });
+      venueRepo.findOne.mockResolvedValue(venue);
+
+      const result = await service.approve(venue.id);
+
+      expect(result.status).toBe(VenueStatus.APPROVED);
+      expect(venueRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: VenueStatus.APPROVED }),
+      );
+    });
+
+    it('throws NotFoundException for a missing venue', async () => {
+      venueRepo.findOne.mockResolvedValue(null);
+      await expect(service.approve(faker.string.uuid())).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('reject', () => {
+    it('sets status to REJECTED and saves', async () => {
+      const venue = buildVenue({ status: VenueStatus.PENDING });
+      venueRepo.findOne.mockResolvedValue(venue);
+
+      const result = await service.reject(venue.id);
+
+      expect(result.status).toBe(VenueStatus.REJECTED);
+      expect(venueRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: VenueStatus.REJECTED }),
+      );
     });
   });
 });

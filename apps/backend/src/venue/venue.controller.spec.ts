@@ -58,4 +58,26 @@ describe('VenueController', () => {
     expect(service.update).toHaveBeenCalledWith(id, { name: 'X' }, user);
     expect(result).toBe(expected);
   });
+
+  it('approve() forwards the venue id to VenueService.approve', async () => {
+    const id = faker.string.uuid();
+    const expected = createMock<Venue>();
+    service.approve.mockResolvedValue(expected);
+
+    const result = await controller.approve(id);
+
+    expect(service.approve).toHaveBeenCalledWith(id);
+    expect(result).toBe(expected);
+  });
+
+  it('reject() forwards the venue id to VenueService.reject', async () => {
+    const id = faker.string.uuid();
+    const expected = createMock<Venue>();
+    service.reject.mockResolvedValue(expected);
+
+    const result = await controller.reject(id);
+
+    expect(service.reject).toHaveBeenCalledWith(id);
+    expect(result).toBe(expected);
+  });
 });

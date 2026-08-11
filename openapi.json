@@ -409,6 +409,78 @@
         ]
       }
     },
+    "/venues/{id}/approve": {
+      "post": {
+        "operationId": "VenueController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Duyệt cụm sân (chỉ ADMIN)",
+        "tags": [
+          "venues"
+        ]
+      }
+    },
+    "/venues/{id}/reject": {
+      "post": {
+        "operationId": "VenueController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Từ chối cụm sân (chỉ ADMIN)",
+        "tags": [
+          "venues"
+        ]
+      }
+    },
     "/courts": {
       "post": {
         "operationId": "CourtController_create",
@@ -1555,7 +1627,12 @@
             "nullable": true
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED"
+            ]
           },
           "createdAt": {
             "format": "date-time",

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Role } from '@sportspace/shared';
+import { Role, VenueStatus } from '@sportspace/shared';
 import { CreateVenueDto } from './dto/create-venue.dto';
 import { UpdateVenueDto } from './dto/update-venue.dto';
 import { FindVenuesQueryDto } from './dto/find-venues-query.dto';
@@ -36,7 +36,9 @@ export class VenueService {
   }
 
   findAll(query: FindVenuesQueryDto): Promise<Venue[]> {
-    const qb = this.venueRepo.createQueryBuilder('venue');
+    const qb = this.venueRepo
+      .createQueryBuilder('venue')
+      .where('venue.status = :status', { status: VenueStatus.APPROVED });
 
     if (query.sport) {
       qb.innerJoin('venue.courts', 'court', 'court.sport = :sport', {
@@ -84,6 +86,18 @@ export class VenueService {
     const venue = await this.findOne(id);
     this.assertOwnerOrAdmin(venue, user);
     await this.venueRepo.remove(venue);
+  }
+
+  async approve(id: string): Promise<Venue> {
+    const venue = await this.findOne(id);
+    venue.status = VenueStatus.APPROVED;
+    return this.venueRepo.save(venue);
+  }
+
+  async reject(id: string): Promise<Venue> {
+    const venue = await this.findOne(id);
+    venue.status = VenueStatus.REJECTED;
+    return this.venueRepo.save(venue);
   }
 
   private assertOwnerOrAdmin(venue: Venue, user: AuthenticatedUser): void {

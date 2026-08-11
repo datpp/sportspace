@@ -76,4 +76,24 @@ export class VenueController {
   remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.venueService.remove(id, user);
   }
+
+  @Post(':id/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Duyệt cụm sân (chỉ ADMIN)' })
+  @ApiCreatedResponse({ type: Venue })
+  approve(@Param('id') id: string) {
+    return this.venueService.approve(id);
+  }
+
+  @Post(':id/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Từ chối cụm sân (chỉ ADMIN)' })
+  @ApiCreatedResponse({ type: Venue })
+  reject(@Param('id') id: string) {
+    return this.venueService.reject(id);
+  }
 }

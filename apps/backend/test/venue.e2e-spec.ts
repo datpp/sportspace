@@ -20,11 +20,14 @@ describe('Venue + Court (e2e)', () => {
   let dataSource: DataSource;
   let merchant: User;
   let otherMerchant: User;
+  let admin: User;
   let merchantToken: string;
   let otherMerchantToken: string;
   let playerToken: string;
+  let adminToken: string;
   let venueId: string;
   let courtId: string;
+  let rejectedVenueId: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -52,6 +55,12 @@ describe('Venue + Court (e2e)', () => {
       fullName: faker.person.fullName(),
       role: Role.MERCHANT,
     });
+    admin = await dataSource.getRepository(User).save({
+      email: faker.internet.email(),
+      passwordHash,
+      fullName: faker.person.fullName(),
+      role: Role.ADMIN,
+    });
 
     const login = async (email: string) => {
       const res = await request(app.getHttpServer())
@@ -62,6 +71,7 @@ describe('Venue + Court (e2e)', () => {
     };
     merchantToken = await login(merchant.email);
     otherMerchantToken = await login(otherMerchant.email);
+    adminToken = await login(admin.email);
 
     const playerRes = await request(app.getHttpServer())
       .post('/auth/register')
@@ -84,8 +94,12 @@ describe('Venue + Court (e2e)', () => {
     if (venueId) {
       await dataSource.getRepository(Venue).delete({ id: venueId });
     }
+    if (rejectedVenueId) {
+      await dataSource.getRepository(Venue).delete({ id: rejectedVenueId });
+    }
     await dataSource.getRepository(User).delete({ id: merchant.id });
     await dataSource.getRepository(User).delete({ id: otherMerchant.id });
+    await dataSource.getRepository(User).delete({ id: admin.id });
     await app.close();
   });
 
@@ -145,13 +159,75 @@ describe('Venue + Court (e2e)', () => {
       .expect(403);
   });
 
-  it('finds the venue publicly by sport, no auth required', async () => {
+  it('does not show the venue in public search while still PENDING', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/venues')
+      .query({ sport: 'football' })
+      .expect(200);
+
+    expect(res.body.some((v: { id: string }) => v.id === venueId)).toBe(false);
+  });
+
+  it('rejects approve/reject by the owning MERCHANT and by a PLAYER (403)', async () => {
+    await request(app.getHttpServer())
+      .post(`/venues/${venueId}/approve`)
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .expect(403);
+    await request(app.getHttpServer())
+      .post(`/venues/${venueId}/approve`)
+      .set('Authorization', `Bearer ${playerToken}`)
+      .expect(403);
+  });
+
+  it('rejects approve/reject with no token (401)', async () => {
+    await request(app.getHttpServer())
+      .post(`/venues/${venueId}/approve`)
+      .expect(401);
+  });
+
+  it('lets an ADMIN approve the venue', async () => {
+    const res = await request(app.getHttpServer())
+      .post(`/venues/${venueId}/approve`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201);
+
+    expect(res.body.status).toBe('APPROVED');
+  });
+
+  it('finds the venue publicly by sport once APPROVED, no auth required', async () => {
     const res = await request(app.getHttpServer())
       .get('/venues')
       .query({ sport: 'football' })
       .expect(200);
 
     expect(res.body.some((v: { id: string }) => v.id === venueId)).toBe(true);
+  });
+
+  it('never shows a REJECTED venue in public search', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/venues')
+      .set('Authorization', `Bearer ${otherMerchantToken}`)
+      .send({
+        name: 'To Be Rejected',
+        address: '456 Test St',
+        lat: 10.762622,
+        lng: 106.660172,
+      })
+      .expect(201);
+    rejectedVenueId = createRes.body.id;
+
+    const rejectRes = await request(app.getHttpServer())
+      .post(`/venues/${rejectedVenueId}/reject`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201);
+    expect(rejectRes.body.status).toBe('REJECTED');
+
+    const searchRes = await request(app.getHttpServer())
+      .get('/venues')
+      .expect(200);
+    expect(
+      searchRes.body.some((v: { id: string }) => v.id === rejectedVenueId),
+    ).toBe(false);
   });
 
   it('adds a price rule and reflects it in the slots for the matching hour', async () => {

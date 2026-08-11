@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { VenueStatus } from '@sportspace/shared';
 import { User } from '../../user/entities/user.entity';
 import { Court } from './court.entity';
 import { decimalTransformer } from '../../database/decimal.transformer';
@@ -58,9 +59,9 @@ export class Venue {
   @Column({ nullable: true })
   description: string;
 
-  @ApiProperty()
-  @Column({ default: 'PENDING' })
-  status: string;
+  @ApiProperty({ enum: VenueStatus })
+  @Column({ type: 'varchar', default: VenueStatus.PENDING })
+  status: VenueStatus;
 
   @ApiProperty()
   @CreateDateColumn()
