@@ -3,6 +3,16 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  --rc-grid: #e1e0d9;
+  --rc-axis: #c3c2b7;
+  --rc-tick: #898781;
+  --rc-label: #52514e;
+  --rc-line: #2a78d6;
+  --rc-tooltip-bg: #fcfcfb;
+  --rc-tooltip-border: #e1e0d9;
+  --rc-tooltip-text: #0b0b0b;
+  --rc-tooltip-muted: #52514e;
 }
 
 @theme inline {
@@ -16,6 +26,16 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    --rc-grid: #2c2c2a;
+    --rc-axis: #383835;
+    --rc-tick: #898781;
+    --rc-label: #c3c2b7;
+    --rc-line: #3987e5;
+    --rc-tooltip-bg: #1a1a19;
+    --rc-tooltip-border: #2c2c2a;
+    --rc-tooltip-text: #ffffff;
+    --rc-tooltip-muted: #c3c2b7;
   }
 }
 

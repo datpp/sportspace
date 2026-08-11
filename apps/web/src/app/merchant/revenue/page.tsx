@@ -1,11 +1,17 @@
 import Link from 'next/link';
-import { MerchantControllerGetRevenueRange } from '@sportspace/shared';
+import {
+  MerchantControllerGetRevenueRange,
+  MerchantControllerGetRevenueTimeseriesRange,
+  type RevenueTimeseriesPointDto,
+} from '@sportspace/shared';
 import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 import { handleApiError } from '@/lib/handle-api-error';
+import { RevenueTrendChart } from './revenue-trend-chart';
 
 const RANGE_ORDER = ['day', 'week', 'month', 'year'] as const;
 type Range = (typeof RANGE_ORDER)[number];
+type TimeseriesRange = Exclude<Range, 'day'>;
 
 const RANGE_LABELS: Record<Range, string> = {
   day: 'Hôm nay',
@@ -16,6 +22,10 @@ const RANGE_LABELS: Record<Range, string> = {
 
 function isValidRange(value: string | undefined): value is Range {
   return value !== undefined && (RANGE_ORDER as readonly string[]).includes(value);
+}
+
+function hasTimeseries(range: Range): range is TimeseriesRange {
+  return range !== 'day';
 }
 
 function formatVnd(value: number): string {
@@ -35,12 +45,21 @@ export default async function RevenuePage({
 
   let totalRevenue: number;
   let totalBookings: number;
+  let timeseries: RevenueTimeseriesPointDto[] | undefined;
   try {
-    const { data } = await merchant.merchantControllerGetRevenue({
-      range: selectedRange as MerchantControllerGetRevenueRange,
-    });
-    totalRevenue = Number(data.totalRevenue);
-    totalBookings = Number(data.totalBookings);
+    const [revenueRes, timeseriesRes] = await Promise.all([
+      merchant.merchantControllerGetRevenue({
+        range: selectedRange as MerchantControllerGetRevenueRange,
+      }),
+      hasTimeseries(selectedRange)
+        ? merchant.merchantControllerGetRevenueTimeseries({
+            range: selectedRange as MerchantControllerGetRevenueTimeseriesRange,
+          })
+        : Promise.resolve(undefined),
+    ]);
+    totalRevenue = Number(revenueRes.data.totalRevenue);
+    totalBookings = Number(revenueRes.data.totalBookings);
+    timeseries = timeseriesRes?.data;
   } catch (err) {
     handleApiError(err);
   }
@@ -80,6 +99,19 @@ export default async function RevenuePage({
       {totalRevenue === 0 && (
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Chưa có doanh thu trong khoảng thời gian này.
+        </p>
+      )}
+
+      {hasTimeseries(selectedRange) && timeseries ? (
+        <div>
+          <h2 className="mb-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+            Xu hướng doanh thu
+          </h2>
+          <RevenueTrendChart data={timeseries} range={selectedRange} />
+        </div>
+      ) : (
+        <p className="text-sm text-zinc-500">
+          Chọn Tuần này, Tháng này hoặc Năm nay để xem biểu đồ xu hướng.
         </p>
       )}
     </div>
