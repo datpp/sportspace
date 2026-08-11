@@ -154,6 +154,7 @@ describe('Realtime slot updates (e2e)', () => {
 
     await request(app.getHttpServer())
       .post(`/bookings/${bookingId}/cancel`)
+      .set('Authorization', `Bearer ${accessToken}`)
       .expect(201);
 
     await expect(eventPromise).resolves.toEqual({

@@ -787,6 +787,12 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Booking của tôi (ADMIN xem tất cả)",
         "tags": [
           "bookings"
         ]
@@ -817,6 +823,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "bookings"
         ]
@@ -855,6 +866,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "bookings"
         ]
@@ -876,6 +892,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "bookings"
         ]
@@ -906,6 +927,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Hủy đơn đặt sân",
         "tags": [
           "bookings"

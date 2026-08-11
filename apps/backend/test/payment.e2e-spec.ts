@@ -197,6 +197,7 @@ describe('Payment / VNPAY (e2e)', () => {
 
       const bookingRes = await request(app.getHttpServer())
         .get(`/bookings/${bookingId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       expect(bookingRes.body.status).toBe('CONFIRMED');
 
@@ -247,6 +248,7 @@ describe('Payment / VNPAY (e2e)', () => {
 
       const bookingRes = await request(app.getHttpServer())
         .get(`/bookings/${bookingId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       expect(bookingRes.body.status).toBe('PENDING');
     });
@@ -271,6 +273,7 @@ describe('Payment / VNPAY (e2e)', () => {
 
       const bookingRes = await request(app.getHttpServer())
         .get(`/bookings/${bookingId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       expect(bookingRes.body.status).toBe('PENDING');
     });
@@ -315,6 +318,7 @@ describe('Payment / VNPAY (e2e)', () => {
 
       const bookingRes = await request(app.getHttpServer())
         .get(`/bookings/${bookingId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       expect(bookingRes.body.status).toBe('PENDING');
 

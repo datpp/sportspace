@@ -3,9 +3,10 @@ import { faker } from '@faker-js/faker';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { BookingStatus } from '@sportspace/shared';
+import { BookingStatus, Role } from '@sportspace/shared';
 import {
   DataSource,
   EntityManager,
@@ -19,6 +20,7 @@ import { Court } from '../venue/entities/court.entity';
 import { User } from '../user/entities/user.entity';
 import { RedisService } from '../redis/redis.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
 function buildCourt(overrides: Partial<Court> = {}): Court {
@@ -54,6 +56,17 @@ function buildCreateDto(
     bookingDate: '2026-08-10',
     startTime: '09:00',
     endTime: '10:00',
+    ...overrides,
+  };
+}
+
+function buildAuthUser(
+  overrides: Partial<AuthenticatedUser> = {},
+): AuthenticatedUser {
+  return {
+    id: faker.string.uuid(),
+    email: faker.internet.email(),
+    role: Role.PLAYER,
     ...overrides,
   };
 }
@@ -209,11 +222,18 @@ describe('BookingService', () => {
 
   describe('cancel', () => {
     it('sets status to CANCELLED, saves, and broadcasts the freed slot', async () => {
-      const booking = buildBookingRow({ status: BookingStatus.CONFIRMED });
+      const owner = buildUser();
+      const booking = buildBookingRow({
+        user: owner,
+        status: BookingStatus.CONFIRMED,
+      });
       bookingRepo.findOne.mockResolvedValue(booking);
       bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
 
-      const result = await service.cancel(booking.id);
+      const result = await service.cancel(
+        booking.id,
+        buildAuthUser({ id: owner.id }),
+      );
 
       expect(result.status).toBe(BookingStatus.CANCELLED);
       expect(bookingRepo.save).toHaveBeenCalledWith(
@@ -229,9 +249,114 @@ describe('BookingService', () => {
 
     it('throws NotFoundException for a missing booking', async () => {
       bookingRepo.findOne.mockResolvedValue(null);
-      await expect(service.cancel(faker.string.uuid())).rejects.toBeInstanceOf(
-        NotFoundException,
+      await expect(
+        service.cancel(faker.string.uuid(), buildAuthUser()),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws ForbiddenException when a different PLAYER tries to cancel', async () => {
+      const booking = buildBookingRow({ user: buildUser() });
+      bookingRepo.findOne.mockResolvedValue(booking);
+
+      await expect(
+        service.cancel(booking.id, buildAuthUser({ role: Role.PLAYER })),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(bookingRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('allows an ADMIN to cancel any booking', async () => {
+      const booking = buildBookingRow({
+        user: buildUser(),
+        status: BookingStatus.CONFIRMED,
+      });
+      bookingRepo.findOne.mockResolvedValue(booking);
+      bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
+
+      const result = await service.cancel(
+        booking.id,
+        buildAuthUser({ role: Role.ADMIN }),
       );
+
+      expect(result.status).toBe(BookingStatus.CANCELLED);
+    });
+  });
+
+  describe('findAll', () => {
+    it("scopes a PLAYER's results to their own bookings", async () => {
+      const user = buildAuthUser({ role: Role.PLAYER });
+      bookingRepo.find.mockResolvedValue([]);
+
+      await service.findAll(user);
+
+      expect(bookingRepo.find).toHaveBeenCalledWith({
+        where: { user: { id: user.id } },
+        relations: { court: true, user: true },
+      });
+    });
+
+    it('returns every booking for an ADMIN, unfiltered', async () => {
+      const user = buildAuthUser({ role: Role.ADMIN });
+      bookingRepo.find.mockResolvedValue([]);
+
+      await service.findAll(user);
+
+      expect(bookingRepo.find).toHaveBeenCalledWith({
+        where: {},
+        relations: { court: true, user: true },
+      });
+    });
+  });
+
+  describe('findOne', () => {
+    it('throws ForbiddenException when a different PLAYER requests the booking', async () => {
+      const booking = buildBookingRow({ user: buildUser() });
+      bookingRepo.findOne.mockResolvedValue(booking);
+
+      await expect(
+        service.findOne(booking.id, buildAuthUser({ role: Role.PLAYER })),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('allows the owner to fetch their own booking', async () => {
+      const owner = buildUser();
+      const booking = buildBookingRow({ user: owner });
+      bookingRepo.findOne.mockResolvedValue(booking);
+
+      await expect(
+        service.findOne(booking.id, buildAuthUser({ id: owner.id })),
+      ).resolves.toBe(booking);
+    });
+
+    it('allows an ADMIN to fetch any booking', async () => {
+      const booking = buildBookingRow({ user: buildUser() });
+      bookingRepo.findOne.mockResolvedValue(booking);
+
+      await expect(
+        service.findOne(booking.id, buildAuthUser({ role: Role.ADMIN })),
+      ).resolves.toBe(booking);
+    });
+  });
+
+  describe('remove', () => {
+    it('throws ForbiddenException when a different PLAYER tries to delete', async () => {
+      const booking = buildBookingRow({ user: buildUser() });
+      bookingRepo.findOne.mockResolvedValue(booking);
+
+      await expect(
+        service.remove(booking.id, buildAuthUser({ role: Role.PLAYER })),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(bookingRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes when the caller owns the booking', async () => {
+      const owner = buildUser();
+      const booking = buildBookingRow({ user: owner });
+      bookingRepo.findOne.mockResolvedValue(booking);
+      bookingRepo.delete.mockResolvedValue({ affected: 1, raw: undefined });
+
+      await service.remove(booking.id, buildAuthUser({ id: owner.id }));
+
+      expect(bookingRepo.delete).toHaveBeenCalledWith(booking.id);
     });
   });
 
@@ -239,8 +364,10 @@ describe('BookingService', () => {
     it('reschedules to a new slot: broadcasts the old slot freed and the new slot taken', async () => {
       const court = buildCourt();
       const newCourt = buildCourt();
+      const owner = buildUser();
       const current = buildBookingRow({
         court,
+        user: owner,
         bookingDate: '2026-08-10',
         startTime: '09:00',
         endTime: '10:00',
@@ -252,12 +379,16 @@ describe('BookingService', () => {
         return Promise.resolve(null);
       });
 
-      await service.update(current.id, {
-        courtId: newCourt.id,
-        bookingDate: '2026-08-11',
-        startTime: '14:00',
-        endTime: '15:00',
-      });
+      await service.update(
+        current.id,
+        {
+          courtId: newCourt.id,
+          bookingDate: '2026-08-11',
+          startTime: '14:00',
+          endTime: '15:00',
+        },
+        buildAuthUser({ id: owner.id }),
+      );
 
       expect(realtimeGateway.broadcastSlotUpdate).toHaveBeenCalledWith({
         courtId: court.id,
@@ -274,15 +405,34 @@ describe('BookingService', () => {
     });
 
     it('does not broadcast when the slot is unchanged', async () => {
+      const owner = buildUser();
       const current = buildBookingRow({
+        user: owner,
         bookingDate: '2026-08-10',
         startTime: '09:00',
       });
       bookingRepo.findOne.mockResolvedValue(current);
 
-      await service.update(current.id, { bookingDate: '2026-08-10' });
+      await service.update(
+        current.id,
+        { bookingDate: '2026-08-10' },
+        buildAuthUser({ id: owner.id }),
+      );
 
       expect(realtimeGateway.broadcastSlotUpdate).not.toHaveBeenCalled();
+    });
+
+    it('throws ForbiddenException when a different PLAYER tries to reschedule', async () => {
+      const current = buildBookingRow({ user: buildUser() });
+      bookingRepo.findOne.mockResolvedValue(current);
+
+      await expect(
+        service.update(
+          current.id,
+          { bookingDate: '2026-08-12' },
+          buildAuthUser({ role: Role.PLAYER }),
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 

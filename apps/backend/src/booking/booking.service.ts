@@ -1,11 +1,12 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { BookingStatus } from '@sportspace/shared';
+import { BookingStatus, Role } from '@sportspace/shared';
 import {
   DataSource,
   EntityManager,
@@ -18,6 +19,7 @@ import { Court } from '../venue/entities/court.entity';
 import { PriceRule } from '../venue/entities/price-rule.entity';
 import { User } from '../user/entities/user.entity';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { RevenueQueryDto } from './dto/revenue-query.dto';
@@ -101,11 +103,15 @@ export class BookingService {
     return booking;
   }
 
-  findAll(): Promise<Booking[]> {
-    return this.bookingRepo.find({ relations: { court: true, user: true } });
+  findAll(user: AuthenticatedUser): Promise<Booking[]> {
+    const where = user.role === Role.ADMIN ? {} : { user: { id: user.id } };
+    return this.bookingRepo.find({
+      where,
+      relations: { court: true, user: true },
+    });
   }
 
-  async findOne(id: string): Promise<Booking> {
+  async findOne(id: string, user: AuthenticatedUser): Promise<Booking> {
     const booking = await this.bookingRepo.findOne({
       where: { id },
       relations: { court: true, user: true },
@@ -113,11 +119,16 @@ export class BookingService {
     if (!booking) {
       throw new NotFoundException('Booking không tồn tại');
     }
+    this.assertOwnerOrAdmin(booking, user);
     return booking;
   }
 
-  async update(id: string, dto: UpdateBookingDto): Promise<Booking> {
-    const current = await this.findOne(id);
+  async update(
+    id: string,
+    dto: UpdateBookingDto,
+    user: AuthenticatedUser,
+  ): Promise<Booking> {
+    const current = await this.findOne(id, user);
     const courtId = dto.courtId ?? current.court.id;
     const bookingDate = dto.bookingDate ?? current.bookingDate;
     const startTime = dto.startTime ?? current.startTime;
@@ -176,11 +187,11 @@ export class BookingService {
       status: current.status,
     });
 
-    return this.findOne(id);
+    return this.findOne(id, user);
   }
 
-  async cancel(id: string): Promise<Booking> {
-    const booking = await this.findOne(id);
+  async cancel(id: string, user: AuthenticatedUser): Promise<Booking> {
+    const booking = await this.findOne(id, user);
     if (booking.status !== BookingStatus.CANCELLED) {
       booking.status = BookingStatus.CANCELLED;
       await this.bookingRepo.save(booking);
@@ -194,10 +205,19 @@ export class BookingService {
     return booking;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, user: AuthenticatedUser): Promise<void> {
+    await this.findOne(id, user);
     const result = await this.bookingRepo.delete(id);
     if (!result.affected) {
       throw new NotFoundException('Booking không tồn tại');
+    }
+  }
+
+  private assertOwnerOrAdmin(booking: Booking, user: AuthenticatedUser): void {
+    if (user.role !== Role.ADMIN && booking.user.id !== user.id) {
+      throw new ForbiddenException(
+        'Bạn không có quyền thao tác trên đơn đặt sân này',
+      );
     }
   }
 

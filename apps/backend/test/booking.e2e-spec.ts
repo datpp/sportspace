@@ -19,6 +19,8 @@ describe('Booking (e2e)', () => {
   let court: Court;
   let playerId: string;
   let accessToken: string;
+  let otherPlayerId: string;
+  let otherAccessToken: string;
   const createdBookingIds: string[] = [];
 
   beforeAll(async () => {
@@ -65,6 +67,17 @@ describe('Booking (e2e)', () => {
 
     playerId = registerRes.body.userId;
     accessToken = registerRes.body.accessToken;
+
+    const otherRegisterRes = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: faker.internet.email(),
+        password: 'Password123!',
+        fullName: faker.person.fullName(),
+      })
+      .expect(201);
+    otherPlayerId = otherRegisterRes.body.userId;
+    otherAccessToken = otherRegisterRes.body.accessToken;
   });
 
   afterAll(async () => {
@@ -75,6 +88,7 @@ describe('Booking (e2e)', () => {
     await dataSource.getRepository(Venue).delete({ id: venue.id });
     await dataSource.getRepository(User).delete({ id: owner.id });
     await dataSource.getRepository(User).delete({ id: playerId });
+    await dataSource.getRepository(User).delete({ id: otherPlayerId });
     await app.close();
   });
 
@@ -135,6 +149,7 @@ describe('Booking (e2e)', () => {
 
     await request(app.getHttpServer())
       .post(`/bookings/${bookingId}/cancel`)
+      .set('Authorization', `Bearer ${accessToken}`)
       .expect(201);
 
     const res = await request(app.getHttpServer())
@@ -149,5 +164,80 @@ describe('Booking (e2e)', () => {
       .expect(201);
 
     createdBookingIds.push(res.body.id);
+  });
+
+  describe('authorization', () => {
+    let ownBookingId: string;
+
+    beforeAll(async () => {
+      const res = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-05',
+          startTime: '09:00',
+          endTime: '10:00',
+        })
+        .expect(201);
+      ownBookingId = res.body.id;
+      createdBookingIds.push(ownBookingId);
+    });
+
+    it('rejects every read/write route with no Authorization header (401)', async () => {
+      await request(app.getHttpServer()).get('/bookings').expect(401);
+      await request(app.getHttpServer())
+        .get(`/bookings/${ownBookingId}`)
+        .expect(401);
+      await request(app.getHttpServer())
+        .patch(`/bookings/${ownBookingId}`)
+        .send({ startTime: '11:00' })
+        .expect(401);
+      await request(app.getHttpServer())
+        .post(`/bookings/${ownBookingId}/cancel`)
+        .expect(401);
+      await request(app.getHttpServer())
+        .delete(`/bookings/${ownBookingId}`)
+        .expect(401);
+    });
+
+    it('rejects a different PLAYER from reading, updating, cancelling or deleting the booking (403)', async () => {
+      await request(app.getHttpServer())
+        .get(`/bookings/${ownBookingId}`)
+        .set('Authorization', `Bearer ${otherAccessToken}`)
+        .expect(403);
+      await request(app.getHttpServer())
+        .patch(`/bookings/${ownBookingId}`)
+        .set('Authorization', `Bearer ${otherAccessToken}`)
+        .send({ startTime: '11:00' })
+        .expect(403);
+      await request(app.getHttpServer())
+        .post(`/bookings/${ownBookingId}/cancel`)
+        .set('Authorization', `Bearer ${otherAccessToken}`)
+        .expect(403);
+      await request(app.getHttpServer())
+        .delete(`/bookings/${ownBookingId}`)
+        .set('Authorization', `Bearer ${otherAccessToken}`)
+        .expect(403);
+    });
+
+    it("GET /bookings only returns the caller's own bookings, never another player's", async () => {
+      const res = await request(app.getHttpServer())
+        .get('/bookings')
+        .set('Authorization', `Bearer ${otherAccessToken}`)
+        .expect(200);
+
+      const ids = (res.body as { id: string }[]).map((b) => b.id);
+      expect(ids).not.toContain(ownBookingId);
+    });
+
+    it('lets the owner read their own booking', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/bookings/${ownBookingId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+
+      expect(res.body.id).toBe(ownBookingId);
+    });
   });
 });
