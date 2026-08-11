@@ -2,11 +2,22 @@ import React from 'react';
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { http, HttpResponse } from 'msw';
+import { BookingStatus } from '@sportspace/shared';
 import { server } from '../../../test-utils/server';
 import { CourtSlotsScreen } from '../CourtSlotsScreen';
 import { toDateOnlyString } from '../../../utils/date';
+import { useCourtSlotUpdates } from '../../../hooks/useCourtSlotUpdates';
 import type { VenuesStackParamList } from '../../../navigation/types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+// useCourtSlotUpdates dùng realtimeSocket thật (socket.io-client) — mock hẳn
+// hook để test screen này không mở kết nối mạng thật; hành vi hook được test
+// riêng ở useCourtSlotUpdates.test.ts.
+jest.mock('../../../hooks/useCourtSlotUpdates', () => ({
+  useCourtSlotUpdates: jest.fn(),
+}));
+
+const mockedUseCourtSlotUpdates = useCourtSlotUpdates as jest.MockedFunction<typeof useCourtSlotUpdates>;
 
 const navigate = jest.fn();
 const navigation = { navigate } as unknown as NativeStackNavigationProp<
@@ -34,6 +45,7 @@ async function renderScreen() {
 describe('CourtSlotsScreen', () => {
   afterEach(() => {
     navigate.mockClear();
+    mockedUseCourtSlotUpdates.mockReset();
   });
 
   it('hiển thị ô giờ trống có thể bấm và ô đã đặt bị disable', async () => {
@@ -111,5 +123,36 @@ describe('CourtSlotsScreen', () => {
     await renderScreen();
 
     expect(await screen.findByTestId('court-slots-error')).toBeTruthy();
+  });
+
+  it('nhận court:slotUpdate qua WS thì cập nhật available của đúng slot tại chỗ', async () => {
+    server.use(
+      http.get('*/courts/:id/slots', () =>
+        HttpResponse.json(
+          [{ startTime: '06:00', endTime: '07:00', price: 200000, available: false }],
+          { status: 200 },
+        ),
+      ),
+    );
+    await renderScreen();
+    const slotBefore = await screen.findByTestId('slot-06:00');
+    expect(slotBefore.props.accessibilityState?.disabled).toBe(true);
+
+    expect(mockedUseCourtSlotUpdates).toHaveBeenCalledWith(
+      'court-1',
+      expect.any(String),
+      expect.any(Function),
+    );
+    const handleSlotUpdate = mockedUseCourtSlotUpdates.mock.calls[0][2];
+    handleSlotUpdate({
+      courtId: 'court-1',
+      bookingDate: mockedUseCourtSlotUpdates.mock.calls[0][1],
+      startTime: '06:00',
+      status: BookingStatus.CANCELLED,
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('slot-06:00').props.accessibilityState?.disabled).toBe(false),
+    );
   });
 });

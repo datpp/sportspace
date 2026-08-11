@@ -3,8 +3,11 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Tex
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { SlotDto } from '@sportspace/shared';
+import { BookingStatus } from '@sportspace/shared';
 import { courtsApi } from '../../api/client';
 import { toDateOnlyString } from '../../utils/date';
+import { useCourtSlotUpdates } from '../../hooks/useCourtSlotUpdates';
+import type { SlotUpdatePayload } from '../../realtime/socket';
 import type { VenuesStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<VenuesStackParamList, 'CourtSlots'>;
@@ -55,6 +58,21 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
     setIsRefreshing(true);
     void fetchSlots({ silent: true });
   }, [fetchSlots]);
+
+  // Cập nhật tại chỗ trong lúc đang xem màn hình (bổ sung cho REST refetch ở
+  // useFocusEffect phía trên, không thay thế) — thấy ngay khi người khác vừa
+  // đặt/huỷ ô giờ mà không cần tự kéo refresh.
+  const handleSlotUpdate = useCallback((payload: SlotUpdatePayload) => {
+    setSlots((prev) =>
+      prev?.map((slot) =>
+        slot.startTime === payload.startTime
+          ? { ...slot, available: payload.status === BookingStatus.CANCELLED }
+          : slot,
+      ) ?? prev,
+    );
+  }, []);
+
+  useCourtSlotUpdates(courtId, dateString, handleSlotUpdate);
 
   return (
     <View style={styles.container} testID="court-slots-screen">
