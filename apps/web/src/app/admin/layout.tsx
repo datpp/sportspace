@@ -7,9 +7,6 @@ import { LogoutButton } from '@/components/logout-button';
 const NAV_ITEMS = [
   { href: '/admin', label: 'Tổng quan' },
   { href: '/admin/venues', label: 'Duyệt sân' },
-  { href: '/admin/users', label: 'Người dùng' },
-  { href: '/admin/disputes', label: 'Tranh chấp' },
-  { href: '/admin/settings', label: 'Cấu hình hệ thống' },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

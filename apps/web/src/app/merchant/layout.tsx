@@ -9,7 +9,6 @@ const NAV_ITEMS = [
   { href: '/merchant/venues', label: 'Cụm sân' },
   { href: '/merchant/venues/new', label: 'Tạo cụm sân mới' },
   { href: '/merchant/revenue', label: 'Doanh thu' },
-  { href: '/merchant/staff', label: 'Nhân viên' },
 ];
 
 export default async function MerchantLayout({ children }: { children: React.ReactNode }) {
