@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAuth, getVenues, getCourts, getMerchant } from '@sportspace/shared';
+import { getAuth, getVenues, getCourts, getMerchant, getAdmin } from '@sportspace/shared';
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:3000';
 
@@ -17,5 +17,6 @@ export function createAuthenticatedApiClient(accessToken: string) {
     venues: getVenues(instance),
     courts: getCourts(instance),
     merchant: getMerchant(instance),
+    admin: getAdmin(instance),
   };
 }

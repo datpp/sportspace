@@ -30,10 +30,11 @@ describe('createAuthenticatedApiClient', () => {
     expect(config?.headers).toEqual({ Authorization: 'Bearer my-token' });
   });
 
-  it('trả về client cho venues, courts, merchant', () => {
+  it('trả về client cho venues, courts, merchant, admin', () => {
     const client = createAuthenticatedApiClient('my-token');
     expect(client.venues.venueControllerFindAll).toBeInstanceOf(Function);
     expect(client.courts.courtControllerFindAll).toBeInstanceOf(Function);
     expect(client.merchant.merchantControllerGetRevenue).toBeInstanceOf(Function);
+    expect(client.admin.adminControllerGetVenues).toBeInstanceOf(Function);
   });
 });
