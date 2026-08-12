@@ -11,6 +11,7 @@ import { VenueDetailScreen } from '../screens/venues/VenueDetailScreen';
 import { CourtSlotsScreen } from '../screens/venues/CourtSlotsScreen';
 import { BookingConfirmScreen } from '../screens/venues/BookingConfirmScreen';
 import { MyBookingsScreen } from '../screens/bookings/MyBookingsScreen';
+import { NotificationsScreen } from '../screens/notifications/NotificationsScreen';
 import { AccountScreen } from '../screens/AccountScreen';
 import type { AuthStackParamList, RootTabParamList, VenuesStackParamList } from './types';
 
@@ -55,6 +56,11 @@ function AppTabs() {
     <RootTab.Navigator>
       <RootTab.Screen name="Venues" component={VenuesNavigator} options={{ headerShown: false, title: 'Tìm sân' }} />
       <RootTab.Screen name="MyBookings" component={MyBookingsScreen} options={{ title: 'Lịch của tôi' }} />
+      <RootTab.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ title: 'Thông báo' }}
+      />
       <RootTab.Screen name="Account" component={AccountScreen} options={{ title: 'Tài khoản' }} />
     </RootTab.Navigator>
   );

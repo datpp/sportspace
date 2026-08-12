@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAuth, getBookings, getCourts, getPayments, getVenues } from '@sportspace/shared';
+import { getAuth, getBookings, getCourts, getNotifications, getPayments, getVenues } from '@sportspace/shared';
 import { getAccessToken } from '../auth/session';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -40,3 +40,4 @@ export const venuesApi = getVenues(apiClient);
 export const courtsApi = getCourts(apiClient);
 export const bookingsApi = getBookings(apiClient);
 export const paymentsApi = getPayments(apiClient);
+export const notificationsApi = getNotifications(apiClient);

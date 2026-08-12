@@ -21,5 +21,6 @@ export type VenuesStackParamList = {
 export type RootTabParamList = {
   Venues: undefined;
   MyBookings: undefined;
+  Notifications: undefined;
   Account: undefined;
 };
