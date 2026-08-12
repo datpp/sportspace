@@ -10,9 +10,11 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Booking } from '@sportspace/shared';
 import { BookingStatus } from '@sportspace/shared';
 import { bookingsApi } from '../../api/client';
+import type { MyBookingsStackParamList } from '../../navigation/types';
 
 const STATUS_LABEL: Record<string, string> = {
   [BookingStatus.PENDING]: 'Đang giữ chỗ',
@@ -20,7 +22,9 @@ const STATUS_LABEL: Record<string, string> = {
   [BookingStatus.CANCELLED]: 'Đã huỷ',
 };
 
-export function MyBookingsScreen() {
+type Props = NativeStackScreenProps<MyBookingsStackParamList, 'MyBookingsList'>;
+
+export function MyBookingsScreen({ navigation }: Props) {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -109,6 +113,7 @@ export function MyBookingsScreen() {
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
       renderItem={({ item }) => {
         const cancellable = item.status !== BookingStatus.CANCELLED;
+        const canCreateMatch = item.status === BookingStatus.CONFIRMED;
         return (
           <View testID={`booking-item-${item.id}`} style={styles.card}>
             <Text style={styles.cardTitle}>{item.court.name}</Text>
@@ -117,18 +122,37 @@ export function MyBookingsScreen() {
             </Text>
             <Text style={styles.cardStatus}>{STATUS_LABEL[item.status] ?? item.status}</Text>
             <Text style={styles.cardPrice}>{item.totalAmount.toLocaleString('vi-VN')} đ</Text>
-            {cancellable ? (
-              <Pressable
-                testID={`booking-cancel-${item.id}`}
-                style={styles.cancelButton}
-                disabled={cancellingId === item.id}
-                onPress={() => confirmCancel(item.id)}
-              >
-                <Text style={styles.cancelButtonText}>
-                  {cancellingId === item.id ? 'Đang huỷ...' : 'Huỷ lịch'}
-                </Text>
-              </Pressable>
-            ) : null}
+            <View style={styles.cardActions}>
+              {canCreateMatch ? (
+                <Pressable
+                  testID={`booking-create-match-${item.id}`}
+                  style={styles.matchButton}
+                  onPress={() =>
+                    navigation.navigate('CreateMatch', {
+                      bookingId: item.id,
+                      courtName: item.court.name,
+                      bookingDate: item.bookingDate,
+                      startTime: item.startTime,
+                      endTime: item.endTime,
+                    })
+                  }
+                >
+                  <Text style={styles.matchButtonText}>Tạo kèo</Text>
+                </Pressable>
+              ) : null}
+              {cancellable ? (
+                <Pressable
+                  testID={`booking-cancel-${item.id}`}
+                  style={styles.cancelButton}
+                  disabled={cancellingId === item.id}
+                  onPress={() => confirmCancel(item.id)}
+                >
+                  <Text style={styles.cancelButtonText}>
+                    {cancellingId === item.id ? 'Đang huỷ...' : 'Huỷ lịch'}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         );
       }}
@@ -153,8 +177,16 @@ const styles = StyleSheet.create({
   cardSubtitle: { color: '#555' },
   cardStatus: { color: '#1d4ed8', fontWeight: '600' },
   cardPrice: { fontWeight: '600' },
+  cardActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  matchButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#16a34a',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  matchButtonText: { color: '#fff', fontWeight: '600' },
   cancelButton: {
-    marginTop: 8,
     alignSelf: 'flex-start',
     backgroundColor: '#dc2626',
     borderRadius: 6,

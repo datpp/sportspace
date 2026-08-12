@@ -11,13 +11,24 @@ import { VenueDetailScreen } from '../screens/venues/VenueDetailScreen';
 import { CourtSlotsScreen } from '../screens/venues/CourtSlotsScreen';
 import { BookingConfirmScreen } from '../screens/venues/BookingConfirmScreen';
 import { MyBookingsScreen } from '../screens/bookings/MyBookingsScreen';
+import { CreateMatchScreen } from '../screens/bookings/CreateMatchScreen';
+import { MatchListScreen } from '../screens/matches/MatchListScreen';
+import { MatchDetailScreen } from '../screens/matches/MatchDetailScreen';
 import { NotificationsScreen } from '../screens/notifications/NotificationsScreen';
 import { AccountScreen } from '../screens/AccountScreen';
-import type { AuthStackParamList, RootTabParamList, VenuesStackParamList } from './types';
+import type {
+  AuthStackParamList,
+  MatchesStackParamList,
+  MyBookingsStackParamList,
+  RootTabParamList,
+  VenuesStackParamList,
+} from './types';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const RootTab = createBottomTabNavigator<RootTabParamList>();
 const VenuesStack = createNativeStackNavigator<VenuesStackParamList>();
+const MyBookingsStack = createNativeStackNavigator<MyBookingsStackParamList>();
+const MatchesStack = createNativeStackNavigator<MatchesStackParamList>();
 
 function AuthNavigator() {
   return (
@@ -51,11 +62,50 @@ function VenuesNavigator() {
   );
 }
 
+function MyBookingsNavigator() {
+  return (
+    <MyBookingsStack.Navigator>
+      <MyBookingsStack.Screen
+        name="MyBookingsList"
+        component={MyBookingsScreen}
+        options={{ title: 'Lịch của tôi' }}
+      />
+      <MyBookingsStack.Screen
+        name="CreateMatch"
+        component={CreateMatchScreen}
+        options={{ title: 'Tạo kèo' }}
+      />
+    </MyBookingsStack.Navigator>
+  );
+}
+
+function MatchesNavigator() {
+  return (
+    <MatchesStack.Navigator>
+      <MatchesStack.Screen name="MatchList" component={MatchListScreen} options={{ title: 'Tìm kèo' }} />
+      <MatchesStack.Screen
+        name="MatchDetail"
+        component={MatchDetailScreen}
+        options={{ title: 'Chi tiết kèo' }}
+      />
+    </MatchesStack.Navigator>
+  );
+}
+
 function AppTabs() {
   return (
     <RootTab.Navigator>
       <RootTab.Screen name="Venues" component={VenuesNavigator} options={{ headerShown: false, title: 'Tìm sân' }} />
-      <RootTab.Screen name="MyBookings" component={MyBookingsScreen} options={{ title: 'Lịch của tôi' }} />
+      <RootTab.Screen
+        name="MyBookings"
+        component={MyBookingsNavigator}
+        options={{ headerShown: false, title: 'Lịch của tôi' }}
+      />
+      <RootTab.Screen
+        name="Matches"
+        component={MatchesNavigator}
+        options={{ headerShown: false, title: 'Kèo' }}
+      />
       <RootTab.Screen
         name="Notifications"
         component={NotificationsScreen}

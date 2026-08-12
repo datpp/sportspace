@@ -18,9 +18,26 @@ export type VenuesStackParamList = {
   };
 };
 
+export type MyBookingsStackParamList = {
+  MyBookingsList: undefined;
+  CreateMatch: {
+    bookingId: string;
+    courtName: string;
+    bookingDate: string;
+    startTime: string;
+    endTime: string;
+  };
+};
+
+export type MatchesStackParamList = {
+  MatchList: undefined;
+  MatchDetail: { matchId: string };
+};
+
 export type RootTabParamList = {
   Venues: undefined;
   MyBookings: undefined;
+  Matches: undefined;
   Notifications: undefined;
   Account: undefined;
 };

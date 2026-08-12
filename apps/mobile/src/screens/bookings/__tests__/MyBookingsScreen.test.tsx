@@ -10,12 +10,20 @@ import {
 } from '@sportspace/shared/mocks';
 import { BookingStatus } from '@sportspace/shared';
 import { MyBookingsScreen } from '../MyBookingsScreen';
+import type { MyBookingsStackParamList } from '../../../navigation/types';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+const navigate = jest.fn();
+const navigation = { navigate } as unknown as NativeStackNavigationProp<
+  MyBookingsStackParamList,
+  'MyBookingsList'
+>;
 
 async function renderScreen() {
   return render(
     // MyBookingsScreen dùng useFocusEffect để refetch khi tab được focus lại.
     <NavigationContainer>
-      <MyBookingsScreen />
+      <MyBookingsScreen navigation={navigation} route={{ key: 'MyBookingsList', name: 'MyBookingsList' }} />
     </NavigationContainer>,
   );
 }
@@ -23,6 +31,7 @@ async function renderScreen() {
 describe('MyBookingsScreen', () => {
   afterEach(() => {
     jest.restoreAllMocks();
+    navigate.mockClear();
   });
 
   it('hiển thị danh sách lịch đặt sân sau khi tải xong', async () => {
@@ -99,5 +108,34 @@ describe('MyBookingsScreen', () => {
     expect(screen.getByTestId(`booking-item-${booking.id}`)).toHaveTextContent('Đã xác nhận', {
       exact: false,
     });
+  });
+
+  it('booking CONFIRMED hiện nút Tạo kèo, bấm điều hướng sang CreateMatch đúng tham số', async () => {
+    const booking = getBookingControllerFindAllResponseMock()[0];
+    booking.status = BookingStatus.CONFIRMED;
+    server.use(http.get('*/bookings', () => HttpResponse.json([booking], { status: 200 })));
+    const user = userEvent.setup();
+    await renderScreen();
+
+    const createMatchButton = await screen.findByTestId(`booking-create-match-${booking.id}`);
+    await user.press(createMatchButton);
+
+    expect(navigate).toHaveBeenCalledWith('CreateMatch', {
+      bookingId: booking.id,
+      courtName: booking.court.name,
+      bookingDate: booking.bookingDate,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+    });
+  });
+
+  it('booking PENDING không hiện nút Tạo kèo', async () => {
+    const booking = getBookingControllerFindAllResponseMock()[0];
+    booking.status = BookingStatus.PENDING;
+    server.use(http.get('*/bookings', () => HttpResponse.json([booking], { status: 200 })));
+    await renderScreen();
+
+    await screen.findByTestId(`booking-item-${booking.id}`);
+    expect(screen.queryByTestId(`booking-create-match-${booking.id}`)).toBeNull();
   });
 });

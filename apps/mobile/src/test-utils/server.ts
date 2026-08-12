@@ -6,6 +6,7 @@ import {
   getAuthMock,
   getBookingsMock,
   getCourtsMock,
+  getMatchesMock,
   getNotificationsMock,
   getPaymentsMock,
   getVenuesMock,
@@ -23,5 +24,6 @@ export const server = setupServer(
     ...getBookingsMock(),
     ...getPaymentsMock(),
     ...getNotificationsMock(),
+    ...getMatchesMock(),
   ] as unknown as Parameters<typeof setupServer>),
 );
