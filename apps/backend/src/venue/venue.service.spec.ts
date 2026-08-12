@@ -115,6 +115,32 @@ describe('VenueService', () => {
     });
   });
 
+  describe('findAllForAdmin', () => {
+    it('queries venues by the given status and loads the owner relation', async () => {
+      const pending = [buildVenue({ status: VenueStatus.PENDING })];
+      venueRepo.find.mockResolvedValue(pending);
+
+      const result = await service.findAllForAdmin(VenueStatus.PENDING);
+
+      expect(venueRepo.find).toHaveBeenCalledWith({
+        where: { status: VenueStatus.PENDING },
+        relations: { owner: true, courts: true },
+        order: { createdAt: 'DESC' },
+      });
+      expect(result).toBe(pending);
+    });
+
+    it('queries by whatever status is passed in, not just PENDING', async () => {
+      venueRepo.find.mockResolvedValue([]);
+
+      await service.findAllForAdmin(VenueStatus.REJECTED);
+
+      expect(venueRepo.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { status: VenueStatus.REJECTED } }),
+      );
+    });
+  });
+
   describe('findAll', () => {
     it('only searches APPROVED venues', async () => {
       await service.findAll({});

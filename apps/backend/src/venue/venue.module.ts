@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { VenueService } from './venue.service';
 import { VenueController } from './venue.controller';
+import { AdminController } from './admin.controller';
 import { CourtController } from './court.controller';
 import { Venue } from './entities/venue.entity';
 import { Court } from './entities/court.entity';
@@ -11,7 +12,7 @@ import { CourtService } from './court.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Venue, Court, PriceRule, Review])],
-  controllers: [VenueController, CourtController],
+  controllers: [VenueController, CourtController, AdminController],
   providers: [VenueService, CourtService],
   exports: [VenueService],
 })

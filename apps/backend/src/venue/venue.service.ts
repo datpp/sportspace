@@ -35,6 +35,14 @@ export class VenueService {
     });
   }
 
+  findAllForAdmin(status: VenueStatus): Promise<Venue[]> {
+    return this.venueRepo.find({
+      where: { status },
+      relations: { owner: true, courts: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   findAll(query: FindVenuesQueryDto): Promise<Venue[]> {
     const qb = this.venueRepo
       .createQueryBuilder('venue')

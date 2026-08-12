@@ -805,6 +805,51 @@
         ]
       }
     },
+    "/admin/venues": {
+      "get": {
+        "operationId": "AdminController_getVenues",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "PENDING",
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Venue"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Danh sách cụm sân theo status để duyệt (mặc định PENDING)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/bookings": {
       "post": {
         "operationId": "BookingController_create",
