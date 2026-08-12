@@ -133,6 +133,16 @@ describe('Matching (e2e)', () => {
       .delete([confirmedBooking.id, pendingBooking.id]);
     await dataSource.getRepository(Court).delete({ id: court.id });
     await dataSource.getRepository(Venue).delete({ id: venue.id });
+    // join/accept/reject now write to `notifications`, so those rows must go
+    // before the users they reference (FK) — see notification.entity.ts.
+    await dataSource
+      .createQueryBuilder()
+      .delete()
+      .from('notifications')
+      .where('user_id IN (:...ids)', {
+        ids: [owner.id, host.id, playerA.id, playerB.id, playerC.id],
+      })
+      .execute();
     await dataSource.getRepository(User).delete({ id: owner.id });
     await dataSource
       .getRepository(User)

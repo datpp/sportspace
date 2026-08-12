@@ -18,6 +18,7 @@ function buildUser(overrides: Partial<User> = {}): User {
     fullName: faker.person.fullName(),
     phone: faker.phone.number(),
     role: Role.PLAYER,
+    fcmToken: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

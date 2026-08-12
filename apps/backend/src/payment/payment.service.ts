@@ -10,6 +10,7 @@ import { BookingStatus, PaymentStatus } from '@sportspace/shared';
 import { DataSource, Repository } from 'typeorm';
 import { Booking } from '../booking/entities/booking.entity';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { NotificationService } from '../notification/notification.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { CheckoutDto } from './dto/checkout.dto';
@@ -52,6 +53,7 @@ export class PaymentService {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly config: ConfigService,
     private readonly realtimeGateway: RealtimeGateway,
+    private readonly notificationService: NotificationService,
   ) {}
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -175,6 +177,7 @@ export class PaymentService {
         .setLock('pessimistic_write')
         .innerJoinAndSelect('payment.booking', 'booking')
         .innerJoinAndSelect('booking.court', 'court')
+        .innerJoinAndSelect('booking.user', 'user')
         .where('payment.transactionRef = :txnRef', { txnRef: query.vnp_TxnRef })
         .getOne();
 
@@ -206,7 +209,8 @@ export class PaymentService {
         };
       }
 
-      if (query.vnp_ResponseCode === '00') {
+      const isSuccess = query.vnp_ResponseCode === '00';
+      if (isSuccess) {
         payment.status = PaymentStatus.PAID;
         await queryRunner.manager.save(Payment, payment);
         await queryRunner.manager.update(Booking, payment.booking.id, {
@@ -224,6 +228,22 @@ export class PaymentService {
       }
 
       await queryRunner.commitTransaction();
+
+      if (isSuccess) {
+        // Best-effort, outside the DB transaction and after commit: a
+        // notification failure must not roll back a payment that VNPAY
+        // already considers confirmed, nor break the IPN response.
+        try {
+          await this.notificationService.notify(
+            payment.booking.user.id,
+            'Đặt sân thành công',
+            `Đơn đặt sân ngày ${payment.booking.bookingDate} lúc ${payment.booking.startTime} đã được xác nhận.`,
+          );
+        } catch {
+          // Swallow: history is best-effort, IPN must still ack VNPAY.
+        }
+      }
+
       return { RspCode: IpnRspCode.SUCCESS, Message: 'Confirm Success' };
     } catch (err) {
       await queryRunner.rollbackTransaction();

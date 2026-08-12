@@ -24,6 +24,7 @@ import { MatchParticipant } from './entities/match-participant.entity';
 import { Booking } from '../booking/entities/booking.entity';
 import { User } from '../user/entities/user.entity';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { NotificationService } from '../notification/notification.service';
 
 function buildUser(overrides: Partial<User> = {}): User {
   return {
@@ -103,6 +104,7 @@ describe('MatchingService', () => {
   let manager: DeepMocked<EntityManager>;
   let lockQueryBuilder: DeepMocked<SelectQueryBuilder<Match>>;
   let findAllQueryBuilder: DeepMocked<SelectQueryBuilder<Match>>;
+  let notificationService: DeepMocked<NotificationService>;
 
   beforeEach(() => {
     matchRepo = createMock<Repository<Match>>();
@@ -113,6 +115,7 @@ describe('MatchingService', () => {
     manager = createMock<EntityManager>();
     lockQueryBuilder = createMock<SelectQueryBuilder<Match>>();
     findAllQueryBuilder = createMock<SelectQueryBuilder<Match>>();
+    notificationService = createMock<NotificationService>();
 
     lockQueryBuilder.setLock.mockReturnValue(lockQueryBuilder);
     lockQueryBuilder.innerJoinAndSelect.mockReturnValue(lockQueryBuilder);
@@ -145,6 +148,7 @@ describe('MatchingService', () => {
       participantRepo,
       bookingRepo,
       dataSource,
+      notificationService,
     );
   });
 
@@ -315,6 +319,24 @@ describe('MatchingService', () => {
       const result = await service.join(match.id, faker.string.uuid());
 
       expect(result.status).toBe(MatchParticipantStatus.REQUESTED);
+      expect(notificationService.notify).toHaveBeenCalledWith(
+        match.host.id,
+        expect.any(String),
+        expect.any(String),
+      );
+    });
+
+    it('does not throw when the host notification write fails (best-effort)', async () => {
+      const match = buildMatch();
+      matchRepo.findOne.mockResolvedValue(match);
+      participantRepo.findOne.mockResolvedValue(null);
+      notificationService.notify.mockRejectedValue(new Error('db down'));
+
+      await expect(
+        service.join(match.id, faker.string.uuid()),
+      ).resolves.toEqual(
+        expect.objectContaining({ status: MatchParticipantStatus.REQUESTED }),
+      );
     });
   });
 
@@ -377,6 +399,11 @@ describe('MatchingService', () => {
       expect(match.slotsFilled).toBe(1);
       expect(match.status).toBe(MatchStatus.OPEN);
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      expect(notificationService.notify).toHaveBeenCalledWith(
+        participant.user.id,
+        expect.any(String),
+        expect.any(String),
+      );
     });
 
     it('auto-closes the match once slotsFilled reaches slotsTotal', async () => {
@@ -425,6 +452,11 @@ describe('MatchingService', () => {
 
       expect(result.status).toBe(MatchParticipantStatus.REJECTED);
       expect(match.slotsFilled).toBe(0);
+      expect(notificationService.notify).toHaveBeenCalledWith(
+        participant.user.id,
+        expect.any(String),
+        expect.any(String),
+      );
     });
   });
 });

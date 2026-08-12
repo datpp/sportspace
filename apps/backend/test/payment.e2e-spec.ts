@@ -99,6 +99,16 @@ describe('Payment / VNPAY (e2e)', () => {
     }
     await dataSource.getRepository(Court).delete({ id: court.id });
     await dataSource.getRepository(Venue).delete({ id: venue.id });
+    // Payment IPN confirmation now writes to `notifications`, so those rows
+    // must go before the users they reference (FK) — see notification.entity.ts.
+    await dataSource
+      .createQueryBuilder()
+      .delete()
+      .from('notifications')
+      .where('user_id IN (:...ids)', {
+        ids: [owner.id, playerId, otherPlayerId],
+      })
+      .execute();
     await dataSource.getRepository(User).delete({ id: owner.id });
     await dataSource.getRepository(User).delete({ id: playerId });
     await dataSource.getRepository(User).delete({ id: otherPlayerId });

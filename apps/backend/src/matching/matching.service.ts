@@ -20,6 +20,7 @@ import { UpdateMatchDto } from './dto/update-match.dto';
 import { FindMatchesQueryDto } from './dto/find-matches-query.dto';
 import { Match } from './entities/match.entity';
 import { MatchParticipant } from './entities/match-participant.entity';
+import { NotificationService } from '../notification/notification.service';
 
 const ACTIVE_PARTICIPANT_STATUSES = [
   MatchParticipantStatus.REQUESTED,
@@ -35,7 +36,21 @@ export class MatchingService {
     @InjectRepository(Booking)
     private readonly bookingRepo: Repository<Booking>,
     @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly notificationService: NotificationService,
   ) {}
+
+  /** Best-effort: a notification failure must never fail the underlying action. */
+  private async notifySafe(
+    userId: string,
+    title: string,
+    body: string,
+  ): Promise<void> {
+    try {
+      await this.notificationService.notify(userId, title, body);
+    } catch {
+      // Swallow: history is best-effort.
+    }
+  }
 
   async create(hostId: string, dto: CreateMatchDto): Promise<Match> {
     const booking = await this.bookingRepo.findOne({
@@ -149,7 +164,13 @@ export class MatchingService {
       user: { id: userId } as User,
       status: MatchParticipantStatus.REQUESTED,
     });
-    return this.participantRepo.save(participant);
+    const saved = await this.participantRepo.save(participant);
+    await this.notifySafe(
+      match.host.id,
+      'Có yêu cầu xin ghép kèo mới',
+      'Kèo của bạn vừa có người xin ghép. Vào ứng dụng để duyệt yêu cầu.',
+    );
+    return saved;
   }
 
   /**
@@ -203,6 +224,11 @@ export class MatchingService {
       await queryRunner.manager.save(Match, match);
 
       await queryRunner.commitTransaction();
+      await this.notifySafe(
+        participant.user.id,
+        'Yêu cầu ghép kèo được chấp nhận',
+        'Chủ kèo đã chấp nhận yêu cầu xin ghép của bạn.',
+      );
       return participant;
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -222,6 +248,7 @@ export class MatchingService {
 
     const participant = await this.participantRepo.findOne({
       where: { id: participantId, match: { id: matchId } },
+      relations: { user: true },
     });
     if (!participant) {
       throw new NotFoundException('Yêu cầu ghép kèo không tồn tại');
@@ -231,7 +258,13 @@ export class MatchingService {
     }
 
     participant.status = MatchParticipantStatus.REJECTED;
-    return this.participantRepo.save(participant);
+    const saved = await this.participantRepo.save(participant);
+    await this.notifySafe(
+      participant.user.id,
+      'Yêu cầu ghép kèo bị từ chối',
+      'Chủ kèo đã từ chối yêu cầu xin ghép của bạn.',
+    );
+    return saved;
   }
 
   private assertHostOrAdmin(match: Match, user: AuthenticatedUser): void {

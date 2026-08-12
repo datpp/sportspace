@@ -20,6 +20,7 @@ import { Booking } from '../booking/entities/booking.entity';
 import { Court } from '../venue/entities/court.entity';
 import { User } from '../user/entities/user.entity';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { NotificationService } from '../notification/notification.service';
 import { VnpayIpnQuery } from './dto/vnpay-ipn-query.dto';
 import { signVnpayParams, toVnpayAmount } from './vnpay.util';
 
@@ -119,6 +120,7 @@ describe('PaymentService', () => {
   let manager: DeepMocked<EntityManager>;
   let queryBuilder: DeepMocked<SelectQueryBuilder<Payment>>;
   let realtimeGateway: DeepMocked<RealtimeGateway>;
+  let notificationService: DeepMocked<NotificationService>;
 
   beforeEach(() => {
     paymentRepo = createMock<Repository<Payment>>();
@@ -126,6 +128,7 @@ describe('PaymentService', () => {
     dataSource = createMock<DataSource>();
     config = createMock<ConfigService>();
     realtimeGateway = createMock<RealtimeGateway>();
+    notificationService = createMock<NotificationService>();
     queryRunner = createMock<QueryRunner>();
     manager = createMock<EntityManager>();
     queryBuilder = createMock<SelectQueryBuilder<Payment>>();
@@ -157,6 +160,7 @@ describe('PaymentService', () => {
       dataSource,
       config,
       realtimeGateway,
+      notificationService,
     );
   });
 
@@ -323,6 +327,33 @@ describe('PaymentService', () => {
         startTime: booking.startTime,
         status: BookingStatus.CONFIRMED,
       });
+      expect(notificationService.notify).toHaveBeenCalledWith(
+        booking.user.id,
+        expect.any(String),
+        expect.any(String),
+      );
+    });
+
+    it('still replies RspCode 00 when the notification history write fails (best-effort)', async () => {
+      const booking = buildBooking({ status: BookingStatus.PENDING });
+      const payment = buildPayment({
+        booking,
+        amount: 200000,
+        status: PaymentStatus.PENDING,
+      });
+      queryBuilder.getOne.mockResolvedValue(payment);
+      notificationService.notify.mockRejectedValue(new Error('db down'));
+      const query = buildSignedIpnQuery({
+        vnp_TxnRef: payment.transactionRef,
+        vnp_Amount: toVnpayAmount(200000),
+        vnp_ResponseCode: '00',
+      });
+
+      const result = await service.handleIpn(query);
+
+      expect(result).toEqual({ RspCode: '00', Message: 'Confirm Success' });
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      expect(queryRunner.rollbackTransaction).not.toHaveBeenCalled();
     });
 
     it('marks payment FAILED (but still replies RspCode 00) when VNPAY reports a failed transaction', async () => {
@@ -348,6 +379,7 @@ describe('PaymentService', () => {
       );
       expect(manager.update).not.toHaveBeenCalled();
       expect(realtimeGateway.broadcastSlotUpdate).not.toHaveBeenCalled();
+      expect(notificationService.notify).not.toHaveBeenCalled();
     });
   });
 });
