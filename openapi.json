@@ -1862,6 +1862,35 @@
           "updatedAt"
         ]
       },
+      "MatchParticipant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "REQUESTED",
+              "ACCEPTED",
+              "REJECTED"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user",
+          "status",
+          "createdAt"
+        ]
+      },
       "Match": {
         "type": "object",
         "properties": {
@@ -1873,6 +1902,12 @@
           },
           "host": {
             "$ref": "#/components/schemas/User"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchParticipant"
+            }
           },
           "slotsTotal": {
             "type": "number"
@@ -1904,6 +1939,7 @@
           "id",
           "booking",
           "host",
+          "participants",
           "slotsTotal",
           "slotsFilled",
           "status",
@@ -1921,35 +1957,6 @@
             "type": "string"
           }
         }
-      },
-      "MatchParticipant": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "user": {
-            "$ref": "#/components/schemas/User"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "REQUESTED",
-              "ACCEPTED",
-              "REJECTED"
-            ]
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "user",
-          "status",
-          "createdAt"
-        ]
       },
       "Notification": {
         "type": "object",

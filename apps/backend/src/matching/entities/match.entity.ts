@@ -30,10 +30,11 @@ export class Match {
   @JoinColumn({ name: 'host_id' })
   host: User;
 
-  // No @ApiProperty(): MatchParticipant.match would be a circular
-  // back-reference to this same array — see court.entity.ts for the same
-  // pattern (Court.priceRules embeds PriceRule, so PriceRule.court stays
-  // undecorated).
+  // Forward direction embeds the array, so it gets @ApiProperty(); the back
+  // reference (MatchParticipant.match) stays undecorated to avoid a circular
+  // schema — see court.entity.ts for the same pattern (Court.priceRules
+  // decorated, PriceRule.court not).
+  @ApiProperty({ type: () => [MatchParticipant] })
   @OneToMany(() => MatchParticipant, (participant) => participant.match)
   participants: MatchParticipant[];
 
