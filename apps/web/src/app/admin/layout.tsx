@@ -19,18 +19,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="flex min-h-full flex-1">
-      <aside className="flex w-56 flex-col gap-1 border-r border-zinc-200 p-4 dark:border-zinc-800">
+    <div className="flex min-h-full flex-1 flex-col sm:flex-row">
+      <aside className="flex flex-col gap-1 border-b border-zinc-200 p-4 sm:w-56 sm:border-b-0 sm:border-r dark:border-zinc-800">
         <p className="mb-2 px-2 text-xs font-semibold uppercase text-zinc-500">Admin</p>
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="rounded px-2 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
-          >
-            {item.label}
-          </Link>
-        ))}
+        <div className="flex flex-row gap-1 overflow-x-auto sm:flex-col sm:overflow-visible">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="shrink-0 rounded px-2 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
       </aside>
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-end border-b border-zinc-200 p-4 dark:border-zinc-800">

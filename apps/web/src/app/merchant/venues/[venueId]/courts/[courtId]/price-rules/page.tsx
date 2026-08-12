@@ -7,6 +7,10 @@ import { removePriceRule } from './actions';
 
 const DAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
+function formatTime(time: string): string {
+  return time.slice(0, 5);
+}
+
 export default async function PriceRulesPage({
   params,
 }: {
@@ -51,7 +55,7 @@ export default async function PriceRulesPage({
             className="flex items-center justify-between rounded border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-800"
           >
             <span>
-              {DAY_LABELS[rule.dayOfWeek]} {rule.startTime}–{rule.endTime}:{' '}
+              {DAY_LABELS[rule.dayOfWeek]} {formatTime(rule.startTime)}–{formatTime(rule.endTime)}:{' '}
               {Number(rule.price).toLocaleString('vi-VN')}đ
             </span>
             <form action={removePriceRule.bind(null, venueId, courtId, rule.id)}>
