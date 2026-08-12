@@ -18,3 +18,4 @@ export * from './generated/payments/payments.msw';
 export * from './generated/matches/matches.msw';
 export * from './generated/admin/admin.msw';
 export * from './generated/notifications/notifications.msw';
+export * from './generated/users/users.msw';

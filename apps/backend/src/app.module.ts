@@ -11,6 +11,7 @@ import { PaymentModule } from './payment/payment.module';
 import { NotificationModule } from './notification/notification.module';
 import { RedisModule } from './redis/redis.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     NotificationModule,
     RedisModule,
     RealtimeModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -27,3 +27,4 @@ export * from './generated/merchant/merchant';
 export * from './generated/payments/payments';
 export * from './generated/matches/matches';
 export * from './generated/notifications/notifications';
+export * from './generated/users/users';

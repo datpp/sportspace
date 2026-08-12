@@ -1586,6 +1586,36 @@
           "payments"
         ]
       }
+    },
+    "/users/me/fcm-token": {
+      "patch": {
+        "operationId": "UserController_updateFcmToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFcmTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cập nhật FCM device token của chính mình",
+        "tags": [
+          "users"
+        ]
+      }
     }
   },
   "info": {
@@ -2321,6 +2351,17 @@
         },
         "required": [
           "paymentUrl"
+        ]
+      },
+      "UpdateFcmTokenDto": {
+        "type": "object",
+        "properties": {
+          "fcmToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fcmToken"
         ]
       }
     }
