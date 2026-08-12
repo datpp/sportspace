@@ -6,6 +6,8 @@
 // '@sportspace/shared/mocks' instead.
 // Each *.msw.ts also re-exports its *.faker.ts response generators, so this
 // alone covers both without a separate .faker export.
+// One line per orval tag folder under ./generated/ — same list as index.ts,
+// keep both in sync when a new @ApiTags() controller is added.
 export * from './generated/app/app.msw';
 export * from './generated/auth/auth.msw';
 export * from './generated/venues/venues.msw';
@@ -14,3 +16,5 @@ export * from './generated/bookings/bookings.msw';
 export * from './generated/merchant/merchant.msw';
 export * from './generated/payments/payments.msw';
 export * from './generated/matches/matches.msw';
+export * from './generated/admin/admin.msw';
+export * from './generated/notifications/notifications.msw';
