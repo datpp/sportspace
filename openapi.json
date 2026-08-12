@@ -95,9 +95,21 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Match"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tạo kèo từ 1 booking đã CONFIRMED",
         "tags": [
           "matches"
@@ -105,12 +117,32 @@
       },
       "get": {
         "operationId": "MatchingController_findAll",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "sport",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Match"
+                  }
+                }
+              }
+            }
           }
         },
+        "summary": "Tìm kèo đang mở (lọc theo bộ môn)",
         "tags": [
           "matches"
         ]
@@ -131,7 +163,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Match"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -162,9 +201,21 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Match"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "matches"
         ]
@@ -186,6 +237,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "matches"
         ]
@@ -204,22 +260,112 @@
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JoinMatchDto"
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchParticipant"
+                }
               }
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Xin ghép kèo",
+        "tags": [
+          "matches"
+        ]
+      }
+    },
+    "/matches/{id}/participants/{participantId}/accept": {
+      "post": {
+        "operationId": "MatchingController_acceptParticipant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "participantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchParticipant"
+                }
+              }
+            }
           }
         },
-        "summary": "Xin ghép kèo",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Chủ kèo duyệt yêu cầu ghép",
+        "tags": [
+          "matches"
+        ]
+      }
+    },
+    "/matches/{id}/participants/{participantId}/reject": {
+      "post": {
+        "operationId": "MatchingController_rejectParticipant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "participantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchParticipant"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Chủ kèo từ chối yêu cầu ghép",
         "tags": [
           "matches"
         ]
@@ -1476,92 +1622,6 @@
           "slotsTotal"
         ]
       },
-      "UpdateMatchDto": {
-        "type": "object",
-        "properties": {
-          "bookingId": {
-            "type": "string"
-          },
-          "slotsTotal": {
-            "type": "number"
-          },
-          "skillLevel": {
-            "type": "string"
-          }
-        }
-      },
-      "JoinMatchDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "CreateVenueDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "address": {
-            "type": "string"
-          },
-          "lat": {
-            "type": "number"
-          },
-          "lng": {
-            "type": "number"
-          },
-          "description": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "address",
-          "lat",
-          "lng"
-        ]
-      },
-      "User": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "fullName": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string",
-            "nullable": true
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "PLAYER",
-              "MERCHANT",
-              "ADMIN"
-            ]
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "email",
-          "fullName",
-          "role",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
       "PriceRule": {
         "type": "object",
         "properties": {
@@ -1638,6 +1698,217 @@
           "basePrice",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "PLAYER",
+              "MERCHANT",
+              "ADMIN"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "fullName",
+          "role",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "court": {
+            "$ref": "#/components/schemas/Court"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "bookingDate": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "CANCELLED"
+            ]
+          },
+          "totalAmount": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "court",
+          "user",
+          "bookingDate",
+          "startTime",
+          "endTime",
+          "status",
+          "totalAmount",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Match": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "booking": {
+            "$ref": "#/components/schemas/Booking"
+          },
+          "host": {
+            "$ref": "#/components/schemas/User"
+          },
+          "slotsTotal": {
+            "type": "number"
+          },
+          "slotsFilled": {
+            "type": "number"
+          },
+          "skillLevel": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "CLOSED"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "booking",
+          "host",
+          "slotsTotal",
+          "slotsFilled",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateMatchDto": {
+        "type": "object",
+        "properties": {
+          "slotsTotal": {
+            "type": "number"
+          },
+          "skillLevel": {
+            "type": "string"
+          }
+        }
+      },
+      "MatchParticipant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "REQUESTED",
+              "ACCEPTED",
+              "REJECTED"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user",
+          "status",
+          "createdAt"
+        ]
+      },
+      "CreateVenueDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "address",
+          "lat",
+          "lng"
         ]
       },
       "Venue": {
@@ -1826,60 +2097,6 @@
           "bookingDate",
           "startTime",
           "endTime"
-        ]
-      },
-      "Booking": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "court": {
-            "$ref": "#/components/schemas/Court"
-          },
-          "user": {
-            "$ref": "#/components/schemas/User"
-          },
-          "bookingDate": {
-            "type": "string"
-          },
-          "startTime": {
-            "type": "string"
-          },
-          "endTime": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "CONFIRMED",
-              "CANCELLED"
-            ]
-          },
-          "totalAmount": {
-            "type": "number"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "court",
-          "user",
-          "bookingDate",
-          "startTime",
-          "endTime",
-          "status",
-          "totalAmount",
-          "createdAt",
-          "updatedAt"
         ]
       },
       "UpdateBookingDto": {

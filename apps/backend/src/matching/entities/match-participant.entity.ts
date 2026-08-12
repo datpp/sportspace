@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { MatchParticipantStatus } from '@sportspace/shared';
 import { Match } from './match.entity';
 import { User } from '../../user/entities/user.entity';
@@ -12,17 +13,22 @@ import {
 
 @Entity('match_participants')
 export class MatchParticipant {
+  @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  // No @ApiProperty(): Match.participants already embeds MatchParticipant,
+  // so this would be a circular back-reference — see match.entity.ts.
   @ManyToOne(() => Match)
   @JoinColumn({ name: 'match_id' })
   match: Match;
 
+  @ApiProperty({ type: () => User })
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
   user: User;
 
+  @ApiProperty({ enum: MatchParticipantStatus })
   @Column({
     type: 'enum',
     enum: MatchParticipantStatus,
@@ -30,6 +36,7 @@ export class MatchParticipant {
   })
   status: MatchParticipantStatus;
 
+  @ApiProperty()
   @CreateDateColumn()
   createdAt: Date;
 }
