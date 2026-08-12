@@ -34,6 +34,10 @@ export class User {
   @Column({ type: 'enum', enum: Role, default: Role.PLAYER })
   role: Role;
 
+  // No @ApiProperty() — internal device token, never in Swagger docs/responses.
+  @Column({ nullable: true, type: 'varchar' })
+  fcmToken: string | null;
+
   @ApiProperty()
   @CreateDateColumn()
   createdAt: Date;
