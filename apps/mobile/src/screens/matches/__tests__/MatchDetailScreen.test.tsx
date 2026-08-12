@@ -1,9 +1,12 @@
 import React from 'react';
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { http, HttpResponse } from 'msw';
-import { MatchStatus, Role } from '@sportspace/shared';
+import { MatchParticipantStatus, MatchStatus, Role } from '@sportspace/shared';
 import { server } from '../../../test-utils/server';
-import { getMatchingControllerFindOneResponseMock } from '@sportspace/shared/mocks';
+import {
+  getMatchingControllerFindOneResponseMock,
+  getMatchingControllerJoinResponseMock,
+} from '@sportspace/shared/mocks';
 import type { Match } from '@sportspace/shared';
 import { MatchDetailScreen } from '../MatchDetailScreen';
 import { AuthProvider } from '../../../auth/AuthContext';
@@ -57,15 +60,87 @@ describe('MatchDetailScreen', () => {
     expect(await screen.findByTestId('match-detail-error')).toBeTruthy();
   });
 
-  it('host thấy ghi chú "sắp có", không thấy nút xin ghép', async () => {
-    const match = matchWithHostId('host-1');
+  it('host thấy danh sách người xin ghép, không thấy nút xin ghép', async () => {
+    const participant = getMatchingControllerJoinResponseMock({ status: MatchParticipantStatus.REQUESTED });
+    const match = matchWithHostId('host-1', { participants: [participant] });
     server.use(http.get('*/matches/:id', () => HttpResponse.json(match, { status: 200 })));
     await loginAs('host-1');
 
     await renderScreen();
 
-    expect(await screen.findByTestId('match-host-note')).toBeTruthy();
+    expect(await screen.findByTestId('match-participants-section')).toBeTruthy();
+    expect(screen.getByTestId(`participant-item-${participant.id}`)).toBeTruthy();
     expect(screen.queryByTestId('match-join-submit')).toBeNull();
+  });
+
+  it('host thấy empty state khi chưa có ai xin ghép', async () => {
+    const match = matchWithHostId('host-1', { participants: [] });
+    server.use(http.get('*/matches/:id', () => HttpResponse.json(match, { status: 200 })));
+    await loginAs('host-1');
+
+    await renderScreen();
+
+    expect(await screen.findByTestId('match-participants-empty')).toBeTruthy();
+  });
+
+  it('host duyệt yêu cầu ghép gọi đúng API rồi refetch cập nhật trạng thái', async () => {
+    let participant = getMatchingControllerJoinResponseMock({
+      id: 'p-1',
+      status: MatchParticipantStatus.REQUESTED,
+    });
+    const baseMatch = matchWithHostId('host-1', {});
+    // GET đọc `participant` động (closure) để phản ánh đúng trạng thái sau
+    // khi accept — mô phỏng backend thật thay vì trả response tĩnh.
+    server.use(
+      http.get('*/matches/:id', () =>
+        HttpResponse.json({ ...baseMatch, participants: [participant] }, { status: 200 }),
+      ),
+    );
+    server.use(
+      http.post('*/matches/:id/participants/:participantId/accept', () => {
+        participant = { ...participant, status: MatchParticipantStatus.ACCEPTED };
+        return HttpResponse.json(participant, { status: 201 });
+      }),
+    );
+    await loginAs('host-1');
+    const user = userEvent.setup();
+
+    await renderScreen();
+    await user.press(await screen.findByTestId('participant-accept-p-1'));
+
+    await waitFor(() => expect(screen.queryByTestId('participant-accept-p-1')).toBeNull());
+    expect(screen.getByTestId('participant-item-p-1')).toHaveTextContent('Đã chấp nhận', {
+      exact: false,
+    });
+  });
+
+  it('host từ chối yêu cầu ghép gọi đúng API rồi refetch cập nhật trạng thái', async () => {
+    let participant = getMatchingControllerJoinResponseMock({
+      id: 'p-1',
+      status: MatchParticipantStatus.REQUESTED,
+    });
+    const baseMatch = matchWithHostId('host-1', {});
+    server.use(
+      http.get('*/matches/:id', () =>
+        HttpResponse.json({ ...baseMatch, participants: [participant] }, { status: 200 }),
+      ),
+    );
+    server.use(
+      http.post('*/matches/:id/participants/:participantId/reject', () => {
+        participant = { ...participant, status: MatchParticipantStatus.REJECTED };
+        return HttpResponse.json(participant, { status: 201 });
+      }),
+    );
+    await loginAs('host-1');
+    const user = userEvent.setup();
+
+    await renderScreen();
+    await user.press(await screen.findByTestId('participant-reject-p-1'));
+
+    await waitFor(() => expect(screen.queryByTestId('participant-reject-p-1')).toBeNull());
+    expect(screen.getByTestId('participant-item-p-1')).toHaveTextContent('Đã từ chối', {
+      exact: false,
+    });
   });
 
   it('non-host xin ghép thành công hiện thông báo chờ duyệt', async () => {
