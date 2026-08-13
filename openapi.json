@@ -1465,6 +1465,36 @@
         ]
       }
     },
+    "/merchant/bookings": {
+      "get": {
+        "operationId": "MerchantController_getBookings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Booking"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Danh sách đơn đặt sân trên các cụm sân của chủ sân hiện tại",
+        "tags": [
+          "merchant"
+        ]
+      }
+    },
     "/payments": {
       "post": {
         "operationId": "PaymentController_create",
