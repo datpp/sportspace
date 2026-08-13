@@ -1765,6 +1765,68 @@
         ]
       }
     },
+    "/system-config": {
+      "get": {
+        "operationId": "SystemConfigController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemConfig"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Đọc cấu hình hệ thống hiện tại",
+        "tags": [
+          "system-config"
+        ]
+      },
+      "patch": {
+        "operationId": "SystemConfigController_update",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSystemConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemConfig"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "[ADMIN] Cập nhật cấu hình hệ thống",
+        "tags": [
+          "system-config"
+        ]
+      }
+    },
     "/users/me/fcm-token": {
       "patch": {
         "operationId": "UserController_updateFcmToken",
@@ -1790,6 +1852,108 @@
           }
         ],
         "summary": "Cập nhật FCM device token của chính mình",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users": {
+      "get": {
+        "operationId": "UserController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "[ADMIN] Danh sách toàn bộ người dùng",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/lock": {
+      "patch": {
+        "operationId": "UserController_lock",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "[ADMIN] Khóa tài khoản người dùng",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/unlock": {
+      "patch": {
+        "operationId": "UserController_unlock",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "[ADMIN] Mở khóa tài khoản người dùng",
         "tags": [
           "users"
         ]
@@ -2100,6 +2264,126 @@
           "staff"
         ]
       }
+    },
+    "/disputes": {
+      "post": {
+        "operationId": "DisputeController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDisputeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dispute"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tạo khiếu nại cho một đơn đặt sân của chính mình",
+        "tags": [
+          "disputes"
+        ]
+      },
+      "get": {
+        "operationId": "DisputeController_findAll",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Dispute"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "[ADMIN] Danh sách khiếu nại",
+        "tags": [
+          "disputes"
+        ]
+      }
+    },
+    "/disputes/{id}/resolve": {
+      "patch": {
+        "operationId": "DisputeController_resolve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveDisputeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dispute"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "[ADMIN] Xử lý khiếu nại (chấp nhận/từ chối, có thể hoàn tiền)",
+        "tags": [
+          "disputes"
+        ]
+      }
     }
   },
   "info": {
@@ -2304,6 +2588,9 @@
               "ADMIN"
             ]
           },
+          "isLocked": {
+            "type": "boolean"
+          },
           "createdAt": {
             "format": "date-time",
             "type": "string"
@@ -2318,6 +2605,7 @@
           "email",
           "fullName",
           "role",
+          "isLocked",
           "createdAt",
           "updatedAt"
         ]
@@ -2949,6 +3237,55 @@
           "paymentUrl"
         ]
       },
+      "SystemConfig": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "cancellationFullRefundHours": {
+            "type": "number"
+          },
+          "cancellationPartialRefundHours": {
+            "type": "number"
+          },
+          "cancellationPartialRefundPercent": {
+            "type": "number"
+          },
+          "platformCommissionPercent": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "cancellationFullRefundHours",
+          "cancellationPartialRefundHours",
+          "cancellationPartialRefundPercent",
+          "platformCommissionPercent",
+          "updatedAt"
+        ]
+      },
+      "UpdateSystemConfigDto": {
+        "type": "object",
+        "properties": {
+          "cancellationFullRefundHours": {
+            "type": "number"
+          },
+          "cancellationPartialRefundHours": {
+            "type": "number"
+          },
+          "cancellationPartialRefundPercent": {
+            "type": "number"
+          },
+          "platformCommissionPercent": {
+            "type": "number"
+          }
+        }
+      },
       "UpdateFcmTokenDto": {
         "type": "object",
         "properties": {
@@ -3087,6 +3424,100 @@
           "endTime",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "CreateDisputeDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingId",
+          "reason"
+        ]
+      },
+      "Dispute": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "booking": {
+            "$ref": "#/components/schemas/Booking"
+          },
+          "raisedBy": {
+            "$ref": "#/components/schemas/User"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "RESOLVED",
+              "REJECTED"
+            ]
+          },
+          "resolutionNote": {
+            "type": "object",
+            "nullable": true
+          },
+          "resolvedBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "booking",
+          "raisedBy",
+          "reason",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ResolveDisputeDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "RESOLVED",
+              "REJECTED"
+            ]
+          },
+          "resolutionNote": {
+            "type": "string"
+          },
+          "refundAmount": {
+            "type": "number",
+            "description": "Số tiền hoàn (VNĐ), chỉ áp dụng khi status=RESOLVED"
+          }
+        },
+        "required": [
+          "status",
+          "resolutionNote"
         ]
       }
     }

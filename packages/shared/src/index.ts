@@ -31,3 +31,5 @@ export * from './generated/notifications/notifications';
 export * from './generated/users/users';
 export * from './generated/staff/staff';
 export * from './generated/reviews/reviews';
+export * from './generated/disputes/disputes';
+export * from './generated/system-config/system-config';
