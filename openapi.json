@@ -1838,6 +1838,28 @@
           "updatedAt"
         ]
       },
+      "BookingPaymentSummary": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PAID",
+              "FAILED",
+              "REFUNDED"
+            ]
+          },
+          "refundAmount": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "refundAmount"
+        ]
+      },
       "Booking": {
         "type": "object",
         "properties": {
@@ -1869,6 +1891,9 @@
           },
           "totalAmount": {
             "type": "number"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/BookingPaymentSummary"
           },
           "createdAt": {
             "format": "date-time",
