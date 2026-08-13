@@ -12,6 +12,7 @@ import { NotificationModule } from './notification/notification.module';
 import { RedisModule } from './redis/redis.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { UserModule } from './user/user.module';
+import { StaffModule } from './staff/staff.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { UserModule } from './user/user.module';
     RedisModule,
     RealtimeModule,
     UserModule,
+    StaffModule,
   ],
   controllers: [AppController],
   providers: [AppService],
