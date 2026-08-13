@@ -27,6 +27,10 @@ export type MyBookingsStackParamList = {
     startTime: string;
     endTime: string;
   };
+  WriteReview: {
+    bookingId: string;
+    courtName: string;
+  };
 };
 
 export type MatchesStackParamList = {

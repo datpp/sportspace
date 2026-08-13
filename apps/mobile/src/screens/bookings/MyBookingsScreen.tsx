@@ -114,6 +114,8 @@ export function MyBookingsScreen({ navigation }: Props) {
       renderItem={({ item }) => {
         const cancellable = item.status !== BookingStatus.CANCELLED;
         const canCreateMatch = item.status === BookingStatus.CONFIRMED;
+        const canReview =
+          item.status === BookingStatus.CONFIRMED && new Date(item.bookingDate) <= new Date();
         return (
           <View testID={`booking-item-${item.id}`} style={styles.card}>
             <Text style={styles.cardTitle}>{item.court.name}</Text>
@@ -145,6 +147,20 @@ export function MyBookingsScreen({ navigation }: Props) {
                   }
                 >
                   <Text style={styles.matchButtonText}>Tạo kèo</Text>
+                </Pressable>
+              ) : null}
+              {canReview ? (
+                <Pressable
+                  testID={`booking-review-${item.id}`}
+                  style={styles.reviewButton}
+                  onPress={() =>
+                    navigation.navigate('WriteReview', {
+                      bookingId: item.id,
+                      courtName: item.court.name,
+                    })
+                  }
+                >
+                  <Text style={styles.reviewButtonText}>Đánh giá</Text>
                 </Pressable>
               ) : null}
               {cancellable ? (
@@ -194,6 +210,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   matchButtonText: { color: '#fff', fontWeight: '600' },
+  reviewButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#f59e0b',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  reviewButtonText: { color: '#fff', fontWeight: '600' },
   cancelButton: {
     alignSelf: 'flex-start',
     backgroundColor: '#dc2626',

@@ -12,6 +12,7 @@ import { CourtSlotsScreen } from '../screens/venues/CourtSlotsScreen';
 import { BookingConfirmScreen } from '../screens/venues/BookingConfirmScreen';
 import { MyBookingsScreen } from '../screens/bookings/MyBookingsScreen';
 import { CreateMatchScreen } from '../screens/bookings/CreateMatchScreen';
+import { WriteReviewScreen } from '../screens/bookings/WriteReviewScreen';
 import { MatchListScreen } from '../screens/matches/MatchListScreen';
 import { MatchDetailScreen } from '../screens/matches/MatchDetailScreen';
 import { NotificationsScreen } from '../screens/notifications/NotificationsScreen';
@@ -74,6 +75,11 @@ function MyBookingsNavigator() {
         name="CreateMatch"
         component={CreateMatchScreen}
         options={{ title: 'Tạo kèo' }}
+      />
+      <MyBookingsStack.Screen
+        name="WriteReview"
+        component={WriteReviewScreen}
+        options={{ title: 'Đánh giá sân' }}
       />
     </MyBookingsStack.Navigator>
   );
