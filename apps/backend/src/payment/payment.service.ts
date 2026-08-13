@@ -268,4 +268,47 @@ export class PaymentService {
     payment.status = PaymentStatus.REFUNDED;
     await this.paymentRepo.save(payment);
   }
+
+  /**
+   * Admin-initiated refund from dispute resolution (admin-operations plan,
+   * Task 11) — an admin-chosen amount, not the tiered player-cancel policy.
+   */
+  async applyRefund(
+    paymentId: string,
+    amount: number,
+    reason: string,
+  ): Promise<Payment> {
+    const payment = await this.paymentRepo.findOne({
+      where: { id: paymentId },
+      relations: { booking: { user: true } },
+    });
+    if (!payment) {
+      throw new NotFoundException('Payment không tồn tại');
+    }
+    if (payment.status !== PaymentStatus.PAID) {
+      throw new BadRequestException('Chỉ có thể hoàn tiền cho đơn đã thanh toán');
+    }
+    if (amount <= 0 || amount > Number(payment.amount)) {
+      throw new BadRequestException('Số tiền hoàn không hợp lệ');
+    }
+
+    payment.status = PaymentStatus.REFUNDED;
+    payment.refundAmount = amount;
+    await this.paymentRepo.save(payment);
+    await this.bookingRepo.update(payment.booking.id, {
+      status: BookingStatus.CANCELLED,
+    });
+
+    try {
+      await this.notificationService.notify(
+        payment.booking.user.id,
+        'Hoàn tiền đơn đặt sân',
+        `Bạn đã được hoàn ${amount.toLocaleString('vi-VN')}đ. Lý do: ${reason}`,
+      );
+    } catch {
+      // Swallow: notification is best-effort, refund must not roll back.
+    }
+
+    return payment;
+  }
 }

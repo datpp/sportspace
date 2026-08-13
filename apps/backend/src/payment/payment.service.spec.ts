@@ -410,4 +410,51 @@ describe('PaymentService', () => {
       expect(paymentRepo.save).not.toHaveBeenCalled();
     });
   });
+
+  describe('applyRefund', () => {
+    it('marks the payment REFUNDED, cancels the booking, and notifies the user', async () => {
+      const booking = buildBooking();
+      const payment = buildPayment({
+        booking,
+        amount: 200000,
+        status: PaymentStatus.PAID,
+      });
+      paymentRepo.findOne.mockResolvedValue(payment);
+
+      const result = await service.applyRefund(
+        payment.id,
+        100000,
+        'Khiếu nại được chấp nhận',
+      );
+
+      expect(result.status).toBe(PaymentStatus.REFUNDED);
+      expect(result.refundAmount).toBe(100000);
+      expect(bookingRepo.update).toHaveBeenCalledWith(booking.id, {
+        status: BookingStatus.CANCELLED,
+      });
+      expect(notificationService.notify).toHaveBeenCalledWith(
+        booking.user.id,
+        expect.any(String),
+        expect.stringContaining('Khiếu nại được chấp nhận'),
+      );
+    });
+
+    it('rejects a payment that is not PAID', async () => {
+      const payment = buildPayment({ status: PaymentStatus.PENDING });
+      paymentRepo.findOne.mockResolvedValue(payment);
+
+      await expect(
+        service.applyRefund(payment.id, 1000, 'r'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects an amount greater than the original payment', async () => {
+      const payment = buildPayment({ amount: 100, status: PaymentStatus.PAID });
+      paymentRepo.findOne.mockResolvedValue(payment);
+
+      await expect(
+        service.applyRefund(payment.id, 200, 'r'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
 });
