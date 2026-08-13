@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: '/merchant', label: 'Tổng quan' },
   { href: '/merchant/venues', label: 'Cụm sân' },
   { href: '/merchant/venues/new', label: 'Tạo cụm sân mới' },
+  { href: '/merchant/bookings', label: 'Đơn đặt sân' },
   { href: '/merchant/revenue', label: 'Doanh thu' },
 ];
 
