@@ -21,6 +21,8 @@ import { Court } from '../venue/entities/court.entity';
 import { User } from '../user/entities/user.entity';
 import { RedisService } from '../redis/redis.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { NotificationService } from '../notification/notification.service';
+import { PaymentService } from '../payment/payment.service';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
@@ -94,6 +96,8 @@ describe('BookingService', () => {
   let dataSource: DeepMocked<DataSource>;
   let redisService: DeepMocked<RedisService>;
   let realtimeGateway: DeepMocked<RealtimeGateway>;
+  let notificationService: DeepMocked<NotificationService>;
+  let paymentService: DeepMocked<PaymentService>;
   let queryRunner: DeepMocked<QueryRunner>;
   let manager: DeepMocked<EntityManager>;
   let queryBuilder: DeepMocked<SelectQueryBuilder<Booking>>;
@@ -106,6 +110,8 @@ describe('BookingService', () => {
     dataSource = createMock<DataSource>();
     redisService = createMock<RedisService>();
     realtimeGateway = createMock<RealtimeGateway>();
+    notificationService = createMock<NotificationService>();
+    paymentService = createMock<PaymentService>();
     queryRunner = createMock<QueryRunner>();
     manager = createMock<EntityManager>();
     queryBuilder = createMock<SelectQueryBuilder<Booking>>();
@@ -135,6 +141,8 @@ describe('BookingService', () => {
       dataSource,
       redisService,
       realtimeGateway,
+      notificationService,
+      paymentService,
     );
   });
 
@@ -433,6 +441,153 @@ describe('BookingService', () => {
 
       const result = await service.cancel(
         booking.id,
+        buildAuthUser({ role: Role.ADMIN }),
+      );
+
+      expect(result.status).toBe(BookingStatus.CANCELLED);
+    });
+  });
+
+  describe('merchantConfirm', () => {
+    it('confirms a PENDING booking owned by the calling MERCHANT', async () => {
+      const owner = buildUser({ role: Role.MERCHANT });
+      const court = buildCourt({
+        venue: { id: faker.string.uuid(), owner } as Court['venue'],
+      });
+      const booking = buildBookingRow({ court, status: BookingStatus.PENDING });
+      bookingRepo.findOne.mockResolvedValue(booking);
+      bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
+
+      const result = await service.merchantConfirm(
+        booking.id,
+        buildAuthUser({ id: owner.id, role: Role.MERCHANT }),
+      );
+
+      expect(result.status).toBe(BookingStatus.CONFIRMED);
+      expect(realtimeGateway.broadcastSlotUpdate).toHaveBeenCalledWith({
+        courtId: booking.court.id,
+        bookingDate: booking.bookingDate,
+        startTime: booking.startTime,
+        status: BookingStatus.CONFIRMED,
+      });
+      expect(notificationService.notify).toHaveBeenCalledWith(
+        booking.user.id,
+        expect.any(String),
+        expect.any(String),
+      );
+    });
+
+    it('throws ForbiddenException when a non-owning MERCHANT tries to confirm', async () => {
+      const owner = buildUser({ role: Role.MERCHANT });
+      const court = buildCourt({
+        venue: { id: faker.string.uuid(), owner } as Court['venue'],
+      });
+      const booking = buildBookingRow({ court, status: BookingStatus.PENDING });
+      bookingRepo.findOne.mockResolvedValue(booking);
+
+      await expect(
+        service.merchantConfirm(
+          booking.id,
+          buildAuthUser({ role: Role.MERCHANT }),
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(bookingRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when the booking is not PENDING', async () => {
+      const owner = buildUser({ role: Role.MERCHANT });
+      const court = buildCourt({
+        venue: { id: faker.string.uuid(), owner } as Court['venue'],
+      });
+      const booking = buildBookingRow({
+        court,
+        status: BookingStatus.CONFIRMED,
+      });
+      bookingRepo.findOne.mockResolvedValue(booking);
+
+      await expect(
+        service.merchantConfirm(
+          booking.id,
+          buildAuthUser({ id: owner.id, role: Role.MERCHANT }),
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
+
+  describe('merchantReject', () => {
+    it('cancels a PENDING booking without touching payment (nothing was paid)', async () => {
+      const owner = buildUser({ role: Role.MERCHANT });
+      const court = buildCourt({
+        venue: { id: faker.string.uuid(), owner } as Court['venue'],
+      });
+      const booking = buildBookingRow({ court, status: BookingStatus.PENDING });
+      bookingRepo.findOne.mockResolvedValue(booking);
+      bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
+
+      const result = await service.merchantReject(
+        booking.id,
+        { reason: 'Sân đang bảo trì' },
+        buildAuthUser({ id: owner.id, role: Role.MERCHANT }),
+      );
+
+      expect(result.status).toBe(BookingStatus.CANCELLED);
+      expect(paymentService.refundFull).not.toHaveBeenCalled();
+    });
+
+    it('cancels a CONFIRMED booking and triggers a full refund', async () => {
+      const owner = buildUser({ role: Role.MERCHANT });
+      const court = buildCourt({
+        venue: { id: faker.string.uuid(), owner } as Court['venue'],
+      });
+      const booking = buildBookingRow({
+        court,
+        status: BookingStatus.CONFIRMED,
+      });
+      bookingRepo.findOne.mockResolvedValue(booking);
+      bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
+
+      const result = await service.merchantReject(
+        booking.id,
+        { reason: 'Sân đang bảo trì' },
+        buildAuthUser({ id: owner.id, role: Role.MERCHANT }),
+      );
+
+      expect(result.status).toBe(BookingStatus.CANCELLED);
+      expect(paymentService.refundFull).toHaveBeenCalledWith(booking.id);
+    });
+
+    it('throws ConflictException when the booking is already CANCELLED', async () => {
+      const owner = buildUser({ role: Role.MERCHANT });
+      const court = buildCourt({
+        venue: { id: faker.string.uuid(), owner } as Court['venue'],
+      });
+      const booking = buildBookingRow({
+        court,
+        status: BookingStatus.CANCELLED,
+      });
+      bookingRepo.findOne.mockResolvedValue(booking);
+
+      await expect(
+        service.merchantReject(
+          booking.id,
+          { reason: 'x' },
+          buildAuthUser({ id: owner.id, role: Role.MERCHANT }),
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('allows an ADMIN to reject any booking', async () => {
+      const owner = buildUser({ role: Role.MERCHANT });
+      const court = buildCourt({
+        venue: { id: faker.string.uuid(), owner } as Court['venue'],
+      });
+      const booking = buildBookingRow({ court, status: BookingStatus.PENDING });
+      bookingRepo.findOne.mockResolvedValue(booking);
+      bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
+
+      const result = await service.merchantReject(
+        booking.id,
+        { reason: 'x' },
         buildAuthUser({ role: Role.ADMIN }),
       );
 

@@ -33,6 +33,9 @@ import {
   calculateRefundPercentage,
   combineBookingDateTime,
 } from './refund-policy.util';
+import { NotificationService } from '../notification/notification.service';
+import { PaymentService } from '../payment/payment.service';
+import { RejectBookingDto } from './dto/reject-booking.dto';
 
 const SLOT_LOCK_TTL_SECONDS = 10;
 const ACTIVE_STATUSES = [BookingStatus.PENDING, BookingStatus.CONFIRMED];
@@ -55,6 +58,8 @@ export class BookingService {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly redisService: RedisService,
     private readonly realtimeGateway: RealtimeGateway,
+    private readonly notificationService: NotificationService,
+    private readonly paymentService: PaymentService,
   ) {}
 
   async create(userId: string, dto: CreateBookingDto): Promise<Booking> {
@@ -256,6 +261,72 @@ export class BookingService {
     return booking;
   }
 
+  async merchantConfirm(id: string, user: AuthenticatedUser): Promise<Booking> {
+    const booking = await this.findOneForMerchant(id);
+    this.assertMerchantOwnerOrAdmin(booking, user);
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new ConflictException('Chỉ có thể xác nhận đơn đang chờ (PENDING)');
+    }
+
+    booking.status = BookingStatus.CONFIRMED;
+    await this.bookingRepo.save(booking);
+
+    this.realtimeGateway.broadcastSlotUpdate({
+      courtId: booking.court.id,
+      bookingDate: booking.bookingDate,
+      startTime: booking.startTime,
+      status: BookingStatus.CONFIRMED,
+    });
+    await this.notificationService.notify(
+      booking.user.id,
+      'Đơn đặt sân đã được xác nhận',
+      `Chủ sân đã xác nhận đơn đặt sân ngày ${booking.bookingDate} lúc ${booking.startTime}.`,
+    );
+
+    return booking;
+  }
+
+  /**
+   * Merchant-initiated rejection is never the player's fault, so — unlike
+   * player cancel — this always refunds 100% of whatever was already paid.
+   */
+  async merchantReject(
+    id: string,
+    dto: RejectBookingDto,
+    user: AuthenticatedUser,
+  ): Promise<Booking> {
+    const booking = await this.findOneForMerchant(id);
+    this.assertMerchantOwnerOrAdmin(booking, user);
+    if (
+      booking.status !== BookingStatus.PENDING &&
+      booking.status !== BookingStatus.CONFIRMED
+    ) {
+      throw new ConflictException('Đơn đặt sân này đã bị hủy trước đó');
+    }
+
+    const wasConfirmed = booking.status === BookingStatus.CONFIRMED;
+    booking.status = BookingStatus.CANCELLED;
+    await this.bookingRepo.save(booking);
+
+    if (wasConfirmed) {
+      await this.paymentService.refundFull(booking.id);
+    }
+
+    this.realtimeGateway.broadcastSlotUpdate({
+      courtId: booking.court.id,
+      bookingDate: booking.bookingDate,
+      startTime: booking.startTime,
+      status: BookingStatus.CANCELLED,
+    });
+    await this.notificationService.notify(
+      booking.user.id,
+      'Đơn đặt sân bị từ chối',
+      `Chủ sân đã từ chối đơn đặt sân ngày ${booking.bookingDate} lúc ${booking.startTime}. Lý do: ${dto.reason}`,
+    );
+
+    return booking;
+  }
+
   async remove(id: string, user: AuthenticatedUser): Promise<void> {
     await this.findOne(id, user);
     const result = await this.bookingRepo.delete(id);
@@ -286,6 +357,28 @@ export class BookingService {
 
   private assertOwnerOrAdmin(booking: Booking, user: AuthenticatedUser): void {
     if (user.role !== Role.ADMIN && booking.user.id !== user.id) {
+      throw new ForbiddenException(
+        'Bạn không có quyền thao tác trên đơn đặt sân này',
+      );
+    }
+  }
+
+  private async findOneForMerchant(id: string): Promise<Booking> {
+    const booking = await this.bookingRepo.findOne({
+      where: { id },
+      relations: { court: { venue: { owner: true } }, user: true },
+    });
+    if (!booking) {
+      throw new NotFoundException('Booking không tồn tại');
+    }
+    return booking;
+  }
+
+  private assertMerchantOwnerOrAdmin(
+    booking: Booking,
+    user: AuthenticatedUser,
+  ): void {
+    if (user.role !== Role.ADMIN && booking.court.venue.owner.id !== user.id) {
       throw new ForbiddenException(
         'Bạn không có quyền thao tác trên đơn đặt sân này',
       );
