@@ -1,6 +1,10 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { faker } from '@faker-js/faker';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -18,6 +22,7 @@ function buildUser(overrides: Partial<User> = {}): User {
     fullName: faker.person.fullName(),
     phone: faker.phone.number(),
     role: Role.PLAYER,
+    isLocked: false,
     fcmToken: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -129,6 +134,17 @@ describe('AuthService', () => {
       await expect(
         service.login({ email: faker.internet.email(), password: 'whatever1' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('rejects a locked user with ForbiddenException', async () => {
+      const password = 'CorrectHorseBattery9';
+      const passwordHash = await bcrypt.hash(password, 10);
+      const user = buildUser({ passwordHash, isLocked: true });
+      queryBuilder.getOne.mockResolvedValue(user);
+
+      await expect(
+        service.login({ email: user.email, password }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 });

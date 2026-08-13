@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -54,6 +55,9 @@ export class AuthService {
 
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    }
+    if (user.isLocked) {
+      throw new ForbiddenException('Tài khoản đã bị khóa');
     }
 
     return this.issueTokens(user);
