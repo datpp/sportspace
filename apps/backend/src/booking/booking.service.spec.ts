@@ -6,7 +6,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { BookingStatus, Role } from '@sportspace/shared';
+import { BookingStatus, PaymentStatus, Role } from '@sportspace/shared';
 import {
   DataSource,
   EntityManager,
@@ -16,6 +16,7 @@ import {
 } from 'typeorm';
 import { BookingService } from './booking.service';
 import { Booking } from './entities/booking.entity';
+import { Payment } from '../payment/entities/payment.entity';
 import { Court } from '../venue/entities/court.entity';
 import { User } from '../user/entities/user.entity';
 import { RedisService } from '../redis/redis.service';
@@ -71,9 +72,25 @@ function buildAuthUser(
   };
 }
 
+function buildPaymentRow(overrides: Partial<Payment> = {}): Payment {
+  return {
+    id: faker.string.uuid(),
+    booking: { id: faker.string.uuid() } as Booking,
+    provider: 'VNPAY',
+    amount: 200000,
+    status: PaymentStatus.PAID,
+    refundAmount: null,
+    transactionRef: faker.string.alphanumeric(16),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
 describe('BookingService', () => {
   let service: BookingService;
   let bookingRepo: DeepMocked<Repository<Booking>>;
+  let paymentRepo: DeepMocked<Repository<Payment>>;
   let dataSource: DeepMocked<DataSource>;
   let redisService: DeepMocked<RedisService>;
   let realtimeGateway: DeepMocked<RealtimeGateway>;
@@ -85,6 +102,7 @@ describe('BookingService', () => {
 
   beforeEach(() => {
     bookingRepo = createMock<Repository<Booking>>();
+    paymentRepo = createMock<Repository<Payment>>();
     dataSource = createMock<DataSource>();
     redisService = createMock<RedisService>();
     realtimeGateway = createMock<RealtimeGateway>();
@@ -108,9 +126,12 @@ describe('BookingService', () => {
     (queryRunner as unknown as { manager: EntityManager }).manager = manager;
     dataSource.createQueryRunner.mockReturnValue(queryRunner);
     redisService.acquireLock.mockResolvedValue(LOCK_TOKEN);
+    paymentRepo.findOne.mockResolvedValue(null);
+    paymentRepo.save.mockImplementation((p) => Promise.resolve(p as Payment));
 
     service = new BookingService(
       bookingRepo,
+      paymentRepo,
       dataSource,
       redisService,
       realtimeGateway,
@@ -245,6 +266,119 @@ describe('BookingService', () => {
         startTime: booking.startTime,
         status: BookingStatus.CANCELLED,
       });
+    });
+
+    it('leaves the payment untouched when the booking was never paid (still PENDING)', async () => {
+      const owner = buildUser();
+      const booking = buildBookingRow({
+        user: owner,
+        status: BookingStatus.PENDING,
+      });
+      bookingRepo.findOne.mockResolvedValue(booking);
+      bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
+
+      await service.cancel(booking.id, buildAuthUser({ id: owner.id }));
+
+      expect(paymentRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('refunds 100% and marks the payment REFUNDED when cancelling >24h before the slot', async () => {
+      const owner = buildUser();
+      const slotStart = new Date(Date.now() + 48 * 60 * 60 * 1000);
+      const booking = buildBookingRow({
+        user: owner,
+        status: BookingStatus.CONFIRMED,
+        bookingDate: slotStart.toISOString().slice(0, 10),
+        startTime: `${String(slotStart.getUTCHours()).padStart(2, '0')}:00`,
+        totalAmount: 200000,
+      });
+      const payment = buildPaymentRow({
+        booking: { id: booking.id } as Booking,
+        amount: 200000,
+      });
+      bookingRepo.findOne.mockResolvedValue(booking);
+      bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
+      paymentRepo.findOne.mockResolvedValue(payment);
+
+      await service.cancel(booking.id, buildAuthUser({ id: owner.id }));
+
+      expect(paymentRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: PaymentStatus.REFUNDED,
+          refundAmount: 200000,
+        }),
+      );
+    });
+
+    it('refunds 50% and marks the payment REFUNDED when cancelling 2-24h before the slot', async () => {
+      const owner = buildUser();
+      const slotStart = new Date(Date.now() + 10 * 60 * 60 * 1000);
+      const booking = buildBookingRow({
+        user: owner,
+        status: BookingStatus.CONFIRMED,
+        bookingDate: slotStart.toISOString().slice(0, 10),
+        startTime: `${String(slotStart.getUTCHours()).padStart(2, '0')}:00`,
+        totalAmount: 200000,
+      });
+      const payment = buildPaymentRow({
+        booking: { id: booking.id } as Booking,
+        amount: 200000,
+      });
+      bookingRepo.findOne.mockResolvedValue(booking);
+      bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
+      paymentRepo.findOne.mockResolvedValue(payment);
+
+      await service.cancel(booking.id, buildAuthUser({ id: owner.id }));
+
+      expect(paymentRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: PaymentStatus.REFUNDED,
+          refundAmount: 100000,
+        }),
+      );
+    });
+
+    it('keeps the payment PAID with refundAmount 0 when cancelling <2h before the slot', async () => {
+      const owner = buildUser();
+      const slotStart = new Date(Date.now() + 60 * 60 * 1000);
+      const booking = buildBookingRow({
+        user: owner,
+        status: BookingStatus.CONFIRMED,
+        bookingDate: slotStart.toISOString().slice(0, 10),
+        startTime: `${String(slotStart.getUTCHours()).padStart(2, '0')}:${String(slotStart.getUTCMinutes()).padStart(2, '0')}`,
+        totalAmount: 200000,
+      });
+      const payment = buildPaymentRow({
+        booking: { id: booking.id } as Booking,
+        amount: 200000,
+      });
+      bookingRepo.findOne.mockResolvedValue(booking);
+      bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
+      paymentRepo.findOne.mockResolvedValue(payment);
+
+      await service.cancel(booking.id, buildAuthUser({ id: owner.id }));
+
+      expect(paymentRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: PaymentStatus.PAID,
+          refundAmount: 0,
+        }),
+      );
+    });
+
+    it('is a no-op the second time an already-CANCELLED booking is cancelled', async () => {
+      const owner = buildUser();
+      const booking = buildBookingRow({
+        user: owner,
+        status: BookingStatus.CANCELLED,
+      });
+      bookingRepo.findOne.mockResolvedValue(booking);
+
+      await service.cancel(booking.id, buildAuthUser({ id: owner.id }));
+
+      expect(bookingRepo.save).not.toHaveBeenCalled();
+      expect(paymentRepo.findOne).not.toHaveBeenCalled();
+      expect(realtimeGateway.broadcastSlotUpdate).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException for a missing booking', async () => {

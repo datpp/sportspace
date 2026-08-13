@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { BookingStatus, Role } from '@sportspace/shared';
+import { BookingStatus, PaymentStatus, Role } from '@sportspace/shared';
 import {
   DataSource,
   EntityManager,
@@ -27,6 +27,11 @@ import { RevenueDto } from './dto/revenue.dto';
 import { RevenueTimeseriesQueryDto } from './dto/revenue-timeseries-query.dto';
 import { RevenueTimeseriesPointDto } from './dto/revenue-timeseries-point.dto';
 import { Booking } from './entities/booking.entity';
+import { Payment } from '../payment/entities/payment.entity';
+import {
+  calculateRefundPercentage,
+  combineBookingDateTime,
+} from './refund-policy.util';
 
 const SLOT_LOCK_TTL_SECONDS = 10;
 const ACTIVE_STATUSES = [BookingStatus.PENDING, BookingStatus.CONFIRMED];
@@ -44,6 +49,8 @@ export class BookingService {
   constructor(
     @InjectRepository(Booking)
     private readonly bookingRepo: Repository<Booking>,
+    @InjectRepository(Payment)
+    private readonly paymentRepo: Repository<Payment>,
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly redisService: RedisService,
     private readonly realtimeGateway: RealtimeGateway,
@@ -192,18 +199,49 @@ export class BookingService {
     return this.findOne(id, user);
   }
 
+  /**
+   * Refund policy (CLAUDE.md §7): only a PAID payment can be refunded. A
+   * refundAmount of 0 (the <2h band) leaves the payment PAID — no money
+   * moved, so REFUNDED would be misleading.
+   */
   async cancel(id: string, user: AuthenticatedUser): Promise<Booking> {
     const booking = await this.findOne(id, user);
-    if (booking.status !== BookingStatus.CANCELLED) {
-      booking.status = BookingStatus.CANCELLED;
-      await this.bookingRepo.save(booking);
-      this.realtimeGateway.broadcastSlotUpdate({
-        courtId: booking.court.id,
-        bookingDate: booking.bookingDate,
-        startTime: booking.startTime,
-        status: BookingStatus.CANCELLED,
-      });
+    if (booking.status === BookingStatus.CANCELLED) {
+      return booking;
     }
+
+    const payment = await this.paymentRepo.findOne({
+      where: { booking: { id: booking.id } },
+    });
+
+    if (payment && payment.status === PaymentStatus.PAID) {
+      const slotStart = combineBookingDateTime(
+        booking.bookingDate,
+        booking.startTime,
+      );
+      const refundPercentage = calculateRefundPercentage(
+        new Date(),
+        slotStart,
+      );
+      const refundAmount =
+        Math.round(Number(booking.totalAmount) * refundPercentage * 100) /
+        100;
+
+      payment.refundAmount = refundAmount;
+      if (refundAmount > 0) {
+        payment.status = PaymentStatus.REFUNDED;
+      }
+      await this.paymentRepo.save(payment);
+    }
+
+    booking.status = BookingStatus.CANCELLED;
+    await this.bookingRepo.save(booking);
+    this.realtimeGateway.broadcastSlotUpdate({
+      courtId: booking.court.id,
+      bookingDate: booking.bookingDate,
+      startTime: booking.startTime,
+      status: BookingStatus.CANCELLED,
+    });
     return booking;
   }
 
