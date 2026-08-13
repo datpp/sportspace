@@ -18,7 +18,7 @@ export class BookingPaymentSummary {
   @ApiProperty({ enum: PaymentStatus })
   status: PaymentStatus;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: 'number', nullable: true })
   refundAmount: number | null;
 }
 
