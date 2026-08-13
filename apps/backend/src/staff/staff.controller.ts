@@ -20,7 +20,10 @@ import { Role } from '@sportspace/shared';
 import { StaffService } from './staff.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
+import { CreateShiftDto } from './dto/create-shift.dto';
+import { ShiftQueryDto } from './dto/shift-query.dto';
 import { Staff } from './entities/staff.entity';
+import { Shift } from './entities/shift.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -68,5 +71,33 @@ export class StaffController {
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.staffService.remove(id, user);
+  }
+
+  @Post(':id/shifts')
+  @ApiOperation({ summary: 'Thêm ca làm cho nhân viên' })
+  @ApiCreatedResponse({ type: Shift })
+  createShift(
+    @Param('id') id: string,
+    @Body() dto: CreateShiftDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.staffService.createShift(id, dto, user);
+  }
+
+  @Get(':id/shifts')
+  @ApiOperation({ summary: 'Danh sách ca làm của nhân viên' })
+  @ApiOkResponse({ type: [Shift] })
+  listShifts(@Param('id') id: string, @Query() query: ShiftQueryDto) {
+    return this.staffService.listShifts(id, query);
+  }
+
+  @Delete(':id/shifts/:shiftId')
+  @ApiOperation({ summary: 'Xoá ca làm' })
+  removeShift(
+    @Param('id') id: string,
+    @Param('shiftId') shiftId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.staffService.removeShift(id, shiftId, user);
   }
 }
