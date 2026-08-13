@@ -1,20 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { createMock } from '@golevelup/ts-jest';
 import { StaffController } from './staff.controller';
 import { StaffService } from './staff.service';
 
 describe('StaffController', () => {
-  let controller: StaffController;
+  it('delegates create() to StaffService', async () => {
+    const staffService = createMock<StaffService>();
+    const controller = new StaffController(staffService);
+    const dto = { venueId: 'v1', fullName: 'A', phone: '090', position: 'Lễ tân' };
+    const user = { id: 'u1', email: 'a@a.com', role: 'MERCHANT' } as never;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [StaffController],
-      providers: [StaffService],
-    }).compile();
+    await controller.create(dto, user);
 
-    controller = module.get<StaffController>(StaffController);
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+    expect(staffService.create).toHaveBeenCalledWith(dto, user);
   });
 });
