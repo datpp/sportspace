@@ -13,6 +13,7 @@ import { RedisModule } from './redis/redis.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { UserModule } from './user/user.module';
 import { StaffModule } from './staff/staff.module';
+import { SystemConfigModule } from './system-config/system-config.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { StaffModule } from './staff/staff.module';
     RealtimeModule,
     UserModule,
     StaffModule,
+    SystemConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService],
