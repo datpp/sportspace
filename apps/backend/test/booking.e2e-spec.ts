@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { Role } from '@sportspace/shared';
@@ -10,10 +11,12 @@ import { AppModule } from '../src/app.module';
 import { Court } from '../src/venue/entities/court.entity';
 import { User } from '../src/user/entities/user.entity';
 import { Venue } from '../src/venue/entities/venue.entity';
+import { signVnpayParams, toVnpayAmount } from '../src/payment/vnpay.util';
 
 describe('Booking (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
+  let hashSecret: string;
   let owner: User;
   let venue: Venue;
   let court: Court;
@@ -35,6 +38,9 @@ describe('Booking (e2e)', () => {
     await app.init();
 
     dataSource = moduleFixture.get<DataSource>(getDataSourceToken());
+    hashSecret = moduleFixture
+      .get(ConfigService)
+      .get<string>('VNP_HASH_SECRET')!;
 
     owner = await dataSource.getRepository(User).save({
       email: faker.internet.email(),
@@ -82,10 +88,26 @@ describe('Booking (e2e)', () => {
 
   afterAll(async () => {
     if (createdBookingIds.length) {
+      await dataSource
+        .createQueryBuilder()
+        .delete()
+        .from('payments')
+        .where('booking_id IN (:...ids)', { ids: createdBookingIds })
+        .execute();
       await dataSource.getRepository('bookings').delete(createdBookingIds);
     }
     await dataSource.getRepository(Court).delete({ id: court.id });
     await dataSource.getRepository(Venue).delete({ id: venue.id });
+    // Payment IPN confirmation now writes to `notifications`, so those rows
+    // must go before the users they reference (FK) — see notification.entity.ts.
+    await dataSource
+      .createQueryBuilder()
+      .delete()
+      .from('notifications')
+      .where('user_id IN (:...ids)', {
+        ids: [owner.id, playerId, otherPlayerId],
+      })
+      .execute();
     await dataSource.getRepository(User).delete({ id: owner.id });
     await dataSource.getRepository(User).delete({ id: playerId });
     await dataSource.getRepository(User).delete({ id: otherPlayerId });
@@ -238,6 +260,57 @@ describe('Booking (e2e)', () => {
         .expect(200);
 
       expect(res.body.id).toBe(ownBookingId);
+    });
+  });
+
+  describe('payment summary on cancel', () => {
+    it('cancel response and a subsequent GET /bookings both carry the refunded payment summary', async () => {
+      const slotStart = new Date(Date.now() + 48 * 60 * 60 * 1000);
+      const bookingDate = slotStart.toISOString().slice(0, 10);
+      const startTime = `${String(slotStart.getUTCHours()).padStart(2, '0')}:00`;
+      const endTime = `${String(slotStart.getUTCHours() + 1).padStart(2, '0')}:00`;
+
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ courtId: court.id, bookingDate, startTime, endTime })
+        .expect(201);
+      const bookingId = createRes.body.id as string;
+      createdBookingIds.push(bookingId);
+
+      const checkoutRes = await request(app.getHttpServer())
+        .post(`/payments/${bookingId}/checkout`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(201);
+      const txnRef = new URL(checkoutRes.body.paymentUrl).searchParams.get(
+        'vnp_TxnRef',
+      )!;
+      const ipnParams = {
+        vnp_TxnRef: txnRef,
+        vnp_Amount: String(toVnpayAmount(200000)),
+        vnp_ResponseCode: '00',
+      };
+      const vnp_SecureHash = signVnpayParams(ipnParams, hashSecret);
+      await request(app.getHttpServer())
+        .get('/payments/ipn')
+        .query({ ...ipnParams, vnp_SecureHash })
+        .expect(200);
+
+      const cancelRes = await request(app.getHttpServer())
+        .post(`/bookings/${bookingId}/cancel`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(201);
+      expect(cancelRes.body.payment.status).toBe('REFUNDED');
+      expect(Number(cancelRes.body.payment.refundAmount)).toBe(200000);
+
+      const listRes = await request(app.getHttpServer())
+        .get('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      const listed = (
+        listRes.body as { id: string; payment?: { status: string } }[]
+      ).find((b) => b.id === bookingId);
+      expect(listed?.payment?.status).toBe('REFUNDED');
     });
   });
 });

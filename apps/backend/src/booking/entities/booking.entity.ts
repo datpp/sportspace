@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { BookingStatus } from '@sportspace/shared';
+import { BookingStatus, PaymentStatus } from '@sportspace/shared';
 import { Court } from '../../venue/entities/court.entity';
 import { User } from '../../user/entities/user.entity';
 import { decimalTransformer } from '../../database/decimal.transformer';
@@ -13,6 +13,14 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
+export class BookingPaymentSummary {
+  @ApiProperty({ enum: PaymentStatus })
+  status: PaymentStatus;
+
+  @ApiProperty({ nullable: true })
+  refundAmount: number | null;
+}
 
 @Index('uq_booking_slot', ['court', 'bookingDate', 'startTime'], {
   unique: true,
@@ -58,6 +66,9 @@ export class Booking {
     transformer: decimalTransformer,
   })
   totalAmount: number;
+
+  @ApiProperty({ type: () => BookingPaymentSummary, required: false })
+  payment?: BookingPaymentSummary;
 
   @ApiProperty()
   @CreateDateColumn()

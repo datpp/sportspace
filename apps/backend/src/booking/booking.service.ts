@@ -10,6 +10,7 @@ import { BookingStatus, PaymentStatus, Role } from '@sportspace/shared';
 import {
   DataSource,
   EntityManager,
+  In,
   LessThanOrEqual,
   MoreThanOrEqual,
   Repository,
@@ -112,12 +113,14 @@ export class BookingService {
     return booking;
   }
 
-  findAll(user: AuthenticatedUser): Promise<Booking[]> {
+  async findAll(user: AuthenticatedUser): Promise<Booking[]> {
     const where = user.role === Role.ADMIN ? {} : { user: { id: user.id } };
-    return this.bookingRepo.find({
+    const bookings = await this.bookingRepo.find({
       where,
       relations: { court: true, user: true },
     });
+    await this.attachPaymentSummaries(bookings);
+    return bookings;
   }
 
   async findOne(id: string, user: AuthenticatedUser): Promise<Booking> {
@@ -242,6 +245,14 @@ export class BookingService {
       startTime: booking.startTime,
       status: BookingStatus.CANCELLED,
     });
+
+    if (payment) {
+      booking.payment = {
+        status: payment.status,
+        refundAmount: payment.refundAmount,
+      };
+    }
+
     return booking;
   }
 
@@ -250,6 +261,26 @@ export class BookingService {
     const result = await this.bookingRepo.delete(id);
     if (!result.affected) {
       throw new NotFoundException('Booking không tồn tại');
+    }
+  }
+
+  private async attachPaymentSummaries(bookings: Booking[]): Promise<void> {
+    if (bookings.length === 0) {
+      return;
+    }
+    const payments = await this.paymentRepo.find({
+      where: { booking: { id: In(bookings.map((b) => b.id)) } },
+      relations: { booking: true },
+    });
+    const byBookingId = new Map(payments.map((p) => [p.booking.id, p]));
+    for (const booking of bookings) {
+      const payment = byBookingId.get(booking.id);
+      if (payment) {
+        booking.payment = {
+          status: payment.status,
+          refundAmount: payment.refundAmount,
+        };
+      }
     }
   }
 

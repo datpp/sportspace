@@ -277,9 +277,13 @@ describe('BookingService', () => {
       bookingRepo.findOne.mockResolvedValue(booking);
       bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
 
-      await service.cancel(booking.id, buildAuthUser({ id: owner.id }));
+      const result = await service.cancel(
+        booking.id,
+        buildAuthUser({ id: owner.id }),
+      );
 
       expect(paymentRepo.save).not.toHaveBeenCalled();
+      expect(result.payment).toBeUndefined();
     });
 
     it('refunds 100% and marks the payment REFUNDED when cancelling >24h before the slot', async () => {
@@ -300,7 +304,10 @@ describe('BookingService', () => {
       bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
       paymentRepo.findOne.mockResolvedValue(payment);
 
-      await service.cancel(booking.id, buildAuthUser({ id: owner.id }));
+      const result = await service.cancel(
+        booking.id,
+        buildAuthUser({ id: owner.id }),
+      );
 
       expect(paymentRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -308,6 +315,10 @@ describe('BookingService', () => {
           refundAmount: 200000,
         }),
       );
+      expect(result.payment).toEqual({
+        status: PaymentStatus.REFUNDED,
+        refundAmount: 200000,
+      });
     });
 
     it('refunds 50% and marks the payment REFUNDED when cancelling 2-24h before the slot', async () => {
@@ -328,7 +339,10 @@ describe('BookingService', () => {
       bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
       paymentRepo.findOne.mockResolvedValue(payment);
 
-      await service.cancel(booking.id, buildAuthUser({ id: owner.id }));
+      const result = await service.cancel(
+        booking.id,
+        buildAuthUser({ id: owner.id }),
+      );
 
       expect(paymentRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -336,6 +350,10 @@ describe('BookingService', () => {
           refundAmount: 100000,
         }),
       );
+      expect(result.payment).toEqual({
+        status: PaymentStatus.REFUNDED,
+        refundAmount: 100000,
+      });
     });
 
     it('keeps the payment PAID with refundAmount 0 when cancelling <2h before the slot', async () => {
@@ -356,7 +374,10 @@ describe('BookingService', () => {
       bookingRepo.save.mockImplementation((b) => Promise.resolve(b as Booking));
       paymentRepo.findOne.mockResolvedValue(payment);
 
-      await service.cancel(booking.id, buildAuthUser({ id: owner.id }));
+      const result = await service.cancel(
+        booking.id,
+        buildAuthUser({ id: owner.id }),
+      );
 
       expect(paymentRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -364,6 +385,10 @@ describe('BookingService', () => {
           refundAmount: 0,
         }),
       );
+      expect(result.payment).toEqual({
+        status: PaymentStatus.PAID,
+        refundAmount: 0,
+      });
     });
 
     it('is a no-op the second time an already-CANCELLED booking is cancelled', async () => {
@@ -438,6 +463,28 @@ describe('BookingService', () => {
         where: {},
         relations: { court: true, user: true },
       });
+    });
+
+    it('attaches a payment summary only to bookings that have a payment', async () => {
+      const paidBooking = buildBookingRow();
+      const unpaidBooking = buildBookingRow();
+      const payment = buildPaymentRow({
+        booking: { id: paidBooking.id } as Booking,
+        status: PaymentStatus.REFUNDED,
+        refundAmount: 100000,
+      });
+      bookingRepo.find.mockResolvedValue([paidBooking, unpaidBooking]);
+      paymentRepo.find.mockResolvedValue([payment]);
+
+      const result = await service.findAll(buildAuthUser({ role: Role.ADMIN }));
+
+      expect(result.find((b) => b.id === paidBooking.id)?.payment).toEqual({
+        status: PaymentStatus.REFUNDED,
+        refundAmount: 100000,
+      });
+      expect(
+        result.find((b) => b.id === unpaidBooking.id)?.payment,
+      ).toBeUndefined();
     });
   });
 
