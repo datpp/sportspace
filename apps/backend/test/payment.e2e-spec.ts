@@ -341,7 +341,13 @@ describe('Payment / VNPAY (e2e)', () => {
 
   describe('cancel refund policy', () => {
     function isoDateNHoursFromNow(hours: number): { date: string; time: string } {
-      const target = new Date(Date.now() + hours * 60 * 60 * 1000);
+      let target = new Date(Date.now() + hours * 60 * 60 * 1000);
+      // Bookings are same-day only (single `date` + start/end `time`
+      // columns); nudge back below the day boundary so `startTime + 1h`
+      // below never rolls into the next calendar day.
+      if (target.getUTCHours() === 23) {
+        target = new Date(target.getTime() - 2 * 60 * 60 * 1000);
+      }
       return {
         date: target.toISOString().slice(0, 10),
         time: `${String(target.getUTCHours()).padStart(2, '0')}:${String(
