@@ -1062,6 +1062,72 @@
         ]
       }
     },
+    "/reviews": {
+      "post": {
+        "operationId": "ReviewController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Review"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Đánh giá sân sau khi đã chơi xong",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "get": {
+        "operationId": "ReviewController_findByVenue",
+        "parameters": [
+          {
+            "name": "venueId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VenueReviewsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách đánh giá + điểm trung bình theo cụm sân",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/bookings": {
       "post": {
         "operationId": "BookingController_create",
@@ -2652,6 +2718,82 @@
           "startTime",
           "endTime",
           "price"
+        ]
+      },
+      "CreateReviewDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "comment": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingId",
+          "rating"
+        ]
+      },
+      "Review": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "venue": {
+            "$ref": "#/components/schemas/Venue"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "rating": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "venue",
+          "user",
+          "rating",
+          "createdAt"
+        ]
+      },
+      "VenueReviewsDto": {
+        "type": "object",
+        "properties": {
+          "averageRating": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Review"
+            }
+          }
+        },
+        "required": [
+          "averageRating",
+          "total",
+          "items"
         ]
       },
       "CreateBookingDto": {

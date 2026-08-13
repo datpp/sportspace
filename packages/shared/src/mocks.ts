@@ -20,3 +20,4 @@ export * from './generated/admin/admin.msw';
 export * from './generated/notifications/notifications.msw';
 export * from './generated/users/users.msw';
 export * from './generated/staff/staff.msw';
+export * from './generated/reviews/reviews.msw';

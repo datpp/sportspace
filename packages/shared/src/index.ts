@@ -29,3 +29,4 @@ export * from './generated/matches/matches';
 export * from './generated/notifications/notifications';
 export * from './generated/users/users';
 export * from './generated/staff/staff';
+export * from './generated/reviews/reviews';
