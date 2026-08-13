@@ -252,4 +252,20 @@ export class PaymentService {
       await queryRunner.release();
     }
   }
+
+  /**
+   * Merchant-initiated rejection isn't the player's fault, so unlike the
+   * player-cancel tiered policy this is always a full refund. No-op if the
+   * booking was never paid (still PENDING) — nothing to refund.
+   */
+  async refundFull(bookingId: string): Promise<void> {
+    const payment = await this.paymentRepo.findOne({
+      where: { booking: { id: bookingId }, status: PaymentStatus.PAID },
+    });
+    if (!payment) {
+      return;
+    }
+    payment.status = PaymentStatus.REFUNDED;
+    await this.paymentRepo.save(payment);
+  }
 }

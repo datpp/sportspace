@@ -383,4 +383,31 @@ describe('PaymentService', () => {
       expect(notificationService.notify).not.toHaveBeenCalled();
     });
   });
+
+  describe('refundFull', () => {
+    it('flips a PAID payment to REFUNDED', async () => {
+      const payment = {
+        id: faker.string.uuid(),
+        provider: 'VNPAY',
+        amount: 200_000,
+        status: PaymentStatus.PAID,
+        transactionRef: faker.string.alphanumeric(10),
+      } as Payment;
+      paymentRepo.findOne.mockResolvedValue(payment);
+
+      await service.refundFull(faker.string.uuid());
+
+      expect(paymentRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: PaymentStatus.REFUNDED }),
+      );
+    });
+
+    it('is a no-op when there is no PAID payment for the booking', async () => {
+      paymentRepo.findOne.mockResolvedValue(null);
+
+      await service.refundFull(faker.string.uuid());
+
+      expect(paymentRepo.save).not.toHaveBeenCalled();
+    });
+  });
 });
