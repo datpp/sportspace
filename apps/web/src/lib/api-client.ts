@@ -7,6 +7,9 @@ import {
   getAdmin,
   getBookings,
   getStaff,
+  getUsers,
+  getDisputes,
+  getSystemConfig,
 } from '@sportspace/shared';
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:3000';
@@ -28,5 +31,8 @@ export function createAuthenticatedApiClient(accessToken: string) {
     admin: getAdmin(instance),
     bookings: getBookings(instance),
     staff: getStaff(instance),
+    users: getUsers(instance),
+    disputes: getDisputes(instance),
+    systemConfig: getSystemConfig(instance),
   };
 }
