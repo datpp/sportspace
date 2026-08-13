@@ -14,6 +14,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { UserModule } from './user/user.module';
 import { StaffModule } from './staff/staff.module';
 import { SystemConfigModule } from './system-config/system-config.module';
+import { DisputeModule } from './dispute/dispute.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { SystemConfigModule } from './system-config/system-config.module';
     UserModule,
     StaffModule,
     SystemConfigModule,
+    DisputeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
