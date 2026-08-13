@@ -21,7 +21,8 @@
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "pnpm typeorm migration:generate -d src/database/data-source.ts",
     "migration:run": "pnpm typeorm migration:run -d src/database/data-source.ts",
-    "swagger:export": "ts-node -r tsconfig-paths/register src/swagger/generate-swagger.ts"
+    "swagger:export": "ts-node -r tsconfig-paths/register src/swagger/generate-swagger.ts",
+    "seed:dev": "ts-node -r tsconfig-paths/register src/database/seed-dev-users.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

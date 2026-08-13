@@ -11,5 +11,6 @@ build/
 coverage/
 packages/shared/src/generated/
 .rtk/
+/.run/
 /CLAUDE.md
 /.claude/
