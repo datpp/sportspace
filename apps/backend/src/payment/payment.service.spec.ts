@@ -80,6 +80,7 @@ function buildPayment(overrides: Partial<Payment> = {}): Payment {
     provider: 'VNPAY',
     amount: 200000,
     status: PaymentStatus.PENDING,
+    refundAmount: null,
     transactionRef: faker.string.hexadecimal({ length: 32, prefix: '' }),
     createdAt: new Date(),
     updatedAt: new Date(),
