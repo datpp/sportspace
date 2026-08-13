@@ -12,5 +12,6 @@ coverage/
 packages/shared/src/generated/
 .rtk/
 /.run/
+/.worktrees/
 /CLAUDE.md
 /.claude/
