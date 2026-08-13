@@ -595,6 +595,29 @@ describe('BookingService', () => {
     });
   });
 
+  describe('findAllForMerchant', () => {
+    it("queries bookings scoped to the merchant's own venues, with court/user relations loaded", async () => {
+      const merchantId = faker.string.uuid();
+      bookingRepo.find.mockResolvedValue([]);
+
+      await service.findAllForMerchant(merchantId);
+
+      expect(bookingRepo.find).toHaveBeenCalledWith({
+        where: { court: { venue: { owner: { id: merchantId } } } },
+        relations: { court: true, user: true },
+      });
+    });
+
+    it('returns exactly the bookings resolved by the repository', async () => {
+      const bookings = [buildBookingRow(), buildBookingRow()];
+      bookingRepo.find.mockResolvedValue(bookings);
+
+      const result = await service.findAllForMerchant(faker.string.uuid());
+
+      expect(result).toBe(bookings);
+    });
+  });
+
   describe('findAll', () => {
     it("scopes a PLAYER's results to their own bookings", async () => {
       const user = buildAuthUser({ role: Role.PLAYER });

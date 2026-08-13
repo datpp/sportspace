@@ -17,6 +17,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { VenueService } from '../venue/venue.service';
 import { Venue } from '../venue/entities/venue.entity';
+import { Booking } from './entities/booking.entity';
 
 @ApiTags('merchant')
 @Controller('merchant')
@@ -62,5 +63,17 @@ export class MerchantController {
   @ApiOkResponse({ type: [Venue] })
   getVenues(@CurrentUser('id') merchantId: string): Promise<Venue[]> {
     return this.venueService.findByOwner(merchantId);
+  }
+
+  @Get('bookings')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.MERCHANT, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Danh sách đơn đặt sân trên các cụm sân của chủ sân hiện tại',
+  })
+  @ApiOkResponse({ type: [Booking] })
+  getBookings(@CurrentUser('id') merchantId: string): Promise<Booking[]> {
+    return this.bookingService.findAllForMerchant(merchantId);
   }
 }

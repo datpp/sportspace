@@ -385,6 +385,13 @@ export class BookingService {
     }
   }
 
+  async findAllForMerchant(merchantId: string): Promise<Booking[]> {
+    return this.bookingRepo.find({
+      where: { court: { venue: { owner: { id: merchantId } } } },
+      relations: { court: true, user: true },
+    });
+  }
+
   async getMerchantRevenue(
     merchantId: string,
     query: RevenueQueryDto,

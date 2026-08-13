@@ -445,4 +445,61 @@ describe('Booking (e2e)', () => {
         .expect(409);
     });
   });
+
+  describe('merchant bookings list', () => {
+    it("lets the owning MERCHANT see a booking made on their own venue (200)", async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-10',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      createdBookingIds.push(createRes.body.id);
+
+      const res = await request(app.getHttpServer())
+        .get('/merchant/bookings')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+
+      const ids = (res.body as { id: string }[]).map((b) => b.id);
+      expect(ids).toContain(createRes.body.id);
+    });
+
+    it('a different MERCHANT with no venues of their own sees a disjoint set', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-11',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      createdBookingIds.push(createRes.body.id);
+
+      const res = await request(app.getHttpServer())
+        .get('/merchant/bookings')
+        .set('Authorization', `Bearer ${otherMerchantToken}`)
+        .expect(200);
+
+      const ids = (res.body as { id: string }[]).map((b) => b.id);
+      expect(ids).not.toContain(createRes.body.id);
+    });
+
+    it('rejects an unauthenticated request (401)', async () => {
+      await request(app.getHttpServer()).get('/merchant/bookings').expect(401);
+    });
+
+    it('rejects a PLAYER (403)', async () => {
+      await request(app.getHttpServer())
+        .get('/merchant/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(403);
+    });
+  });
 });
