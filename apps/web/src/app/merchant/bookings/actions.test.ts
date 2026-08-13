@@ -20,6 +20,14 @@ vi.mock('next/navigation', () => ({ redirect }));
 
 const { confirmBooking, rejectBooking } = await import('./actions');
 
+function formDataFor(fields: Record<string, string>) {
+  const fd = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    fd.set(key, value);
+  }
+  return fd;
+}
+
 beforeEach(() => {
   bookingControllerConfirm.mockReset();
   bookingControllerReject.mockReset();
@@ -67,15 +75,29 @@ describe('confirmBooking', () => {
 });
 
 describe('rejectBooking', () => {
-  it('gọi đúng API với bookingId + reason, revalidate path', async () => {
+  it('gọi đúng API với bookingId + reason từ FormData, revalidate path', async () => {
     bookingControllerReject.mockResolvedValue({ data: { id: 'booking-1' } });
 
-    await rejectBooking('booking-1', 'Sân đang bảo trì');
+    await rejectBooking('booking-1', formDataFor({ reason: 'Sân đang bảo trì' }));
 
     expect(bookingControllerReject).toHaveBeenCalledWith('booking-1', {
       reason: 'Sân đang bảo trì',
     });
     expect(revalidatePath).toHaveBeenCalledWith('/merchant/bookings');
+  });
+
+  it('thiếu reason trong FormData → không gọi API', async () => {
+    await rejectBooking('booking-1', new FormData());
+
+    expect(bookingControllerReject).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('reason là chuỗi trắng → không gọi API', async () => {
+    await rejectBooking('booking-1', formDataFor({ reason: '   ' }));
+
+    expect(bookingControllerReject).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it('401 redirect về /login', async () => {
@@ -89,21 +111,25 @@ describe('rejectBooking', () => {
       }),
     );
 
-    await expect(rejectBooking('booking-1', 'lý do')).rejects.toThrow('NEXT_REDIRECT:/login');
+    await expect(
+      rejectBooking('booking-1', formDataFor({ reason: 'lý do' })),
+    ).rejects.toThrow('NEXT_REDIRECT:/login');
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it('lỗi khác ném ra ngoài cho error boundary xử lý', async () => {
     bookingControllerReject.mockRejectedValue(new Error('server error'));
 
-    await expect(rejectBooking('booking-1', 'lý do')).rejects.toThrow('server error');
+    await expect(
+      rejectBooking('booking-1', formDataFor({ reason: 'lý do' })),
+    ).rejects.toThrow('server error');
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it('không gọi nhầm sang confirm', async () => {
     bookingControllerReject.mockResolvedValue({ data: { id: 'booking-1' } });
 
-    await rejectBooking('booking-1', 'lý do');
+    await rejectBooking('booking-1', formDataFor({ reason: 'lý do' }));
 
     expect(bookingControllerConfirm).not.toHaveBeenCalled();
   });

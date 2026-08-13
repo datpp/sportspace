@@ -27,7 +27,12 @@ export async function confirmBooking(bookingId: string): Promise<void> {
   revalidatePath('/merchant/bookings');
 }
 
-export async function rejectBooking(bookingId: string, reason: string): Promise<void> {
+export async function rejectBooking(bookingId: string, formData: FormData): Promise<void> {
+  const reason = formData.get('reason');
+  if (typeof reason !== 'string' || reason.trim().length === 0) {
+    return;
+  }
+
   await withMerchantSession(({ bookings }) => bookings.bookingControllerReject(bookingId, { reason }));
   revalidatePath('/merchant/bookings');
 }
