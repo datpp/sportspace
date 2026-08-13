@@ -9,6 +9,7 @@ import { VenueModule } from '../venue/venue.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { NotificationModule } from '../notification/notification.module';
 import { PaymentModule } from '../payment/payment.module';
+import { SystemConfigModule } from '../system-config/system-config.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PaymentModule } from '../payment/payment.module';
     RealtimeModule,
     NotificationModule,
     PaymentModule,
+    SystemConfigModule,
   ],
   controllers: [BookingController, MerchantController],
   providers: [BookingService],

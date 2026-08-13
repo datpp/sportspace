@@ -23,6 +23,7 @@ import { RedisService } from '../redis/redis.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { NotificationService } from '../notification/notification.service';
 import { PaymentService } from '../payment/payment.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
@@ -98,6 +99,7 @@ describe('BookingService', () => {
   let realtimeGateway: DeepMocked<RealtimeGateway>;
   let notificationService: DeepMocked<NotificationService>;
   let paymentService: DeepMocked<PaymentService>;
+  let systemConfigService: DeepMocked<SystemConfigService>;
   let queryRunner: DeepMocked<QueryRunner>;
   let manager: DeepMocked<EntityManager>;
   let queryBuilder: DeepMocked<SelectQueryBuilder<Booking>>;
@@ -112,6 +114,7 @@ describe('BookingService', () => {
     realtimeGateway = createMock<RealtimeGateway>();
     notificationService = createMock<NotificationService>();
     paymentService = createMock<PaymentService>();
+    systemConfigService = createMock<SystemConfigService>();
     queryRunner = createMock<QueryRunner>();
     manager = createMock<EntityManager>();
     queryBuilder = createMock<SelectQueryBuilder<Booking>>();
@@ -134,6 +137,14 @@ describe('BookingService', () => {
     redisService.acquireLock.mockResolvedValue(LOCK_TOKEN);
     paymentRepo.findOne.mockResolvedValue(null);
     paymentRepo.save.mockImplementation((p) => Promise.resolve(p as Payment));
+    systemConfigService.get.mockResolvedValue({
+      id: 'config-1',
+      cancellationFullRefundHours: 24,
+      cancellationPartialRefundHours: 2,
+      cancellationPartialRefundPercent: 50,
+      platformCommissionPercent: 10,
+      updatedAt: new Date(),
+    });
 
     service = new BookingService(
       bookingRepo,
@@ -143,6 +154,7 @@ describe('BookingService', () => {
       realtimeGateway,
       notificationService,
       paymentService,
+      systemConfigService,
     );
   });
 

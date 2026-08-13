@@ -35,6 +35,7 @@ import {
 } from './refund-policy.util';
 import { NotificationService } from '../notification/notification.service';
 import { PaymentService } from '../payment/payment.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 import { RejectBookingDto } from './dto/reject-booking.dto';
 
 const SLOT_LOCK_TTL_SECONDS = 10;
@@ -60,6 +61,7 @@ export class BookingService {
     private readonly realtimeGateway: RealtimeGateway,
     private readonly notificationService: NotificationService,
     private readonly paymentService: PaymentService,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
 
   async create(userId: string, dto: CreateBookingDto): Promise<Booking> {
@@ -227,9 +229,13 @@ export class BookingService {
         booking.bookingDate,
         booking.startTime,
       );
+      const config = await this.systemConfigService.get();
       const refundPercentage = calculateRefundPercentage(
         new Date(),
         slotStart,
+        config.cancellationFullRefundHours,
+        config.cancellationPartialRefundHours,
+        config.cancellationPartialRefundPercent / 100,
       );
       const refundAmount =
         Math.round(Number(booking.totalAmount) * refundPercentage * 100) /
