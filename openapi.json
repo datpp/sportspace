@@ -1231,6 +1231,88 @@
         ]
       }
     },
+    "/bookings/{id}/confirm": {
+      "patch": {
+        "operationId": "BookingController_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Chủ sân xác nhận đơn đặt sân (FR-M04)",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/bookings/{id}/reject": {
+      "patch": {
+        "operationId": "BookingController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectBookingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Chủ sân từ chối đơn đặt sân, hoàn tiền 100% nếu đã thanh toán (FR-M04)",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
     "/bookings/{id}/cancel": {
       "post": {
         "operationId": "BookingController_cancel",
@@ -2275,6 +2357,17 @@
             "type": "string"
           }
         }
+      },
+      "RejectBookingDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
       },
       "RevenueDto": {
         "type": "object",
