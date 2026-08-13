@@ -22,6 +22,10 @@ import { Booking } from './entities/booking.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '@sportspace/shared';
+import { RejectBookingDto } from './dto/reject-booking.dto';
 
 @ApiTags('bookings')
 @Controller('bookings')
@@ -58,6 +62,31 @@ export class BookingController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.bookingService.update(id, dto, user);
+  }
+
+  @Patch(':id/confirm')
+  @UseGuards(RolesGuard)
+  @Roles(Role.MERCHANT, Role.ADMIN)
+  @ApiOperation({ summary: 'Chủ sân xác nhận đơn đặt sân (FR-M04)' })
+  @ApiOkResponse({ type: Booking })
+  confirm(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.bookingService.merchantConfirm(id, user);
+  }
+
+  @Patch(':id/reject')
+  @UseGuards(RolesGuard)
+  @Roles(Role.MERCHANT, Role.ADMIN)
+  @ApiOperation({
+    summary:
+      'Chủ sân từ chối đơn đặt sân, hoàn tiền 100% nếu đã thanh toán (FR-M04)',
+  })
+  @ApiOkResponse({ type: Booking })
+  reject(
+    @Param('id') id: string,
+    @Body() dto: RejectBookingDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.bookingService.merchantReject(id, dto, user);
   }
 
   @Post(':id/cancel')

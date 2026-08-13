@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker';
+import * as bcrypt from 'bcrypt';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -13,17 +14,22 @@ import { User } from '../src/user/entities/user.entity';
 import { Venue } from '../src/venue/entities/venue.entity';
 import { signVnpayParams, toVnpayAmount } from '../src/payment/vnpay.util';
 
+const SEED_PASSWORD = 'Password123!';
+
 describe('Booking (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let hashSecret: string;
   let owner: User;
+  let otherMerchant: User;
   let venue: Venue;
   let court: Court;
   let playerId: string;
   let accessToken: string;
   let otherPlayerId: string;
   let otherAccessToken: string;
+  let ownerToken: string;
+  let otherMerchantToken: string;
   const createdBookingIds: string[] = [];
 
   beforeAll(async () => {
@@ -42,9 +48,17 @@ describe('Booking (e2e)', () => {
       .get(ConfigService)
       .get<string>('VNP_HASH_SECRET')!;
 
+    const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
+
     owner = await dataSource.getRepository(User).save({
       email: faker.internet.email(),
-      passwordHash: 'hash',
+      passwordHash,
+      fullName: faker.person.fullName(),
+      role: Role.MERCHANT,
+    });
+    otherMerchant = await dataSource.getRepository(User).save({
+      email: faker.internet.email(),
+      passwordHash,
       fullName: faker.person.fullName(),
       role: Role.MERCHANT,
     });
@@ -84,6 +98,16 @@ describe('Booking (e2e)', () => {
       .expect(201);
     otherPlayerId = otherRegisterRes.body.userId;
     otherAccessToken = otherRegisterRes.body.accessToken;
+
+    const login = async (email: string) => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password: SEED_PASSWORD })
+        .expect(200);
+      return res.body.accessToken as string;
+    };
+    ownerToken = await login(owner.email);
+    otherMerchantToken = await login(otherMerchant.email);
   });
 
   afterAll(async () => {
@@ -109,6 +133,7 @@ describe('Booking (e2e)', () => {
       })
       .execute();
     await dataSource.getRepository(User).delete({ id: owner.id });
+    await dataSource.getRepository(User).delete({ id: otherMerchant.id });
     await dataSource.getRepository(User).delete({ id: playerId });
     await dataSource.getRepository(User).delete({ id: otherPlayerId });
     await app.close();
@@ -311,6 +336,113 @@ describe('Booking (e2e)', () => {
         listRes.body as { id: string; payment?: { status: string } }[]
       ).find((b) => b.id === bookingId);
       expect(listed?.payment?.status).toBe('REFUNDED');
+    });
+  });
+
+  describe('merchant confirm/reject', () => {
+    it('lets the owning MERCHANT confirm a PENDING booking (200)', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-05',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      createdBookingIds.push(createRes.body.id);
+
+      const res = await request(app.getHttpServer())
+        .patch(`/bookings/${createRes.body.id}/confirm`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+
+      expect(res.body.status).toBe('CONFIRMED');
+    });
+
+    it('rejects confirm from a non-owning MERCHANT (403)', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-06',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      createdBookingIds.push(createRes.body.id);
+
+      await request(app.getHttpServer())
+        .patch(`/bookings/${createRes.body.id}/confirm`)
+        .set('Authorization', `Bearer ${otherMerchantToken}`)
+        .expect(403);
+    });
+
+    it('rejects confirm from a PLAYER (403)', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-07',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      createdBookingIds.push(createRes.body.id);
+
+      await request(app.getHttpServer())
+        .patch(`/bookings/${createRes.body.id}/confirm`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(403);
+    });
+
+    it('lets the owning MERCHANT reject a PENDING booking with a reason (200)', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-08',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      createdBookingIds.push(createRes.body.id);
+
+      const res = await request(app.getHttpServer())
+        .patch(`/bookings/${createRes.body.id}/reject`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ reason: 'Sân đang bảo trì' })
+        .expect(200);
+
+      expect(res.body.status).toBe('CANCELLED');
+    });
+
+    it('returns 409 when confirming a booking that is not PENDING', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-09',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      createdBookingIds.push(createRes.body.id);
+
+      await request(app.getHttpServer())
+        .patch(`/bookings/${createRes.body.id}/confirm`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .patch(`/bookings/${createRes.body.id}/confirm`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(409);
     });
   });
 });
