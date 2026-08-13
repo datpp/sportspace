@@ -9,6 +9,7 @@ import { DataSource, Repository } from 'typeorm';
 import { BookingStatus } from '@sportspace/shared';
 import { Review } from './entities/review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { VenueReviewsDto } from './dto/venue-reviews.dto';
 import { Booking } from '../booking/entities/booking.entity';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
@@ -49,5 +50,19 @@ export class ReviewService {
       comment: dto.comment,
     });
     return this.reviewRepo.save(review);
+  }
+
+  async listByVenue(venueId: string): Promise<VenueReviewsDto> {
+    const items = await this.reviewRepo.find({
+      where: { venue: { id: venueId } },
+      relations: { user: true },
+      order: { createdAt: 'DESC' },
+    });
+    const total = items.length;
+    const averageRating =
+      total === 0
+        ? 0
+        : Math.round((items.reduce((sum, r) => sum + r.rating, 0) / total) * 10) / 10;
+    return { items, total, averageRating };
   }
 }

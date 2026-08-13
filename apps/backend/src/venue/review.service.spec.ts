@@ -120,4 +120,31 @@ describe('ReviewService', () => {
       expect(reviewRepo.save).toHaveBeenCalled();
     });
   });
+
+  describe('listByVenue', () => {
+    it('returns items, total, and the average rating rounded to 1 decimal', async () => {
+      const venueId = faker.string.uuid();
+      reviewRepo.find.mockResolvedValue([
+        createMock<Review>({ rating: 5 }),
+        createMock<Review>({ rating: 4 }),
+      ]);
+
+      const result = await service.listByVenue(venueId);
+
+      expect(reviewRepo.find).toHaveBeenCalledWith({
+        where: { venue: { id: venueId } },
+        relations: { user: true },
+        order: { createdAt: 'DESC' },
+      });
+      expect(result.total).toBe(2);
+      expect(result.averageRating).toBe(4.5);
+    });
+
+    it('returns averageRating 0 when there are no reviews', async () => {
+      reviewRepo.find.mockResolvedValue([]);
+      const result = await service.listByVenue(faker.string.uuid());
+      expect(result.total).toBe(0);
+      expect(result.averageRating).toBe(0);
+    });
+  });
 });
