@@ -142,6 +142,16 @@ describe('Payment / VNPAY (e2e)', () => {
     return { ...stringified, vnp_SecureHash };
   }
 
+  async function checkoutAndGetTxnRef(token: string, date: string) {
+    const bookingId = await createPendingBooking(token, date);
+    const res = await request(app.getHttpServer())
+      .post(`/payments/${bookingId}/checkout`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+    const url = new URL(res.body.paymentUrl);
+    return { bookingId, txnRef: url.searchParams.get('vnp_TxnRef')! };
+  }
+
   it('rejects checkout with no Authorization header (401)', async () => {
     const bookingId = await createPendingBooking(accessToken, '2026-09-05');
     await request(app.getHttpServer())
@@ -177,16 +187,6 @@ describe('Payment / VNPAY (e2e)', () => {
   });
 
   describe('IPN webhook', () => {
-    async function checkoutAndGetTxnRef(token: string, date: string) {
-      const bookingId = await createPendingBooking(token, date);
-      const res = await request(app.getHttpServer())
-        .post(`/payments/${bookingId}/checkout`)
-        .set('Authorization', `Bearer ${token}`)
-        .expect(201);
-      const url = new URL(res.body.paymentUrl);
-      return { bookingId, txnRef: url.searchParams.get('vnp_TxnRef')! };
-    }
-
     it('confirms Payment + Booking on a validly-signed success IPN (RspCode 00)', async () => {
       const { bookingId, txnRef } = await checkoutAndGetTxnRef(
         accessToken,
@@ -336,6 +336,117 @@ describe('Payment / VNPAY (e2e)', () => {
         .getRepository('payments')
         .findOne({ where: { transactionRef: txnRef } });
       expect(payment?.status).toBe(PaymentStatus.FAILED);
+    });
+  });
+
+  describe('cancel refund policy', () => {
+    function isoDateNHoursFromNow(hours: number): { date: string; time: string } {
+      const target = new Date(Date.now() + hours * 60 * 60 * 1000);
+      return {
+        date: target.toISOString().slice(0, 10),
+        time: `${String(target.getUTCHours()).padStart(2, '0')}:${String(
+          target.getUTCMinutes(),
+        ).padStart(2, '0')}`,
+      };
+    }
+
+    async function createAndPayBooking(
+      hoursFromNow: number,
+    ): Promise<{ bookingId: string; txnRef: string }> {
+      const { date, time } = isoDateNHoursFromNow(hoursFromNow);
+      const res = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: date,
+          startTime: time,
+          endTime: `${String(Number(time.slice(0, 2)) + 1).padStart(2, '0')}:${time.slice(3)}`,
+        })
+        .expect(201);
+      const bookingId = res.body.id as string;
+      createdBookingIds.push(bookingId);
+
+      const checkoutRes = await request(app.getHttpServer())
+        .post(`/payments/${bookingId}/checkout`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(201);
+      const txnRef = new URL(checkoutRes.body.paymentUrl).searchParams.get(
+        'vnp_TxnRef',
+      )!;
+
+      await request(app.getHttpServer())
+        .get('/payments/ipn')
+        .query(
+          signedIpnQuery({
+            vnp_TxnRef: txnRef,
+            vnp_Amount: toVnpayAmount(BASE_PRICE),
+            vnp_ResponseCode: '00',
+          }),
+        )
+        .expect(200);
+
+      return { bookingId, txnRef };
+    }
+
+    it('refunds 100% when cancelling more than 24h before the slot', async () => {
+      const { bookingId, txnRef } = await createAndPayBooking(48);
+
+      await request(app.getHttpServer())
+        .post(`/bookings/${bookingId}/cancel`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(201);
+
+      const payment = await dataSource
+        .getRepository('payments')
+        .findOne({ where: { transactionRef: txnRef } });
+      expect(payment?.status).toBe(PaymentStatus.REFUNDED);
+      expect(Number(payment?.refundAmount)).toBe(BASE_PRICE);
+    });
+
+    it('refunds 50% when cancelling between 2h and 24h before the slot', async () => {
+      const { bookingId, txnRef } = await createAndPayBooking(10);
+
+      await request(app.getHttpServer())
+        .post(`/bookings/${bookingId}/cancel`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(201);
+
+      const payment = await dataSource
+        .getRepository('payments')
+        .findOne({ where: { transactionRef: txnRef } });
+      expect(payment?.status).toBe(PaymentStatus.REFUNDED);
+      expect(Number(payment?.refundAmount)).toBe(BASE_PRICE / 2);
+    });
+
+    it('keeps the payment PAID with a 0 refund when cancelling less than 2h before the slot', async () => {
+      const { bookingId, txnRef } = await createAndPayBooking(1);
+
+      await request(app.getHttpServer())
+        .post(`/bookings/${bookingId}/cancel`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(201);
+
+      const payment = await dataSource
+        .getRepository('payments')
+        .findOne({ where: { transactionRef: txnRef } });
+      expect(payment?.status).toBe(PaymentStatus.PAID);
+      expect(Number(payment?.refundAmount)).toBe(0);
+    });
+
+    it('leaves an unpaid (PENDING) booking to cancel without creating a refund', async () => {
+      const bookingId = await createPendingBooking(accessToken, '2026-09-14');
+
+      await request(app.getHttpServer())
+        .post(`/bookings/${bookingId}/cancel`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(201);
+
+      const bookingRes = await request(app.getHttpServer())
+        .get(`/bookings/${bookingId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(bookingRes.body.status).toBe('CANCELLED');
     });
   });
 });
