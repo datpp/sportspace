@@ -3,6 +3,7 @@ import { faker } from '@faker-js/faker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
+import { User } from './entities/user.entity';
 
 describe('UserController', () => {
   let controller: UserController;
@@ -31,5 +32,27 @@ describe('UserController', () => {
     await controller.updateFcmToken(userId, dto);
 
     expect(service.updateFcmToken).toHaveBeenCalledWith(userId, 'device-token');
+  });
+
+  it('findAll() forwards to the service', async () => {
+    const users = [{ id: faker.string.uuid() }];
+    service.findAll.mockResolvedValue(users as User[]);
+
+    const result = await controller.findAll();
+
+    expect(result).toBe(users);
+    expect(service.findAll).toHaveBeenCalled();
+  });
+
+  it('lock() forwards id + true to the service', async () => {
+    const id = faker.string.uuid();
+    await controller.lock(id);
+    expect(service.setLocked).toHaveBeenCalledWith(id, true);
+  });
+
+  it('unlock() forwards id + false to the service', async () => {
+    const id = faker.string.uuid();
+    await controller.unlock(id);
+    expect(service.setLocked).toHaveBeenCalledWith(id, false);
   });
 });
