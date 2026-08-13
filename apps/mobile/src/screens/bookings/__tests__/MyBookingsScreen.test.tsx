@@ -138,4 +138,107 @@ describe('MyBookingsScreen', () => {
     await screen.findByTestId(`booking-item-${booking.id}`);
     expect(screen.queryByTestId(`booking-create-match-${booking.id}`)).toBeNull();
   });
+
+  it('hiển thị số tiền hoàn khi lịch đã huỷ có refund > 0', async () => {
+    const booking = getBookingControllerFindAllResponseMock()[0];
+    booking.status = BookingStatus.CONFIRMED;
+    server.use(http.get('*/bookings', () => HttpResponse.json([booking], { status: 200 })));
+    server.use(
+      http.post('*/bookings/:id/cancel', () =>
+        HttpResponse.json(
+          getBookingControllerCancelResponseMock({
+            ...booking,
+            status: BookingStatus.CANCELLED,
+            payment: { status: 'REFUNDED', refundAmount: 100000 },
+          }),
+          { status: 201 },
+        ),
+      ),
+    );
+    jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      const confirmButton = buttons?.find((b) => b.text === 'Huỷ lịch');
+      confirmButton?.onPress?.();
+    });
+
+    const user = userEvent.setup();
+    await renderScreen();
+
+    const cancelButton = await screen.findByTestId(`booking-cancel-${booking.id}`);
+    await user.press(cancelButton);
+
+    await waitFor(() =>
+      expect(screen.getByTestId(`booking-refund-${booking.id}`)).toHaveTextContent('100.000', {
+        exact: false,
+      }),
+    );
+  });
+
+  it('hiển thị "Không được hoàn tiền" khi refund bằng 0', async () => {
+    const booking = getBookingControllerFindAllResponseMock()[0];
+    booking.status = BookingStatus.CONFIRMED;
+    server.use(http.get('*/bookings', () => HttpResponse.json([booking], { status: 200 })));
+    server.use(
+      http.post('*/bookings/:id/cancel', () =>
+        HttpResponse.json(
+          getBookingControllerCancelResponseMock({
+            ...booking,
+            status: BookingStatus.CANCELLED,
+            payment: { status: 'PAID', refundAmount: 0 },
+          }),
+          { status: 201 },
+        ),
+      ),
+    );
+    jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      const confirmButton = buttons?.find((b) => b.text === 'Huỷ lịch');
+      confirmButton?.onPress?.();
+    });
+
+    const user = userEvent.setup();
+    await renderScreen();
+
+    const cancelButton = await screen.findByTestId(`booking-cancel-${booking.id}`);
+    await user.press(cancelButton);
+
+    await waitFor(() =>
+      expect(screen.getByTestId(`booking-refund-${booking.id}`)).toHaveTextContent(
+        'Không được hoàn tiền',
+      ),
+    );
+  });
+
+  it('không hiện dòng hoàn tiền khi lịch huỷ không có payment (chưa thanh toán)', async () => {
+    const booking = getBookingControllerFindAllResponseMock()[0];
+    booking.status = BookingStatus.CONFIRMED;
+    server.use(http.get('*/bookings', () => HttpResponse.json([booking], { status: 200 })));
+    server.use(
+      http.post('*/bookings/:id/cancel', () =>
+        HttpResponse.json(
+          getBookingControllerCancelResponseMock({
+            ...booking,
+            status: BookingStatus.CANCELLED,
+            payment: undefined,
+          }),
+          { status: 201 },
+        ),
+      ),
+    );
+    jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      const confirmButton = buttons?.find((b) => b.text === 'Huỷ lịch');
+      confirmButton?.onPress?.();
+    });
+
+    const user = userEvent.setup();
+    await renderScreen();
+
+    const cancelButton = await screen.findByTestId(`booking-cancel-${booking.id}`);
+    await user.press(cancelButton);
+
+    await waitFor(() =>
+      expect(screen.getByTestId(`booking-item-${booking.id}`)).toHaveTextContent('Đã huỷ', {
+        exact: false,
+      }),
+    );
+    expect(screen.queryByTestId(`booking-refund-${booking.id}`)).toBeNull();
+  });
 });

@@ -122,6 +122,13 @@ export function MyBookingsScreen({ navigation }: Props) {
             </Text>
             <Text style={styles.cardStatus}>{STATUS_LABEL[item.status] ?? item.status}</Text>
             <Text style={styles.cardPrice}>{item.totalAmount.toLocaleString('vi-VN')} đ</Text>
+            {item.status === BookingStatus.CANCELLED && item.payment ? (
+              <Text testID={`booking-refund-${item.id}`} style={styles.cardRefund}>
+                {item.payment.refundAmount && item.payment.refundAmount > 0
+                  ? `Đã hoàn ${item.payment.refundAmount.toLocaleString('vi-VN')} đ`
+                  : 'Không được hoàn tiền'}
+              </Text>
+            ) : null}
             <View style={styles.cardActions}>
               {canCreateMatch ? (
                 <Pressable
@@ -177,6 +184,7 @@ const styles = StyleSheet.create({
   cardSubtitle: { color: '#555' },
   cardStatus: { color: '#1d4ed8', fontWeight: '600' },
   cardPrice: { fontWeight: '600' },
+  cardRefund: { color: '#16a34a', fontWeight: '600' },
   cardActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
   matchButton: {
     alignSelf: 'flex-start',
