@@ -3,7 +3,7 @@ import * as bcrypt from 'bcrypt';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
-import { BookingStatus, Role } from '@sportspace/shared';
+import { BookingStatus, Role, VenueStatus } from '@sportspace/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
@@ -55,7 +55,7 @@ describe('Review (e2e)', () => {
       address: '123 Test St',
       lat: 10.762622,
       lng: 106.660172,
-      status: 'APPROVED',
+      status: VenueStatus.APPROVED,
     });
     venueId = venue.id;
 
