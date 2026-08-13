@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { Venue } from '@sportspace/shared';
-import { venuesApi } from '../../api/client';
+import type { Venue, VenueReviewsDto } from '@sportspace/shared';
+import { reviewsApi, venuesApi } from '../../api/client';
 import type { VenuesStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<VenuesStackParamList, 'VenueDetail'>;
@@ -10,6 +10,7 @@ type Props = NativeStackScreenProps<VenuesStackParamList, 'VenueDetail'>;
 export function VenueDetailScreen({ route, navigation }: Props) {
   const { venueId, venueName } = route.params;
   const [venue, setVenue] = useState<Venue | null>(null);
+  const [reviews, setReviews] = useState<VenueReviewsDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -25,9 +26,19 @@ export function VenueDetailScreen({ route, navigation }: Props) {
     }
   }, [venueId]);
 
+  const fetchReviews = useCallback(async () => {
+    try {
+      const { data } = await reviewsApi.reviewControllerFindByVenue({ venueId });
+      setReviews(data);
+    } catch {
+      // Điểm đánh giá không phải dữ liệu bắt buộc để xem sân — lỗi ở đây không chặn màn hình.
+    }
+  }, [venueId]);
+
   useEffect(() => {
     void fetchVenue();
-  }, [fetchVenue]);
+    void fetchReviews();
+  }, [fetchVenue, fetchReviews]);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -59,6 +70,12 @@ export function VenueDetailScreen({ route, navigation }: Props) {
         <Text style={styles.title}>{venue.name || venueName}</Text>
         <Text style={styles.subtitle}>{venue.address}</Text>
         {venue.description ? <Text style={styles.description}>{venue.description}</Text> : null}
+        {reviews && reviews.total > 0 ? (
+          <View testID="venue-average-rating" style={styles.ratingRow}>
+            <Text style={styles.ratingValue}>{reviews.averageRating.toFixed(1)} ★</Text>
+            <Text style={styles.ratingCount}>({reviews.total} đánh giá)</Text>
+          </View>
+        ) : null}
       </View>
       {venue.courts.length === 0 ? (
         <View style={styles.centerFill} testID="venue-detail-no-courts">
@@ -89,6 +106,17 @@ export function VenueDetailScreen({ route, navigation }: Props) {
           )}
         />
       )}
+      {reviews && reviews.items.length > 0 ? (
+        <View style={styles.reviewsSection}>
+          <Text style={styles.reviewsTitle}>Đánh giá</Text>
+          {reviews.items.map((review) => (
+            <View key={review.id} testID={`review-item-${review.id}`} style={styles.reviewItem}>
+              <Text style={styles.reviewRating}>{review.rating} ★</Text>
+              {review.comment ? <Text>{review.comment}</Text> : null}
+            </View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -99,6 +127,13 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700' },
   subtitle: { color: '#555' },
   description: { color: '#777', marginTop: 4 },
+  ratingRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 },
+  ratingValue: { fontSize: 16, fontWeight: '700', color: '#f59e0b' },
+  ratingCount: { color: '#777' },
+  reviewsSection: { padding: 16, gap: 8 },
+  reviewsTitle: { fontSize: 16, fontWeight: '700' },
+  reviewItem: { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, gap: 2 },
+  reviewRating: { color: '#f59e0b', fontWeight: '600' },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   errorText: { color: '#dc2626' },
   link: { color: '#1d4ed8', fontWeight: '600' },

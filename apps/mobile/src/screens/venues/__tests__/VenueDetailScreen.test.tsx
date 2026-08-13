@@ -70,4 +70,23 @@ describe('VenueDetailScreen', () => {
       venueName: venue.name,
     });
   });
+
+  it('hiển thị điểm đánh giá trung bình và danh sách đánh giá', async () => {
+    server.use(
+      http.get('*/reviews', () =>
+        HttpResponse.json({
+          averageRating: 4.5,
+          total: 2,
+          items: [
+            { id: 'r1', rating: 5, comment: 'Rất tốt', user: { fullName: 'An' } },
+            { id: 'r2', rating: 4, comment: 'Ổn', user: { fullName: 'Bình' } },
+          ],
+        }),
+      ),
+    );
+    await renderScreen();
+
+    expect(await screen.findByTestId('venue-average-rating')).toHaveTextContent('4.5', { exact: false });
+    expect(screen.getByTestId('review-item-r1')).toHaveTextContent('Rất tốt', { exact: false });
+  });
 });

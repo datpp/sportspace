@@ -9,6 +9,7 @@ import {
   getMatchesMock,
   getNotificationsMock,
   getPaymentsMock,
+  getReviewsMock,
   getVenuesMock,
 } from '@sportspace/shared/mocks';
 
@@ -25,5 +26,6 @@ export const server = setupServer(
     ...getPaymentsMock(),
     ...getNotificationsMock(),
     ...getMatchesMock(),
+    ...getReviewsMock(),
   ] as unknown as Parameters<typeof setupServer>),
 );
