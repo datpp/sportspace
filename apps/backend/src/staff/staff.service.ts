@@ -14,8 +14,11 @@ import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { CreateShiftDto } from './dto/create-shift.dto';
 import { ShiftQueryDto } from './dto/shift-query.dto';
+import { FindStaffQueryDto } from './dto/find-staff-query.dto';
 import { hasOverlap } from './shift-overlap';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { PaginatedDto } from '../common/dto/paginated.dto';
+import { buildPaginationMeta } from '../common/pagination.util';
 
 @Injectable()
 export class StaffService {
@@ -46,11 +49,31 @@ export class StaffService {
     return this.staffRepo.save(staff);
   }
 
-  findAll(venueId: string): Promise<Staff[]> {
-    return this.staffRepo.find({
-      where: { venue: { id: venueId } },
-      relations: { venue: true },
-    });
+  async findAll(query: FindStaffQueryDto): Promise<PaginatedDto<Staff>> {
+    const { page, limit, q, venueId, isActive } = query;
+
+    const qb = this.staffRepo
+      .createQueryBuilder('staff')
+      .leftJoinAndSelect('staff.venue', 'venue')
+      .where('venue.id = :venueId', { venueId })
+      .orderBy('staff.fullName', 'ASC');
+
+    if (isActive !== undefined) {
+      qb.andWhere('staff.isActive = :isActive', {
+        isActive: isActive === 'true',
+      });
+    }
+    if (q?.trim()) {
+      qb.andWhere('(staff.fullName ILIKE :q OR staff.phone ILIKE :q)', {
+        q: `%${q.trim()}%`,
+      });
+    }
+
+    const [data, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+    return { data, meta: buildPaginationMeta(total, page, limit) };
   }
 
   async findOne(id: string): Promise<Staff> {

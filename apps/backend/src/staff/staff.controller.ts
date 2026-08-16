@@ -22,6 +22,7 @@ import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { CreateShiftDto } from './dto/create-shift.dto';
 import { ShiftQueryDto } from './dto/shift-query.dto';
+import { FindStaffQueryDto } from './dto/find-staff-query.dto';
 import { Staff } from './entities/staff.entity';
 import { Shift } from './entities/shift.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -29,6 +30,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { PaginatedDto } from '../common/dto/paginated.dto';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('staff')
 @Controller('staff')
@@ -46,10 +49,10 @@ export class StaffController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Danh sách nhân viên theo cụm sân' })
-  @ApiOkResponse({ type: [Staff] })
-  findAll(@Query('venueId') venueId: string) {
-    return this.staffService.findAll(venueId);
+  @ApiOperation({ summary: 'Danh sách nhân viên theo cụm sân (tìm kiếm/lọc/phân trang)' })
+  @ApiPaginatedResponse(Staff)
+  findAll(@Query() query: FindStaffQueryDto): Promise<PaginatedDto<Staff>> {
+    return this.staffService.findAll(query);
   }
 
   @Get(':id')

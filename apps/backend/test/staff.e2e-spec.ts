@@ -95,7 +95,17 @@ describe('Staff + Shift (e2e)', () => {
       .set('Authorization', `Bearer ${merchantToken}`)
       .expect(200);
 
-    expect(res.body).toHaveLength(1);
+    expect(res.body.data).toHaveLength(1);
+  });
+
+  it('searches staff by name or phone and filters by isActive', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/staff')
+      .query({ venueId, q: 'not-a-real-staff-name-xyz' })
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .expect(200);
+    expect(res.body.data).toHaveLength(0);
+    expect(res.body.meta).toMatchObject({ page: 1, limit: 20 });
   });
 
   it('POST /staff/:id/shifts — tạo ca làm', async () => {
