@@ -641,6 +641,14 @@ export class AdminVenuesQueryDto extends PaginationQueryDto {
 // apps/backend/src/venue/venue.service.ts — add these methods (keep the
 // rest of the class as-is), and add PaginatedDto/buildPaginationMeta/
 // AdminVenuesQueryDto/MerchantVenuesQueryDto imports at the top:
+  //
+  // Deliberately does NOT .leftJoinAndSelect('venue.courts', 'courts'): a
+  // one-to-many join combined with .skip()/.take() operates on the
+  // flattened venue×court row set, not on distinct venues — a venue with
+  // multiple courts can make a page return fewer than `limit` distinct
+  // venues or split its courts across the LIMIT window. The admin venues
+  // list UI doesn't read `venue.courts`, so it's dropped from this query
+  // rather than worked around.
   async findAllForAdmin(query: AdminVenuesQueryDto): Promise<PaginatedDto<Venue>> {
     const { page, limit, q, province } = query;
     const status = query.status ?? VenueStatus.PENDING;
@@ -648,7 +656,6 @@ export class AdminVenuesQueryDto extends PaginationQueryDto {
     const qb = this.venueRepo
       .createQueryBuilder('venue')
       .leftJoinAndSelect('venue.owner', 'owner')
-      .leftJoinAndSelect('venue.courts', 'courts')
       .orderBy('venue.createdAt', 'DESC');
 
     if (status !== 'ALL') {
@@ -1130,6 +1137,14 @@ export class MerchantVenuesQueryDto extends PaginationQueryDto {
 
 ```typescript
 // apps/backend/src/venue/venue.service.ts — replace findByOwner
+  //
+  // Deliberately does NOT .leftJoinAndSelect('venue.courts', 'courts'): a
+  // one-to-many join combined with .skip()/.take() operates on the
+  // flattened venue×court row set, not on distinct venues — a venue with
+  // multiple courts can make a page return fewer than `limit` distinct
+  // venues or split its courts across the LIMIT window. Neither the
+  // merchant nor admin venues list UI reads `venue.courts`, so it's
+  // dropped from this query rather than worked around.
   async findByOwner(
     ownerId: string,
     query: MerchantVenuesQueryDto,
@@ -1138,7 +1153,6 @@ export class MerchantVenuesQueryDto extends PaginationQueryDto {
 
     const qb = this.venueRepo
       .createQueryBuilder('venue')
-      .leftJoinAndSelect('venue.courts', 'courts')
       .where('venue.owner = :ownerId', { ownerId })
       .orderBy('venue.createdAt', 'DESC');
 
