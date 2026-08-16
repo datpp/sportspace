@@ -99,27 +99,63 @@ describe('VenueService', () => {
   });
 
   describe('findByOwner', () => {
-    it('queries venues filtered by owner id, newest first', async () => {
+    it('queries venues filtered by owner id, newest first, and paginates', async () => {
       const ownerId = faker.string.uuid();
       const owned = [buildVenue({ owner: buildUser({ id: ownerId }) })];
-      venueRepo.find.mockResolvedValue(owned);
+      queryBuilder.getManyAndCount.mockResolvedValue([owned, 1]);
 
-      const result = await service.findByOwner(ownerId);
-
-      expect(venueRepo.find).toHaveBeenCalledWith({
-        where: { owner: { id: ownerId } },
-        relations: { courts: true },
-        order: { createdAt: 'DESC' },
+      const result = await service.findByOwner(ownerId, {
+        page: 1,
+        limit: 20,
       });
-      expect(result).toBe(owned);
+
+      expect(queryBuilder.where).toHaveBeenCalledWith(
+        'venue.owner = :ownerId',
+        { ownerId },
+      );
+      expect(result.data).toBe(owned);
+      expect(result.meta).toMatchObject({ total: 1, page: 1, limit: 20 });
     });
 
     it("does not return another merchant's venues", async () => {
-      venueRepo.find.mockResolvedValue([]);
+      queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 
-      const result = await service.findByOwner(faker.string.uuid());
+      const result = await service.findByOwner(faker.string.uuid(), {
+        page: 1,
+        limit: 20,
+      });
 
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
+    });
+
+    it('filters by status when provided', async () => {
+      queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findByOwner(faker.string.uuid(), {
+        page: 1,
+        limit: 20,
+        status: VenueStatus.APPROVED,
+      });
+
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'venue.status = :status',
+        { status: VenueStatus.APPROVED },
+      );
+    });
+
+    it('searches by name or address when q is provided', async () => {
+      queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findByOwner(faker.string.uuid(), {
+        page: 1,
+        limit: 20,
+        q: 'san van dong',
+      });
+
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        '(venue.name ILIKE :q OR venue.address ILIKE :q)',
+        { q: '%san van dong%' },
+      );
     });
   });
 

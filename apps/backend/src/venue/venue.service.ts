@@ -10,6 +10,7 @@ import { CreateVenueDto } from './dto/create-venue.dto';
 import { UpdateVenueDto } from './dto/update-venue.dto';
 import { FindVenuesQueryDto } from './dto/find-venues-query.dto';
 import { AdminVenuesQueryDto } from './dto/admin-venues-query.dto';
+import { MerchantVenuesQueryDto } from './dto/merchant-venues-query.dto';
 import { Venue } from './entities/venue.entity';
 import { User } from '../user/entities/user.entity';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -30,12 +31,40 @@ export class VenueService {
     return this.venueRepo.save(venue);
   }
 
-  findByOwner(ownerId: string): Promise<Venue[]> {
-    return this.venueRepo.find({
-      where: { owner: { id: ownerId } },
-      relations: { courts: true },
-      order: { createdAt: 'DESC' },
-    });
+  //
+  // Deliberately does NOT .leftJoinAndSelect('venue.courts', 'courts'):
+  // neither the merchant nor admin venues list UI reads `venue.courts`,
+  // so it's dropped to keep this query lighter. (This is NOT a
+  // correctness fix — see the identical note on findAllForAdmin above:
+  // the project's TypeORM version already protects a joined one-to-many
+  // + .skip()/.take() query from fan-out via a two-step distinct-ID-
+  // then-hydrate query. Drop it for cost, not because leaving it in
+  // would paginate incorrectly.)
+  async findByOwner(
+    ownerId: string,
+    query: MerchantVenuesQueryDto,
+  ): Promise<PaginatedDto<Venue>> {
+    const { page, limit, q } = query;
+
+    const qb = this.venueRepo
+      .createQueryBuilder('venue')
+      .where('venue.owner = :ownerId', { ownerId })
+      .orderBy('venue.createdAt', 'DESC');
+
+    if (query.status && query.status !== 'ALL') {
+      qb.andWhere('venue.status = :status', { status: query.status });
+    }
+    if (q?.trim()) {
+      qb.andWhere('(venue.name ILIKE :q OR venue.address ILIKE :q)', {
+        q: `%${q.trim()}%`,
+      });
+    }
+
+    const [data, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+    return { data, meta: buildPaginationMeta(total, page, limit) };
   }
 
   async findAllForAdmin(

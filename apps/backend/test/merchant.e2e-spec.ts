@@ -172,7 +172,7 @@ describe('Merchant endpoints (e2e)', () => {
       .set('Authorization', `Bearer ${merchantToken}`)
       .expect(200);
 
-    const ids = (res.body as Venue[]).map((v) => v.id);
+    const ids = (res.body.data as Venue[]).map((v) => v.id);
     expect(ids).toContain(merchantVenue.id);
     expect(ids).not.toContain(otherMerchantVenue.id);
 
@@ -180,9 +180,20 @@ describe('Merchant endpoints (e2e)', () => {
       .get('/merchant/venues')
       .set('Authorization', `Bearer ${otherMerchantToken}`)
       .expect(200);
-    const otherIds = (otherRes.body as Venue[]).map((v) => v.id);
+    const otherIds = (otherRes.body.data as Venue[]).map((v) => v.id);
     expect(otherIds).toContain(otherMerchantVenue.id);
     expect(otherIds).not.toContain(merchantVenue.id);
+  });
+
+  it("searches the merchant's own venues by name", async () => {
+    const res = await request(app.getHttpServer())
+      .get('/merchant/venues')
+      .query({ q: merchantVenue.name })
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .expect(200);
+    expect((res.body.data as Venue[]).map((v) => v.id)).toEqual([
+      merchantVenue.id,
+    ]);
   });
 
   describe('GET /merchant/revenue/timeseries', () => {

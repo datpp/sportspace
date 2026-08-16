@@ -12,6 +12,7 @@ import { RevenueDto } from './dto/revenue.dto';
 import { RevenueTimeseriesQueryDto } from './dto/revenue-timeseries-query.dto';
 import { RevenueTimeseriesPointDto } from './dto/revenue-timeseries-point.dto';
 import { MerchantBookingsQueryDto } from './dto/merchant-bookings-query.dto';
+import { MerchantVenuesQueryDto } from '../venue/dto/merchant-venues-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -62,10 +63,15 @@ export class MerchantController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.MERCHANT, Role.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Danh sách cụm sân của chủ sân hiện tại' })
-  @ApiOkResponse({ type: [Venue] })
-  getVenues(@CurrentUser('id') merchantId: string): Promise<Venue[]> {
-    return this.venueService.findByOwner(merchantId);
+  @ApiOperation({
+    summary: 'Danh sách cụm sân của chủ sân hiện tại (tìm kiếm/lọc/phân trang)',
+  })
+  @ApiPaginatedResponse(Venue)
+  getVenues(
+    @CurrentUser('id') merchantId: string,
+    @Query() query: MerchantVenuesQueryDto,
+  ): Promise<PaginatedDto<Venue>> {
+    return this.venueService.findByOwner(merchantId, query);
   }
 
   @Get('bookings')

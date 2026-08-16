@@ -63,14 +63,21 @@ describe('MerchantController', () => {
     expect(result).toBe(expected);
   });
 
-  it('getVenues() forwards the authenticated merchantId to VenueService.findByOwner', async () => {
+  it('getVenues() forwards the authenticated merchantId and query to VenueService.findByOwner', async () => {
     const merchantId = faker.string.uuid();
-    const expected = [createMock<Venue>()];
+    const query = { page: 1, limit: 20 };
+    const expected = {
+      data: [createMock<Venue>()],
+      meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
+    };
     venueService.findByOwner.mockResolvedValue(expected);
 
-    const result = await controller.getVenues(merchantId);
+    const result = await controller.getVenues(merchantId, query);
 
-    expect(venueService.findByOwner).toHaveBeenCalledWith(merchantId);
+    expect(venueService.findByOwner).toHaveBeenCalledWith(
+      merchantId,
+      query,
+    );
     expect(result).toBe(expected);
   });
 });
