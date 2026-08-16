@@ -10,8 +10,11 @@ import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { User } from '../src/user/entities/user.entity';
 import { Venue } from '../src/venue/entities/venue.entity';
+import { Court } from '../src/venue/entities/court.entity';
 
 const SEED_PASSWORD = 'Password123!';
+const NAME_MARKER = `E2ETestVenue-${faker.string.alphanumeric(8)}`;
+const markedName = () => `${NAME_MARKER} ${faker.company.name()}`;
 
 describe('GET /admin/venues (e2e)', () => {
   let app: INestApplication<App>;
@@ -23,6 +26,7 @@ describe('GET /admin/venues (e2e)', () => {
   let pendingVenue: Venue;
   let approvedVenue: Venue;
   let rejectedVenue: Venue;
+  let multiCourtVenue: Venue;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -53,7 +57,7 @@ describe('GET /admin/venues (e2e)', () => {
 
     pendingVenue = await dataSource.getRepository(Venue).save({
       owner: merchant,
-      name: faker.company.name(),
+      name: markedName(),
       address: faker.location.streetAddress(),
       lat: 10.762622,
       lng: 106.660172,
@@ -62,7 +66,7 @@ describe('GET /admin/venues (e2e)', () => {
     });
     approvedVenue = await dataSource.getRepository(Venue).save({
       owner: merchant,
-      name: faker.company.name(),
+      name: markedName(),
       address: faker.location.streetAddress(),
       lat: 10.762622,
       lng: 106.660172,
@@ -71,13 +75,36 @@ describe('GET /admin/venues (e2e)', () => {
     });
     rejectedVenue = await dataSource.getRepository(Venue).save({
       owner: merchant,
-      name: faker.company.name(),
+      name: markedName(),
       address: faker.location.streetAddress(),
       lat: 10.762622,
       lng: 106.660172,
       status: VenueStatus.REJECTED,
       province: faker.helpers.arrayElement(VIETNAM_PROVINCES),
     });
+    multiCourtVenue = await dataSource.getRepository(Venue).save({
+      owner: merchant,
+      name: markedName(),
+      address: faker.location.streetAddress(),
+      lat: 10.762622,
+      lng: 106.660172,
+      status: VenueStatus.APPROVED,
+      province: faker.helpers.arrayElement(VIETNAM_PROVINCES),
+    });
+    await dataSource.getRepository(Court).save([
+      {
+        venue: multiCourtVenue,
+        name: 'Sân A',
+        sport: 'football',
+        basePrice: 200000,
+      },
+      {
+        venue: multiCourtVenue,
+        name: 'Sân B',
+        sport: 'football',
+        basePrice: 250000,
+      },
+    ]);
 
     const login = async (email: string) => {
       const res = await request(app.getHttpServer())
@@ -92,8 +119,16 @@ describe('GET /admin/venues (e2e)', () => {
 
   afterAll(async () => {
     await dataSource
+      .getRepository(Court)
+      .delete({ venue: { id: multiCourtVenue.id } });
+    await dataSource
       .getRepository(Venue)
-      .delete([pendingVenue.id, approvedVenue.id, rejectedVenue.id]);
+      .delete([
+        pendingVenue.id,
+        approvedVenue.id,
+        rejectedVenue.id,
+        multiCourtVenue.id,
+      ]);
     await dataSource.getRepository(User).delete({ id: merchant.id });
     await dataSource.getRepository(User).delete({ id: admin.id });
     await app.close();
@@ -183,5 +218,26 @@ describe('GET /admin/venues (e2e)', () => {
 
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body).toContain(pendingVenue.province);
+  });
+
+  it('paginates by distinct venues, not fanned-out by a venue having multiple courts', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/admin/venues')
+      .query({ status: 'ALL', q: NAME_MARKER, limit: 4, page: 1 })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.meta.total).toBe(4);
+    const ids = (res.body.data as Venue[]).map((v) => v.id);
+    expect(ids).toHaveLength(4);
+    expect(new Set(ids).size).toBe(4);
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        pendingVenue.id,
+        approvedVenue.id,
+        rejectedVenue.id,
+        multiCourtVenue.id,
+      ]),
+    );
   });
 });

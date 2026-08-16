@@ -47,7 +47,6 @@ export class VenueService {
     const qb = this.venueRepo
       .createQueryBuilder('venue')
       .leftJoinAndSelect('venue.owner', 'owner')
-      .leftJoinAndSelect('venue.courts', 'courts')
       .orderBy('venue.createdAt', 'DESC');
 
     if (status !== 'ALL') {
