@@ -15,15 +15,18 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { DisputeStatus, Role } from '@sportspace/shared';
+import { Role } from '@sportspace/shared';
 import { DisputeService } from './dispute.service';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
+import { FindDisputesQueryDto } from './dto/find-disputes-query.dto';
 import { Dispute } from './entities/dispute.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { PaginatedDto } from '../common/dto/paginated.dto';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('disputes')
 @Controller('disputes')
@@ -45,10 +48,10 @@ export class DisputeController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: '[ADMIN] Danh sách khiếu nại' })
-  @ApiOkResponse({ type: [Dispute] })
-  findAll(@Query('status') status?: DisputeStatus): Promise<Dispute[]> {
-    return this.disputeService.findAll(status);
+  @ApiOperation({ summary: '[ADMIN] Danh sách khiếu nại (tìm kiếm/lọc/phân trang)' })
+  @ApiPaginatedResponse(Dispute)
+  findAll(@Query() query: FindDisputesQueryDto): Promise<PaginatedDto<Dispute>> {
+    return this.disputeService.findAll(query);
   }
 
   @Patch(':id/resolve')

@@ -117,6 +117,32 @@ describe('Dispute (e2e)', () => {
       .get('/disputes').set('Authorization', `Bearer ${playerToken}`).expect(403);
   });
 
+  it('lists only OPEN disputes by default, and everything with ?status=ALL', async () => {
+    const openOnly = await request(app.getHttpServer())
+      .get('/disputes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(
+      openOnly.body.data.every((d: { status: string }) => d.status === DisputeStatus.OPEN),
+    ).toBe(true);
+
+    const all = await request(app.getHttpServer())
+      .get('/disputes')
+      .query({ status: 'ALL' })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(all.body.data.length).toBeGreaterThanOrEqual(openOnly.body.data.length);
+  });
+
+  it('searches disputes by reason text', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/disputes')
+      .query({ status: 'ALL', q: 'not-a-real-reason-substring-xyz' })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(res.body.data).toHaveLength(0);
+  });
+
   it('lets an ADMIN resolve the dispute with a refund, marking the payment REFUNDED', async () => {
     const resolveRes = await request(app.getHttpServer())
       .patch(`/disputes/${disputeId}/resolve`)

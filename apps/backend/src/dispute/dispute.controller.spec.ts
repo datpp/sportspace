@@ -5,6 +5,8 @@ import { DisputeStatus } from '@sportspace/shared';
 import { DisputeController } from './dispute.controller';
 import { DisputeService } from './dispute.service';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
+import { Dispute } from './entities/dispute.entity';
+import { PaginatedDto } from '../common/dto/paginated.dto';
 
 describe('DisputeController', () => {
   let controller: DisputeController;
@@ -29,12 +31,18 @@ describe('DisputeController', () => {
     expect(service.create).toHaveBeenCalledWith(userId, dto);
   });
 
-  it('findAll() forwards the status query param', async () => {
-    service.findAll.mockResolvedValue([]);
+  it('findAll() forwards the query params to the service', async () => {
+    const expected: PaginatedDto<Dispute> = {
+      data: [createMock<Dispute>()],
+      meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
+    };
+    service.findAll.mockResolvedValue(expected);
 
-    await controller.findAll(DisputeStatus.OPEN);
+    const query = { page: 1, limit: 20, status: DisputeStatus.OPEN };
+    const result = await controller.findAll(query);
 
-    expect(service.findAll).toHaveBeenCalledWith(DisputeStatus.OPEN);
+    expect(service.findAll).toHaveBeenCalledWith(query);
+    expect(result).toBe(expected);
   });
 
   it('resolve() forwards id + adminId + dto', async () => {

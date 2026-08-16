@@ -10,9 +10,12 @@ import { Repository } from 'typeorm';
 import { Dispute } from './entities/dispute.entity';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
+import { FindDisputesQueryDto } from './dto/find-disputes-query.dto';
 import { Booking } from '../booking/entities/booking.entity';
 import { Payment } from '../payment/entities/payment.entity';
 import { PaymentService } from '../payment/payment.service';
+import { PaginatedDto } from '../common/dto/paginated.dto';
+import { buildPaginationMeta } from '../common/pagination.util';
 
 @Injectable()
 export class DisputeService {
@@ -44,12 +47,31 @@ export class DisputeService {
     return this.disputeRepo.save(dispute);
   }
 
-  async findAll(status?: DisputeStatus): Promise<Dispute[]> {
-    return this.disputeRepo.find({
-      where: status ? { status } : {},
-      relations: { booking: true, raisedBy: true },
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(query: FindDisputesQueryDto): Promise<PaginatedDto<Dispute>> {
+    const { page, limit, q } = query;
+    const status = query.status ?? DisputeStatus.OPEN;
+
+    const qb = this.disputeRepo
+      .createQueryBuilder('dispute')
+      .leftJoinAndSelect('dispute.booking', 'booking')
+      .leftJoinAndSelect('dispute.raisedBy', 'raisedBy')
+      .orderBy('dispute.createdAt', 'DESC');
+
+    if (status !== 'ALL') {
+      qb.andWhere('dispute.status = :status', { status });
+    }
+    if (q?.trim()) {
+      qb.andWhere(
+        '(dispute.reason ILIKE :q OR raisedBy.fullName ILIKE :q OR raisedBy.email ILIKE :q)',
+        { q: `%${q.trim()}%` },
+      );
+    }
+
+    const [data, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+    return { data, meta: buildPaginationMeta(total, page, limit) };
   }
 
   async resolve(
