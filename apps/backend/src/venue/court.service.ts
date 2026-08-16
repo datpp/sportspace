@@ -20,8 +20,11 @@ import { UpdateCourtDto } from './dto/update-court.dto';
 import { CreatePriceRuleDto } from './dto/create-price-rule.dto';
 import { SlotQueryDto } from './dto/slot-query.dto';
 import { SlotDto } from './dto/slot.dto';
+import { FindCourtsQueryDto } from './dto/find-courts-query.dto';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { Booking } from '../booking/entities/booking.entity';
+import { PaginatedDto } from '../common/dto/paginated.dto';
+import { buildPaginationMeta } from '../common/pagination.util';
 
 const OPERATING_START_HOUR = 6;
 const OPERATING_END_HOUR = 22;
@@ -52,11 +55,28 @@ export class CourtService {
     return this.courtRepo.save(court);
   }
 
-  findAll(venueId?: string): Promise<Court[]> {
-    return this.courtRepo.find({
-      where: venueId ? { venue: { id: venueId } } : {},
-      relations: { venue: true },
-    });
+  async findAll(query: FindCourtsQueryDto): Promise<PaginatedDto<Court>> {
+    const { page, limit, q, venueId } = query;
+
+    const qb = this.courtRepo
+      .createQueryBuilder('court')
+      .leftJoinAndSelect('court.venue', 'venue')
+      .orderBy('court.name', 'ASC');
+
+    if (venueId) {
+      qb.andWhere('venue.id = :venueId', { venueId });
+    }
+    if (q?.trim()) {
+      qb.andWhere('(court.name ILIKE :q OR court.sport ILIKE :q)', {
+        q: `%${q.trim()}%`,
+      });
+    }
+
+    const [data, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+    return { data, meta: buildPaginationMeta(total, page, limit) };
   }
 
   async findOne(id: string): Promise<Court> {

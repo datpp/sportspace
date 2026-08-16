@@ -23,6 +23,7 @@ import { UpdateCourtDto } from './dto/update-court.dto';
 import { CreatePriceRuleDto } from './dto/create-price-rule.dto';
 import { SlotQueryDto } from './dto/slot-query.dto';
 import { SlotDto } from './dto/slot.dto';
+import { FindCourtsQueryDto } from './dto/find-courts-query.dto';
 import { Court } from './entities/court.entity';
 import { PriceRule } from './entities/price-rule.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -30,6 +31,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { PaginatedDto } from '../common/dto/paginated.dto';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('courts')
 @Controller('courts')
@@ -47,10 +50,10 @@ export class CourtController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Danh sách sân con (lọc theo venueId)' })
-  @ApiOkResponse({ type: [Court] })
-  findAll(@Query('venueId') venueId?: string) {
-    return this.courtService.findAll(venueId);
+  @ApiOperation({ summary: 'Danh sách sân con (lọc theo venueId, tìm kiếm, phân trang)' })
+  @ApiPaginatedResponse(Court)
+  findAll(@Query() query: FindCourtsQueryDto): Promise<PaginatedDto<Court>> {
+    return this.courtService.findAll(query);
   }
 
   @Get(':id')

@@ -275,4 +275,13 @@ describe('Venue + Court (e2e)', () => {
     expect(Number(morningSlot.price)).toBe(200_000);
     expect(eveningSlot.available).toBe(true);
   });
+
+  it('searches courts by name or sport, scoped to a venue, and paginates', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/courts')
+      .query({ venueId, q: 'not-a-real-court-name-xyz' })
+      .expect(200);
+    expect(res.body.data).toHaveLength(0);
+    expect(res.body.meta).toMatchObject({ page: 1, limit: 20 });
+  });
 });
