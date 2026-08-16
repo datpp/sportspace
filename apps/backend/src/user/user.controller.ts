@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   Patch,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -17,7 +18,10 @@ import {
 import { Role } from '@sportspace/shared';
 import { UserService } from './user.service';
 import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
+import { FindUsersQueryDto } from './dto/find-users-query.dto';
 import { User } from './entities/user.entity';
+import { PaginatedDto } from '../common/dto/paginated.dto';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -44,10 +48,10 @@ export class UserController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: '[ADMIN] Danh sách toàn bộ người dùng' })
-  @ApiOkResponse({ type: [User] })
-  findAll(): Promise<User[]> {
-    return this.userService.findAll();
+  @ApiOperation({ summary: '[ADMIN] Danh sách người dùng (tìm kiếm, lọc, phân trang)' })
+  @ApiPaginatedResponse(User)
+  findAll(@Query() query: FindUsersQueryDto): Promise<PaginatedDto<User>> {
+    return this.userService.findAll(query);
   }
 
   @Patch(':id/lock')

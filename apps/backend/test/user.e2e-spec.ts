@@ -144,8 +144,9 @@ describe('User admin (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
     expect(
-      listRes.body.some((u: { id: string }) => u.id === player.id),
+      listRes.body.data.some((u: { id: string }) => u.id === player.id),
     ).toBe(true);
+    expect(listRes.body.meta).toMatchObject({ page: 1, limit: 20 });
 
     const lockRes = await request(app.getHttpServer())
       .patch(`/users/${player.id}/lock`)
@@ -168,5 +169,38 @@ describe('User admin (e2e)', () => {
       .post('/auth/login')
       .send({ email: player.email, password: SEED_PASSWORD })
       .expect(200);
+  });
+
+  it('filters the user list by role', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/users')
+      .query({ role: Role.ADMIN })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.data.every((u: { role: string }) => u.role === Role.ADMIN)).toBe(true);
+    expect(res.body.data.some((u: { id: string }) => u.id === player.id)).toBe(false);
+  });
+
+  it('searches the user list by fullName or email', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/users')
+      .query({ q: player.email })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.data.map((u: { id: string }) => u.id)).toEqual([player.id]);
+  });
+
+  it('paginates the user list', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/users')
+      .query({ page: 1, limit: 1 })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.meta.limit).toBe(1);
+    expect(res.body.meta.total).toBeGreaterThanOrEqual(2);
   });
 });

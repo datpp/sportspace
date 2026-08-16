@@ -1,9 +1,10 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { faker } from '@faker-js/faker';
 import { NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
+import { FindUsersQueryDto } from './dto/find-users-query.dto';
 
 describe('UserService', () => {
   let service: UserService;
@@ -27,15 +28,23 @@ describe('UserService', () => {
   });
 
   describe('findAll', () => {
-    it('returns all users', async () => {
+    it('returns paginated users via the query builder', async () => {
       const users = [
         { id: faker.string.uuid(), email: faker.internet.email() },
       ] as User[];
-      userRepo.find.mockResolvedValue(users);
+      const qb = createMock<SelectQueryBuilder<User>>();
+      qb.orderBy.mockReturnThis();
+      qb.andWhere.mockReturnThis();
+      qb.skip.mockReturnThis();
+      qb.take.mockReturnThis();
+      qb.getManyAndCount.mockResolvedValue([users, 1]);
+      userRepo.createQueryBuilder.mockReturnValue(qb);
 
-      const result = await service.findAll();
+      const query: FindUsersQueryDto = { page: 1, limit: 20 };
+      const result = await service.findAll(query);
 
-      expect(result).toBe(users);
+      expect(result.data).toBe(users);
+      expect(result.meta).toMatchObject({ total: 1, page: 1, limit: 20 });
     });
   });
 
