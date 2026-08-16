@@ -4,6 +4,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
+import { FindUsersQueryDto } from './dto/find-users-query.dto';
+import { PaginatedDto } from '../common/dto/paginated.dto';
 
 describe('UserController', () => {
   let controller: UserController;
@@ -36,12 +38,17 @@ describe('UserController', () => {
 
   it('findAll() forwards to the service', async () => {
     const users = [{ id: faker.string.uuid() }];
-    service.findAll.mockResolvedValue(users as User[]);
+    const query: FindUsersQueryDto = { page: 1, limit: 20 };
+    const paginated: PaginatedDto<User> = {
+      data: users as User[],
+      meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
+    };
+    service.findAll.mockResolvedValue(paginated);
 
-    const result = await controller.findAll();
+    const result = await controller.findAll(query);
 
-    expect(result).toBe(users);
-    expect(service.findAll).toHaveBeenCalled();
+    expect(result).toBe(paginated);
+    expect(service.findAll).toHaveBeenCalledWith(query);
   });
 
   it('lock() forwards id + true to the service', async () => {

@@ -87,6 +87,7 @@ describe('VenueService', () => {
         address: faker.location.streetAddress(),
         lat: 10.76,
         lng: 106.66,
+        province: 'Hà Nội',
       };
 
       await service.create(ownerId, dto);

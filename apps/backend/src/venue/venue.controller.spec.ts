@@ -33,6 +33,7 @@ describe('VenueController', () => {
       address: faker.location.streetAddress(),
       lat: 10.76,
       lng: 106.66,
+      province: 'Hà Nội',
     };
     const expected = createMock<Venue>();
     service.create.mockResolvedValue(expected);
