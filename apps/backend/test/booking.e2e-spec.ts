@@ -465,7 +465,7 @@ describe('Booking (e2e)', () => {
         .set('Authorization', `Bearer ${ownerToken}`)
         .expect(200);
 
-      const ids = (res.body as { id: string }[]).map((b) => b.id);
+      const ids = (res.body.data as { id: string }[]).map((b) => b.id);
       expect(ids).toContain(createRes.body.id);
     });
 
@@ -487,7 +487,7 @@ describe('Booking (e2e)', () => {
         .set('Authorization', `Bearer ${otherMerchantToken}`)
         .expect(200);
 
-      const ids = (res.body as { id: string }[]).map((b) => b.id);
+      const ids = (res.body.data as { id: string }[]).map((b) => b.id);
       expect(ids).not.toContain(createRes.body.id);
     });
 
@@ -500,6 +500,50 @@ describe('Booking (e2e)', () => {
         .get('/merchant/bookings')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(403);
+    });
+
+    it('excludes CANCELLED bookings by default but includes them with ?status=ALL', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-12',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      createdBookingIds.push(createRes.body.id);
+      await request(app.getHttpServer())
+        .post(`/bookings/${createRes.body.id}/cancel`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(201);
+
+      const defaultRes = await request(app.getHttpServer())
+        .get('/merchant/bookings')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      expect(
+        (defaultRes.body.data as { id: string }[]).map((b) => b.id),
+      ).not.toContain(createRes.body.id);
+
+      const allRes = await request(app.getHttpServer())
+        .get('/merchant/bookings')
+        .query({ status: 'ALL' })
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      expect(
+        (allRes.body.data as { id: string }[]).map((b) => b.id),
+      ).toContain(createRes.body.id);
+    });
+
+    it('filters merchant bookings by date range', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/merchant/bookings')
+        .query({ status: 'ALL', from: '2099-01-01', to: '2099-01-02' })
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      expect(res.body.data).toHaveLength(0);
     });
   });
 });

@@ -11,6 +11,7 @@ import { RevenueQueryDto } from './dto/revenue-query.dto';
 import { RevenueDto } from './dto/revenue.dto';
 import { RevenueTimeseriesQueryDto } from './dto/revenue-timeseries-query.dto';
 import { RevenueTimeseriesPointDto } from './dto/revenue-timeseries-point.dto';
+import { MerchantBookingsQueryDto } from './dto/merchant-bookings-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -18,6 +19,8 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { VenueService } from '../venue/venue.service';
 import { Venue } from '../venue/entities/venue.entity';
 import { Booking } from './entities/booking.entity';
+import { PaginatedDto } from '../common/dto/paginated.dto';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 
 @ApiTags('merchant')
 @Controller('merchant')
@@ -70,10 +73,14 @@ export class MerchantController {
   @Roles(Role.MERCHANT, Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Danh sách đơn đặt sân trên các cụm sân của chủ sân hiện tại',
+    summary:
+      'Danh sách đơn đặt sân trên các cụm sân của chủ sân hiện tại (tìm kiếm/lọc/phân trang)',
   })
-  @ApiOkResponse({ type: [Booking] })
-  getBookings(@CurrentUser('id') merchantId: string): Promise<Booking[]> {
-    return this.bookingService.findAllForMerchant(merchantId);
+  @ApiPaginatedResponse(Booking)
+  getBookings(
+    @CurrentUser('id') merchantId: string,
+    @Query() query: MerchantBookingsQueryDto,
+  ): Promise<PaginatedDto<Booking>> {
+    return this.bookingService.findAllForMerchant(merchantId, query);
   }
 }

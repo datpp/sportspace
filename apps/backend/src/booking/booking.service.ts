@@ -27,6 +27,9 @@ import { RevenueQueryDto } from './dto/revenue-query.dto';
 import { RevenueDto } from './dto/revenue.dto';
 import { RevenueTimeseriesQueryDto } from './dto/revenue-timeseries-query.dto';
 import { RevenueTimeseriesPointDto } from './dto/revenue-timeseries-point.dto';
+import { MerchantBookingsQueryDto } from './dto/merchant-bookings-query.dto';
+import { PaginatedDto } from '../common/dto/paginated.dto';
+import { buildPaginationMeta } from '../common/pagination.util';
 import { Booking } from './entities/booking.entity';
 import { Payment } from '../payment/entities/payment.entity';
 import {
@@ -391,11 +394,48 @@ export class BookingService {
     }
   }
 
-  async findAllForMerchant(merchantId: string): Promise<Booking[]> {
-    return this.bookingRepo.find({
-      where: { court: { venue: { owner: { id: merchantId } } } },
-      relations: { court: true, user: true },
-    });
+  async findAllForMerchant(
+    merchantId: string,
+    query: MerchantBookingsQueryDto,
+  ): Promise<PaginatedDto<Booking>> {
+    const { page, limit, q, venueId, from, to } = query;
+
+    const qb = this.bookingRepo
+      .createQueryBuilder('booking')
+      .leftJoinAndSelect('booking.court', 'court')
+      .leftJoinAndSelect('booking.user', 'user')
+      .innerJoin('court.venue', 'venue')
+      .where('venue.owner = :merchantId', { merchantId })
+      .orderBy('booking.createdAt', 'DESC');
+
+    if (query.status && query.status !== 'ALL') {
+      qb.andWhere('booking.status = :status', { status: query.status });
+    } else if (!query.status) {
+      qb.andWhere('booking.status IN (:...statuses)', {
+        statuses: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
+      });
+    }
+    if (q?.trim()) {
+      qb.andWhere(
+        '(user.fullName ILIKE :q OR user.email ILIKE :q OR court.name ILIKE :q)',
+        { q: `%${q.trim()}%` },
+      );
+    }
+    if (venueId) {
+      qb.andWhere('venue.id = :venueId', { venueId });
+    }
+    if (from) {
+      qb.andWhere('booking.bookingDate >= :from', { from });
+    }
+    if (to) {
+      qb.andWhere('booking.bookingDate <= :to', { to });
+    }
+
+    const [data, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+    return { data, meta: buildPaginationMeta(total, page, limit) };
   }
 
   async getMerchantRevenue(

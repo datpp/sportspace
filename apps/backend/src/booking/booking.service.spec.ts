@@ -608,25 +608,78 @@ describe('BookingService', () => {
   });
 
   describe('findAllForMerchant', () => {
-    it("queries bookings scoped to the merchant's own venues, with court/user relations loaded", async () => {
+    function mockQb(bookings: Booking[], total: number) {
+      const qb = createMock<SelectQueryBuilder<Booking>>();
+      qb.leftJoinAndSelect.mockReturnThis();
+      qb.innerJoin.mockReturnThis();
+      qb.where.mockReturnThis();
+      qb.andWhere.mockReturnThis();
+      qb.orderBy.mockReturnThis();
+      qb.skip.mockReturnThis();
+      qb.take.mockReturnThis();
+      qb.getManyAndCount.mockResolvedValue([bookings, total]);
+      bookingRepo.createQueryBuilder.mockReturnValue(qb);
+      return qb;
+    }
+
+    it('returns paginated bookings scoped to the merchant via the query builder', async () => {
       const merchantId = faker.string.uuid();
-      bookingRepo.find.mockResolvedValue([]);
+      const bookings = [buildBookingRow(), buildBookingRow()];
+      const qb = mockQb(bookings, 2);
 
-      await service.findAllForMerchant(merchantId);
+      const result = await service.findAllForMerchant(merchantId, {
+        page: 1,
+        limit: 20,
+      });
 
-      expect(bookingRepo.find).toHaveBeenCalledWith({
-        where: { court: { venue: { owner: { id: merchantId } } } },
-        relations: { court: true, user: true },
+      expect(qb.where).toHaveBeenCalledWith('venue.owner = :merchantId', {
+        merchantId,
+      });
+      expect(result.data).toBe(bookings);
+      expect(result.meta).toMatchObject({ total: 2, page: 1, limit: 20 });
+    });
+
+    it('defaults to PENDING+CONFIRMED statuses when no status filter is given', async () => {
+      const qb = mockQb([], 0);
+
+      await service.findAllForMerchant(faker.string.uuid(), {
+        page: 1,
+        limit: 20,
+      });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'booking.status IN (:...statuses)',
+        { statuses: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+      );
+    });
+
+    it('filters by an explicit status and skips the default status filter', async () => {
+      const qb = mockQb([], 0);
+
+      await service.findAllForMerchant(faker.string.uuid(), {
+        page: 1,
+        limit: 20,
+        status: BookingStatus.CANCELLED,
+      });
+
+      expect(qb.andWhere).toHaveBeenCalledWith('booking.status = :status', {
+        status: BookingStatus.CANCELLED,
       });
     });
 
-    it('returns exactly the bookings resolved by the repository', async () => {
-      const bookings = [buildBookingRow(), buildBookingRow()];
-      bookingRepo.find.mockResolvedValue(bookings);
+    it('does not filter by status when status=ALL', async () => {
+      const qb = mockQb([], 0);
 
-      const result = await service.findAllForMerchant(faker.string.uuid());
+      await service.findAllForMerchant(faker.string.uuid(), {
+        page: 1,
+        limit: 20,
+        status: 'ALL',
+      });
 
-      expect(result).toBe(bookings);
+      expect(qb.andWhere).not.toHaveBeenCalledWith(
+        expect.stringContaining('booking.status'),
+        expect.anything(),
+      );
     });
   });
 
