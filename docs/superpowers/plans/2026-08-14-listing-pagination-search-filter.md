@@ -642,13 +642,13 @@ export class AdminVenuesQueryDto extends PaginationQueryDto {
 // rest of the class as-is), and add PaginatedDto/buildPaginationMeta/
 // AdminVenuesQueryDto/MerchantVenuesQueryDto imports at the top:
   //
-  // Deliberately does NOT .leftJoinAndSelect('venue.courts', 'courts'): a
-  // one-to-many join combined with .skip()/.take() operates on the
-  // flattened venue×court row set, not on distinct venues — a venue with
-  // multiple courts can make a page return fewer than `limit` distinct
-  // venues or split its courts across the LIMIT window. The admin venues
-  // list UI doesn't read `venue.courts`, so it's dropped from this query
-  // rather than worked around.
+  // Deliberately does NOT .leftJoinAndSelect('venue.courts', 'courts'):
+  // the admin venues list UI never reads `venue.courts`, so it's dropped
+  // to keep this query lighter. (This is NOT a correctness fix — verified
+  // against the project's TypeORM version that combining a one-to-many
+  // join with .skip()/.take() already gets ORM-level fan-out protection
+  // via a two-step distinct-ID-then-hydrate query. Drop it for cost, not
+  // because leaving it in would paginate incorrectly.)
   async findAllForAdmin(query: AdminVenuesQueryDto): Promise<PaginatedDto<Venue>> {
     const { page, limit, q, province } = query;
     const status = query.status ?? VenueStatus.PENDING;
@@ -1138,13 +1138,14 @@ export class MerchantVenuesQueryDto extends PaginationQueryDto {
 ```typescript
 // apps/backend/src/venue/venue.service.ts — replace findByOwner
   //
-  // Deliberately does NOT .leftJoinAndSelect('venue.courts', 'courts'): a
-  // one-to-many join combined with .skip()/.take() operates on the
-  // flattened venue×court row set, not on distinct venues — a venue with
-  // multiple courts can make a page return fewer than `limit` distinct
-  // venues or split its courts across the LIMIT window. Neither the
-  // merchant nor admin venues list UI reads `venue.courts`, so it's
-  // dropped from this query rather than worked around.
+  // Deliberately does NOT .leftJoinAndSelect('venue.courts', 'courts'):
+  // neither the merchant nor admin venues list UI reads `venue.courts`,
+  // so it's dropped to keep this query lighter. (This is NOT a
+  // correctness fix — see the identical note on findAllForAdmin above:
+  // the project's TypeORM version already protects a joined one-to-many
+  // + .skip()/.take() query from fan-out via a two-step distinct-ID-
+  // then-hydrate query. Drop it for cost, not because leaving it in
+  // would paginate incorrectly.)
   async findByOwner(
     ownerId: string,
     query: MerchantVenuesQueryDto,
