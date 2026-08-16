@@ -733,9 +733,39 @@
         "operationId": "CourtController_findAll",
         "parameters": [
           {
-            "name": "venueId",
-            "required": true,
+            "name": "page",
+            "required": false,
             "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "venueId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên sân hoặc bộ môn",
             "schema": {
               "type": "string"
             }
@@ -747,16 +777,27 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Court"
-                  }
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Court"
+                          }
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
           }
         },
-        "summary": "Danh sách sân con (lọc theo venueId)",
+        "summary": "Danh sách sân con (lọc theo venueId, tìm kiếm, phân trang)",
         "tags": [
           "courts"
         ]
@@ -1022,6 +1063,27 @@
         "operationId": "AdminController_getVenues",
         "parameters": [
           {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
             "name": "status",
             "required": false,
             "in": "query",
@@ -1031,8 +1093,27 @@
               "enum": [
                 "PENDING",
                 "APPROVED",
-                "REJECTED"
+                "REJECTED",
+                "ALL"
               ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên, địa chỉ, hoặc chủ sở hữu",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "province",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo tỉnh/thành",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -1042,9 +1123,50 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Venue"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Danh sách cụm sân (tìm kiếm/lọc theo trạng thái, tỉnh/thành, phân trang)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/venues/provinces": {
+      "get": {
+        "operationId": "AdminController_getVenueProvinces",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Venue"
+                    "type": "string"
                   }
                 }
               }
@@ -1056,7 +1178,7 @@
             "bearer": []
           }
         ],
-        "summary": "Danh sách cụm sân theo status để duyệt (mặc định PENDING)",
+        "summary": "Danh sách tỉnh/thành đang có cụm sân (cho bộ lọc)",
         "tags": [
           "admin"
         ]
@@ -1504,17 +1626,73 @@
     "/merchant/venues": {
       "get": {
         "operationId": "MerchantController_getVenues",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "ALL"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên hoặc địa chỉ",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Venue"
-                  }
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Venue"
+                          }
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -1525,7 +1703,7 @@
             "bearer": []
           }
         ],
-        "summary": "Danh sách cụm sân của chủ sân hiện tại",
+        "summary": "Danh sách cụm sân của chủ sân hiện tại (tìm kiếm/lọc/phân trang)",
         "tags": [
           "merchant"
         ]
@@ -1534,17 +1712,99 @@
     "/merchant/bookings": {
       "get": {
         "operationId": "MerchantController_getBookings",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "CONFIRMED",
+                "CANCELLED",
+                "ALL"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên/email khách hoặc tên sân",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "venueId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Từ ngày (YYYY-MM-DD)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Đến ngày (YYYY-MM-DD)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Booking"
-                  }
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Booking"
+                          }
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -1555,7 +1815,7 @@
             "bearer": []
           }
         ],
-        "summary": "Danh sách đơn đặt sân trên các cụm sân của chủ sân hiện tại",
+        "summary": "Danh sách đơn đặt sân trên các cụm sân của chủ sân hiện tại (tìm kiếm/lọc/phân trang)",
         "tags": [
           "merchant"
         ]
@@ -1860,17 +2120,81 @@
     "/users": {
       "get": {
         "operationId": "UserController_findAll",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên hoặc email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "role",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PLAYER",
+                "MERCHANT",
+                "ADMIN"
+              ]
+            }
+          },
+          {
+            "name": "isLocked",
+            "required": false,
+            "in": "query",
+            "description": "\"true\" hoặc \"false\"",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/User"
-                  }
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/User"
+                          }
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -1881,7 +2205,7 @@
             "bearer": []
           }
         ],
-        "summary": "[ADMIN] Danh sách toàn bộ người dùng",
+        "summary": "[ADMIN] Danh sách người dùng (tìm kiếm, lọc, phân trang)",
         "tags": [
           "users"
         ]
@@ -1999,9 +2323,48 @@
         "operationId": "StaffController_findAll",
         "parameters": [
           {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
             "name": "venueId",
             "required": true,
             "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "description": "\"true\" hoặc \"false\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên hoặc số điện thoại",
             "schema": {
               "type": "string"
             }
@@ -2013,10 +2376,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Staff"
-                  }
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Staff"
+                          }
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -2027,7 +2401,7 @@
             "bearer": []
           }
         ],
-        "summary": "Danh sách nhân viên theo cụm sân",
+        "summary": "Danh sách nhân viên theo cụm sân (tìm kiếm/lọc/phân trang)",
         "tags": [
           "staff"
         ]
@@ -2305,9 +2679,46 @@
         "operationId": "DisputeController_findAll",
         "parameters": [
           {
-            "name": "status",
-            "required": true,
+            "name": "page",
+            "required": false,
             "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "OPEN",
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "RESOLVED",
+                "REJECTED",
+                "ALL"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo lý do hoặc người khiếu nại",
             "schema": {
               "type": "string"
             }
@@ -2319,10 +2730,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Dispute"
-                  }
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Dispute"
+                          }
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -2333,7 +2755,7 @@
             "bearer": []
           }
         ],
-        "summary": "[ADMIN] Danh sách khiếu nại",
+        "summary": "[ADMIN] Danh sách khiếu nại (tìm kiếm/lọc/phân trang)",
         "tags": [
           "disputes"
         ]
@@ -2832,6 +3254,45 @@
           "lng": {
             "type": "number"
           },
+          "province": {
+            "type": "string",
+            "enum": [
+              "Hà Nội",
+              "Huế",
+              "Lai Châu",
+              "Điện Biên",
+              "Sơn La",
+              "Lạng Sơn",
+              "Quảng Ninh",
+              "Thanh Hóa",
+              "Nghệ An",
+              "Hà Tĩnh",
+              "Cao Bằng",
+              "Tuyên Quang",
+              "Lào Cai",
+              "Thái Nguyên",
+              "Phú Thọ",
+              "Bắc Ninh",
+              "Hưng Yên",
+              "Hải Phòng",
+              "Ninh Bình",
+              "Quảng Trị",
+              "Đà Nẵng",
+              "Quảng Ngãi",
+              "Gia Lai",
+              "Khánh Hòa",
+              "Lâm Đồng",
+              "Đắk Lắk",
+              "Thành phố Hồ Chí Minh",
+              "Đồng Nai",
+              "Tây Ninh",
+              "Cần Thơ",
+              "Vĩnh Long",
+              "Đồng Tháp",
+              "Cà Mau",
+              "An Giang"
+            ]
+          },
           "description": {
             "type": "string"
           }
@@ -2840,7 +3301,8 @@
           "name",
           "address",
           "lat",
-          "lng"
+          "lng",
+          "province"
         ]
       },
       "Venue": {
@@ -2872,6 +3334,10 @@
           },
           "description": {
             "type": "string",
+            "nullable": true
+          },
+          "province": {
+            "type": "object",
             "nullable": true
           },
           "status": {
@@ -2919,6 +3385,45 @@
           "lng": {
             "type": "number"
           },
+          "province": {
+            "type": "string",
+            "enum": [
+              "Hà Nội",
+              "Huế",
+              "Lai Châu",
+              "Điện Biên",
+              "Sơn La",
+              "Lạng Sơn",
+              "Quảng Ninh",
+              "Thanh Hóa",
+              "Nghệ An",
+              "Hà Tĩnh",
+              "Cao Bằng",
+              "Tuyên Quang",
+              "Lào Cai",
+              "Thái Nguyên",
+              "Phú Thọ",
+              "Bắc Ninh",
+              "Hưng Yên",
+              "Hải Phòng",
+              "Ninh Bình",
+              "Quảng Trị",
+              "Đà Nẵng",
+              "Quảng Ngãi",
+              "Gia Lai",
+              "Khánh Hòa",
+              "Lâm Đồng",
+              "Đắk Lắk",
+              "Thành phố Hồ Chí Minh",
+              "Đồng Nai",
+              "Tây Ninh",
+              "Cần Thơ",
+              "Vĩnh Long",
+              "Đồng Tháp",
+              "Cà Mau",
+              "An Giang"
+            ]
+          },
           "description": {
             "type": "string"
           }
@@ -2945,6 +3450,40 @@
           "name",
           "sport",
           "basePrice"
+        ]
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ]
+      },
+      "PaginatedDto": {
+        "type": "object",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "meta"
         ]
       },
       "SlotDto": {
