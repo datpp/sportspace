@@ -127,6 +127,7 @@ describe('Venue + Court (e2e)', () => {
         address: '123 Test St',
         lat: 10.762622,
         lng: 106.660172,
+        province: 'Thành phố Hồ Chí Minh',
       })
       .expect(201);
 
@@ -137,6 +138,20 @@ describe('Venue + Court (e2e)', () => {
     expect(res.body.lng).toBe(106.660172);
     expect(typeof res.body.lat).toBe('number');
     expect(typeof res.body.lng).toBe('number');
+  });
+
+  it('rejects creating a venue with a province not in the canonical list (400)', async () => {
+    await request(app.getHttpServer())
+      .post('/venues')
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .send({
+        name: 'Sân test tỉnh không hợp lệ',
+        address: '123 Test',
+        lat: 21.0285,
+        lng: 105.8542,
+        province: 'Không Tồn Tại',
+      })
+      .expect(400);
   });
 
   it('lets the owning MERCHANT create a court in that venue (201)', async () => {
@@ -212,6 +227,7 @@ describe('Venue + Court (e2e)', () => {
         address: '456 Test St',
         lat: 10.762622,
         lng: 106.660172,
+        province: 'Thành phố Hồ Chí Minh',
       })
       .expect(201);
     rejectedVenueId = createRes.body.id;

@@ -1,5 +1,6 @@
 export * from './enums/role.enum';
 export * from './enums/payment-status.enum';
+export * from './constants/provinces';
 export * from './generated/model';
 // Some entity `status` properties generate an orval type of the exact same
 // name as our hand-written enum (orval names inline-enum properties

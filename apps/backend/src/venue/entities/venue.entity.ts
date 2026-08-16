@@ -59,6 +59,10 @@ export class Venue {
   @Column({ nullable: true })
   description: string;
 
+  @ApiProperty({ required: false, nullable: true })
+  @Column({ type: 'varchar', nullable: true })
+  province: string | null;
+
   @ApiProperty({ enum: VenueStatus })
   @Column({ type: 'varchar', default: VenueStatus.PENDING })
   status: VenueStatus;

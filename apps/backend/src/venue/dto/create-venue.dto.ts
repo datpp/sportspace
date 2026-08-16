@@ -1,5 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsLatitude, IsLongitude, IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { VIETNAM_PROVINCES } from '@sportspace/shared';
+import { IsIn, IsLatitude, IsLongitude, IsOptional, IsString } from 'class-validator';
 
 export class CreateVenueDto {
   @ApiProperty()
@@ -18,7 +19,11 @@ export class CreateVenueDto {
   @IsLongitude()
   lng: number;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ enum: VIETNAM_PROVINCES })
+  @IsIn(VIETNAM_PROVINCES)
+  province: string;
+
+  @ApiPropertyOptional({ required: false })
   @IsOptional()
   @IsString()
   description?: string;
