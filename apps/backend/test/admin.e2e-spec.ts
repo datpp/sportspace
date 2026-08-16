@@ -3,7 +3,7 @@ import * as bcrypt from 'bcrypt';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
-import { Role, VenueStatus } from '@sportspace/shared';
+import { Role, VenueStatus, VIETNAM_PROVINCES } from '@sportspace/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
@@ -58,6 +58,7 @@ describe('GET /admin/venues (e2e)', () => {
       lat: 10.762622,
       lng: 106.660172,
       status: VenueStatus.PENDING,
+      province: faker.helpers.arrayElement(VIETNAM_PROVINCES),
     });
     approvedVenue = await dataSource.getRepository(Venue).save({
       owner: merchant,
@@ -66,6 +67,7 @@ describe('GET /admin/venues (e2e)', () => {
       lat: 10.762622,
       lng: 106.660172,
       status: VenueStatus.APPROVED,
+      province: faker.helpers.arrayElement(VIETNAM_PROVINCES),
     });
     rejectedVenue = await dataSource.getRepository(Venue).save({
       owner: merchant,
@@ -74,6 +76,7 @@ describe('GET /admin/venues (e2e)', () => {
       lat: 10.762622,
       lng: 106.660172,
       status: VenueStatus.REJECTED,
+      province: faker.helpers.arrayElement(VIETNAM_PROVINCES),
     });
 
     const login = async (email: string) => {
@@ -113,7 +116,7 @@ describe('GET /admin/venues (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    const ids = (res.body as Venue[]).map((v) => v.id);
+    const ids = (res.body.data as Venue[]).map((v) => v.id);
     expect(ids).toContain(pendingVenue.id);
     expect(ids).not.toContain(approvedVenue.id);
     expect(ids).not.toContain(rejectedVenue.id);
@@ -125,9 +128,9 @@ describe('GET /admin/venues (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    const found = (res.body as { id: string; owner: { id: string } }[]).find(
-      (v) => v.id === pendingVenue.id,
-    );
+    const found = (
+      res.body.data as { id: string; owner: { id: string } }[]
+    ).find((v) => v.id === pendingVenue.id);
     expect(found?.owner?.id).toBe(merchant.id);
   });
 
@@ -138,9 +141,47 @@ describe('GET /admin/venues (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    const ids = (res.body as Venue[]).map((v) => v.id);
+    const ids = (res.body.data as Venue[]).map((v) => v.id);
     expect(ids).toContain(approvedVenue.id);
     expect(ids).not.toContain(pendingVenue.id);
     expect(ids).not.toContain(rejectedVenue.id);
+  });
+
+  it('lists every status when ?status=ALL', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/admin/venues')
+      .query({ status: 'ALL' })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const ids = (res.body.data as Venue[]).map((v) => v.id);
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        pendingVenue.id,
+        approvedVenue.id,
+        rejectedVenue.id,
+      ]),
+    );
+  });
+
+  it('searches venues by name, address, or owner', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/admin/venues')
+      .query({ status: 'ALL', q: pendingVenue.name })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const ids = (res.body.data as Venue[]).map((v) => v.id);
+    expect(ids).toEqual([pendingVenue.id]);
+  });
+
+  it('lists the distinct provinces currently in use', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/admin/venues/provinces')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toContain(pendingVenue.province);
   });
 });

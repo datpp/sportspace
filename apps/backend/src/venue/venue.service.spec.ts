@@ -57,11 +57,18 @@ describe('VenueService', () => {
 
     queryBuilder.where.mockReturnValue(queryBuilder);
     queryBuilder.innerJoin.mockReturnValue(queryBuilder);
+    queryBuilder.leftJoinAndSelect.mockReturnValue(queryBuilder);
     queryBuilder.distinct.mockReturnValue(queryBuilder);
     queryBuilder.addSelect.mockReturnValue(queryBuilder);
+    queryBuilder.select.mockReturnValue(queryBuilder);
     queryBuilder.setParameters.mockReturnValue(queryBuilder);
+    queryBuilder.andWhere.mockReturnValue(queryBuilder);
     queryBuilder.orderBy.mockReturnValue(queryBuilder);
+    queryBuilder.skip.mockReturnValue(queryBuilder);
+    queryBuilder.take.mockReturnValue(queryBuilder);
     queryBuilder.getMany.mockResolvedValue([]);
+    queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+    queryBuilder.getRawMany.mockResolvedValue([]);
     venueRepo.createQueryBuilder.mockReturnValue(queryBuilder);
 
     venueRepo.create.mockImplementation(
@@ -116,28 +123,78 @@ describe('VenueService', () => {
   });
 
   describe('findAllForAdmin', () => {
-    it('queries venues by the given status and loads the owner relation', async () => {
+    it('defaults to PENDING and paginates the result', async () => {
       const pending = [buildVenue({ status: VenueStatus.PENDING })];
-      venueRepo.find.mockResolvedValue(pending);
+      queryBuilder.getManyAndCount.mockResolvedValue([pending, 1]);
 
-      const result = await service.findAllForAdmin(VenueStatus.PENDING);
+      const result = await service.findAllForAdmin({ page: 1, limit: 20 });
 
-      expect(venueRepo.find).toHaveBeenCalledWith({
-        where: { status: VenueStatus.PENDING },
-        relations: { owner: true, courts: true },
-        order: { createdAt: 'DESC' },
-      });
-      expect(result).toBe(pending);
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'venue.status = :status',
+        { status: VenueStatus.PENDING },
+      );
+      expect(result.data).toBe(pending);
+      expect(result.meta).toMatchObject({ total: 1, page: 1, limit: 20 });
     });
 
     it('queries by whatever status is passed in, not just PENDING', async () => {
-      venueRepo.find.mockResolvedValue([]);
+      await service.findAllForAdmin({
+        page: 1,
+        limit: 20,
+        status: VenueStatus.REJECTED,
+      });
 
-      await service.findAllForAdmin(VenueStatus.REJECTED);
-
-      expect(venueRepo.find).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { status: VenueStatus.REJECTED } }),
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'venue.status = :status',
+        { status: VenueStatus.REJECTED },
       );
+    });
+
+    it('skips the status filter when status=ALL', async () => {
+      await service.findAllForAdmin({ page: 1, limit: 20, status: 'ALL' });
+
+      expect(queryBuilder.andWhere).not.toHaveBeenCalledWith(
+        'venue.status = :status',
+        expect.anything(),
+      );
+    });
+
+    it('filters by search term across name, address, and owner', async () => {
+      await service.findAllForAdmin({ page: 1, limit: 20, q: 'sports' });
+
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        '(venue.name ILIKE :q OR venue.address ILIKE :q OR owner.fullName ILIKE :q OR owner.email ILIKE :q)',
+        { q: '%sports%' },
+      );
+    });
+
+    it('filters by province', async () => {
+      await service.findAllForAdmin({
+        page: 1,
+        limit: 20,
+        province: 'Hà Nội',
+      });
+
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'venue.province = :province',
+        { province: 'Hà Nội' },
+      );
+    });
+  });
+
+  describe('listDistinctProvinces', () => {
+    it('returns the distinct provinces currently in use', async () => {
+      queryBuilder.getRawMany.mockResolvedValue([
+        { province: 'Hà Nội' },
+        { province: 'Huế' },
+      ]);
+
+      const result = await service.listDistinctProvinces();
+
+      expect(queryBuilder.where).toHaveBeenCalledWith(
+        'venue.province IS NOT NULL',
+      );
+      expect(result).toEqual(['Hà Nội', 'Huế']);
     });
   });
 

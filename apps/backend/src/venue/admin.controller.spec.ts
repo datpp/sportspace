@@ -4,6 +4,7 @@ import { VenueStatus } from '@sportspace/shared';
 import { AdminController } from './admin.controller';
 import { VenueService } from './venue.service';
 import { Venue } from './entities/venue.entity';
+import { PaginatedDto } from '../common/dto/paginated.dto';
 
 describe('AdminController', () => {
   let controller: AdminController;
@@ -25,23 +26,27 @@ describe('AdminController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('getVenues() defaults to PENDING when no status query is given', async () => {
-    const expected = [createMock<Venue>()];
+  it('getVenues() forwards the query params to the service', async () => {
+    const expected: PaginatedDto<Venue> = {
+      data: [createMock<Venue>()],
+      meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
+    };
     service.findAllForAdmin.mockResolvedValue(expected);
 
-    const result = await controller.getVenues({});
+    const query = { page: 1, limit: 20, status: VenueStatus.APPROVED };
+    const result = await controller.getVenues(query);
 
-    expect(service.findAllForAdmin).toHaveBeenCalledWith(VenueStatus.PENDING);
+    expect(service.findAllForAdmin).toHaveBeenCalledWith(query);
     expect(result).toBe(expected);
   });
 
-  it('getVenues() forwards an explicit status query', async () => {
-    const expected = [createMock<Venue>()];
-    service.findAllForAdmin.mockResolvedValue(expected);
+  it('getVenueProvinces() returns the distinct provinces from the service', async () => {
+    const expected = ['Hà Nội', 'Huế'];
+    service.listDistinctProvinces.mockResolvedValue(expected);
 
-    const result = await controller.getVenues({ status: VenueStatus.APPROVED });
+    const result = await controller.getVenueProvinces();
 
-    expect(service.findAllForAdmin).toHaveBeenCalledWith(VenueStatus.APPROVED);
+    expect(service.listDistinctProvinces).toHaveBeenCalled();
     expect(result).toBe(expected);
   });
 });

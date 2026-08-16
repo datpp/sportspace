@@ -9,9 +9,12 @@ import { Role, VenueStatus } from '@sportspace/shared';
 import { CreateVenueDto } from './dto/create-venue.dto';
 import { UpdateVenueDto } from './dto/update-venue.dto';
 import { FindVenuesQueryDto } from './dto/find-venues-query.dto';
+import { AdminVenuesQueryDto } from './dto/admin-venues-query.dto';
 import { Venue } from './entities/venue.entity';
 import { User } from '../user/entities/user.entity';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { PaginatedDto } from '../common/dto/paginated.dto';
+import { buildPaginationMeta } from '../common/pagination.util';
 
 @Injectable()
 export class VenueService {
@@ -35,12 +38,46 @@ export class VenueService {
     });
   }
 
-  findAllForAdmin(status: VenueStatus): Promise<Venue[]> {
-    return this.venueRepo.find({
-      where: { status },
-      relations: { owner: true, courts: true },
-      order: { createdAt: 'DESC' },
-    });
+  async findAllForAdmin(
+    query: AdminVenuesQueryDto,
+  ): Promise<PaginatedDto<Venue>> {
+    const { page, limit, q, province } = query;
+    const status = query.status ?? VenueStatus.PENDING;
+
+    const qb = this.venueRepo
+      .createQueryBuilder('venue')
+      .leftJoinAndSelect('venue.owner', 'owner')
+      .leftJoinAndSelect('venue.courts', 'courts')
+      .orderBy('venue.createdAt', 'DESC');
+
+    if (status !== 'ALL') {
+      qb.andWhere('venue.status = :status', { status });
+    }
+    if (q?.trim()) {
+      qb.andWhere(
+        '(venue.name ILIKE :q OR venue.address ILIKE :q OR owner.fullName ILIKE :q OR owner.email ILIKE :q)',
+        { q: `%${q.trim()}%` },
+      );
+    }
+    if (province?.trim()) {
+      qb.andWhere('venue.province = :province', { province: province.trim() });
+    }
+
+    const [data, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+    return { data, meta: buildPaginationMeta(total, page, limit) };
+  }
+
+  async listDistinctProvinces(): Promise<string[]> {
+    const rows = await this.venueRepo
+      .createQueryBuilder('venue')
+      .select('DISTINCT venue.province', 'province')
+      .where('venue.province IS NOT NULL')
+      .orderBy('venue.province', 'ASC')
+      .getRawMany<{ province: string }>();
+    return rows.map((r) => r.province);
   }
 
   findAll(query: FindVenuesQueryDto): Promise<Venue[]> {
