@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { VIETNAM_PROVINCES } from '@sportspace/shared';
 import { createVenue, type CreateVenueActionState } from './actions';
 
 const initialState: CreateVenueActionState = {};
@@ -31,6 +32,27 @@ export function VenueForm() {
           required
           className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         />
+      </div>
+      <div className="flex flex-col gap-1">
+        <label htmlFor="province" className="text-sm font-medium">
+          Tỉnh/Thành phố
+        </label>
+        <select
+          id="province"
+          name="province"
+          required
+          defaultValue=""
+          className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          <option value="" disabled>
+            Chọn tỉnh/thành
+          </option>
+          {VIETNAM_PROVINCES.map((province) => (
+            <option key={province} value={province}>
+              {province}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1">

@@ -3,12 +3,14 @@
 import { isAxiosError } from 'axios';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
+import { VIETNAM_PROVINCES } from '@sportspace/shared';
 import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 
 const createVenueSchema = z.object({
   name: z.string().min(1, 'Vui lòng nhập tên cụm sân'),
   address: z.string().min(1, 'Vui lòng nhập địa chỉ'),
+  province: z.enum(VIETNAM_PROVINCES, 'Vui lòng chọn tỉnh/thành'),
   lat: z.coerce.number('Vĩ độ không hợp lệ').min(-90).max(90),
   lng: z.coerce.number('Kinh độ không hợp lệ').min(-180).max(180),
   description: z.string().optional(),
@@ -25,6 +27,7 @@ export async function createVenue(
   const parsed = createVenueSchema.safeParse({
     name: formData.get('name'),
     address: formData.get('address'),
+    province: formData.get('province'),
     lat: formData.get('lat'),
     lng: formData.get('lng'),
     description: formData.get('description') || undefined,
