@@ -2,25 +2,37 @@ import Link from 'next/link';
 import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 import { handleApiError } from '@/lib/handle-api-error';
+import { SearchInput } from '@/components/list/search-input';
+import { FilterSelect } from '@/components/list/filter-select';
+import { Pagination } from '@/components/list/pagination';
 import { StaffForm } from './staff-form';
 import { deactivateStaff } from './actions';
 
 export default async function StaffPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ venueId: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { venueId } = await params;
+  const sp = await searchParams;
+  const page = Number(sp.page) || 1;
+  const q = typeof sp.q === 'string' ? sp.q : undefined;
+  const isActive = typeof sp.isActive === 'string' ? sp.isActive : undefined;
+
   const session = await requireSession();
   const { staff: staffApi } = createAuthenticatedApiClient(session.accessToken);
 
-  let staffList;
+  let staffPage;
   try {
-    const res = await staffApi.staffControllerFindAll({ venueId });
-    staffList = res.data;
+    const res = await staffApi.staffControllerFindAll({ venueId, page, q, isActive });
+    staffPage = res.data;
   } catch (err) {
     handleApiError(err);
   }
+
+  const staffList = staffPage.data ?? [];
 
   return (
     <div className="flex flex-col gap-8">
@@ -28,9 +40,24 @@ export default async function StaffPage({
         <h1 className="text-xl font-semibold">Nhân viên</h1>
       </div>
 
+      <div className="flex flex-wrap gap-3">
+        <SearchInput placeholder="Tìm theo tên hoặc số điện thoại" />
+        <FilterSelect
+          paramKey="isActive"
+          label="Trạng thái"
+          options={[
+            { value: '', label: 'Tất cả' },
+            { value: 'true', label: 'Đang làm việc' },
+            { value: 'false', label: 'Đã vô hiệu hoá' },
+          ]}
+        />
+      </div>
+
       <div className="flex flex-col gap-2">
         {staffList.length === 0 && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Chưa có nhân viên nào.</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Không có nhân viên nào phù hợp.
+          </p>
         )}
         {staffList.map((member) => (
           <div
@@ -54,6 +81,8 @@ export default async function StaffPage({
           </div>
         ))}
       </div>
+
+      <Pagination page={staffPage.meta.page} totalPages={staffPage.meta.totalPages} />
 
       <div className="rounded border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
         <h2 className="mb-3 text-sm font-medium">Thêm nhân viên mới</h2>
