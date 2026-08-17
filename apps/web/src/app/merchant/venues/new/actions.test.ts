@@ -23,7 +23,7 @@ function formDataFor(fields: Record<string, string>) {
   return fd;
 }
 
-const validFields = { name: 'Sân ABC', address: '123 Đường X', lat: '10.5', lng: '106.7' };
+const validFields = { name: 'Sân ABC', address: '123 Đường X', lat: '10.5', lng: '106.7', province: 'Hà Nội' };
 
 beforeEach(() => {
   venueControllerCreate.mockReset();
