@@ -1,4 +1,5 @@
 import { VenueStatus } from '@sportspace/shared';
+import type { AdminControllerGetVenuesStatus } from '@sportspace/shared';
 import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 import { handleApiError } from '@/lib/handle-api-error';
@@ -25,7 +26,12 @@ export default async function AdminVenuesPage({
   let provinces: string[] = [];
   try {
     const [venuesRes, provincesRes] = await Promise.all([
-      admin.adminControllerGetVenues({ page, q, status, province } as never),
+      admin.adminControllerGetVenues({
+        page,
+        q,
+        province,
+        status: status as AdminControllerGetVenuesStatus | undefined,
+      }),
       admin.adminControllerGetVenueProvinces(),
     ]);
     venuesPage = venuesRes.data;

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { VenueStatus } from '@sportspace/shared';
+import type { MerchantControllerGetVenuesStatus } from '@sportspace/shared';
 import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 import { handleApiError } from '@/lib/handle-api-error';
@@ -23,7 +24,11 @@ export default async function VenuesPage({
   let venuesPage;
   try {
     venuesPage = (
-      await merchant.merchantControllerGetVenues({ page, q, status } as never)
+      await merchant.merchantControllerGetVenues({
+        page,
+        q,
+        status: status as MerchantControllerGetVenuesStatus | undefined,
+      })
     ).data;
   } catch (err) {
     handleApiError(err);

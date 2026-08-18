@@ -1,4 +1,5 @@
 import { BookingStatus } from '@sportspace/shared';
+import type { MerchantControllerGetBookingsStatus } from '@sportspace/shared';
 import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 import { handleApiError } from '@/lib/handle-api-error';
@@ -30,12 +31,12 @@ export default async function MerchantBookingsPage({
       merchant.merchantControllerGetBookings({
         page,
         q,
-        status,
         venueId,
         from,
         to,
-      } as never),
-      merchant.merchantControllerGetVenues({ limit: 100 } as never),
+        status: status as MerchantControllerGetBookingsStatus | undefined,
+      }),
+      merchant.merchantControllerGetVenues({ limit: 100 }),
     ]);
     bookingsPage = bookingsRes.data;
     venueOptions = (venuesRes.data.data ?? []).map((v) => ({ value: v.id, label: v.name }));

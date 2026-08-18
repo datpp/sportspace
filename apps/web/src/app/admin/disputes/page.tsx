@@ -1,4 +1,5 @@
 import { DisputeStatus, ResolveDisputeDtoStatus } from '@sportspace/shared';
+import type { DisputeControllerFindAllStatus } from '@sportspace/shared';
 import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 import { handleApiError } from '@/lib/handle-api-error';
@@ -22,7 +23,11 @@ export default async function AdminDisputesPage({
 
   let disputesPage;
   try {
-    const { data } = await disputes.disputeControllerFindAll({ page, q, status } as never);
+    const { data } = await disputes.disputeControllerFindAll({
+      page,
+      q,
+      status: status as DisputeControllerFindAllStatus | undefined,
+    });
     disputesPage = data;
   } catch (err) {
     handleApiError(err);
