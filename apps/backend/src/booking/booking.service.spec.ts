@@ -18,7 +18,9 @@ import { BookingService } from './booking.service';
 import { Booking } from './entities/booking.entity';
 import { Payment } from '../payment/entities/payment.entity';
 import { Court } from '../venue/entities/court.entity';
+import { Venue } from '../venue/entities/venue.entity';
 import { User } from '../user/entities/user.entity';
+import { AddOnService } from '../addon-services/entities/add-on-service.entity';
 import { RedisService } from '../redis/redis.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { NotificationService } from '../notification/notification.service';
@@ -30,6 +32,7 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 function buildCourt(overrides: Partial<Court> = {}): Court {
   return {
     id: faker.string.uuid(),
+    venue: { id: faker.string.uuid() } as Venue,
     name: faker.word.words(2),
     sport: 'football',
     basePrice: faker.number.int({ min: 100_000, max: 500_000 }),
@@ -258,6 +261,128 @@ describe('BookingService', () => {
         service.create(faker.string.uuid(), dto),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(redisService.acquireLock).not.toHaveBeenCalled();
+    });
+
+    it('creates a booking with zero services unchanged (regression)', async () => {
+      const court = buildCourt();
+      const user = buildUser();
+      const dto = buildCreateDto({ courtId: court.id });
+
+      manager.findOne.mockImplementation((entity: unknown) => {
+        if (entity === Court) return Promise.resolve(court);
+        if (entity === User) return Promise.resolve(user);
+        return Promise.resolve(null);
+      });
+
+      const result = await service.create(user.id, dto);
+
+      expect(result.totalAmount).toBeCloseTo(Number(court.basePrice));
+      expect(result.services).toBeUndefined();
+    });
+
+    it('adds one service to totalAmount and returns the itemized summary', async () => {
+      const court = buildCourt();
+      const user = buildUser();
+      const addOnServiceId = faker.string.uuid();
+      const dto = buildCreateDto({
+        courtId: court.id,
+        services: [{ addOnServiceId, quantity: 2 }],
+      });
+
+      manager.findOne.mockImplementation((entity: unknown) => {
+        if (entity === Court) return Promise.resolve(court);
+        if (entity === User) return Promise.resolve(user);
+        if (entity === AddOnService) {
+          return Promise.resolve({
+            id: addOnServiceId,
+            name: 'Thuê bóng',
+            price: 20000,
+            venue: { id: court.venue?.id ?? 'venue-1' },
+          } as AddOnService);
+        }
+        return Promise.resolve(null);
+      });
+
+      const result = await service.create(user.id, dto);
+
+      expect(result.totalAmount).toBeCloseTo(Number(court.basePrice) + 40000);
+      expect(result.services).toEqual([
+        expect.objectContaining({ name: 'Thuê bóng', quantity: 2, unitPrice: 20000 }),
+      ]);
+    });
+
+    it('sums multiple services with different quantities into totalAmount', async () => {
+      const court = buildCourt();
+      const user = buildUser();
+      const serviceAId = faker.string.uuid();
+      const serviceBId = faker.string.uuid();
+      const dto = buildCreateDto({
+        courtId: court.id,
+        services: [
+          { addOnServiceId: serviceAId, quantity: 2 },
+          { addOnServiceId: serviceBId, quantity: 3 },
+        ],
+      });
+
+      manager.findOne.mockImplementation((entity: unknown, opts?: unknown) => {
+        if (entity === Court) return Promise.resolve(court);
+        if (entity === User) return Promise.resolve(user);
+        if (entity === AddOnService) {
+          const where = (opts as { where?: { id?: string } })?.where;
+          if (where?.id === serviceAId) {
+            return Promise.resolve({
+              id: serviceAId,
+              name: 'Thuê bóng',
+              price: 20000,
+              venue: { id: court.venue?.id ?? 'venue-1' },
+            } as AddOnService);
+          }
+          if (where?.id === serviceBId) {
+            return Promise.resolve({
+              id: serviceBId,
+              name: 'Nước uống',
+              price: 10000,
+              venue: { id: court.venue?.id ?? 'venue-1' },
+            } as AddOnService);
+          }
+        }
+        return Promise.resolve(null);
+      });
+
+      const result = await service.create(user.id, dto);
+
+      // base price + (2 * 20000) + (3 * 10000) = base + 70000
+      expect(result.totalAmount).toBeCloseTo(Number(court.basePrice) + 70000);
+      expect(result.services).toEqual([
+        expect.objectContaining({ name: 'Thuê bóng', quantity: 2, unitPrice: 20000 }),
+        expect.objectContaining({ name: 'Nước uống', quantity: 3, unitPrice: 10000 }),
+      ]);
+    });
+
+    it('rejects a service ID that belongs to a different venue', async () => {
+      const court = buildCourt();
+      const user = buildUser();
+      const addOnServiceId = faker.string.uuid();
+      const dto = buildCreateDto({
+        courtId: court.id,
+        services: [{ addOnServiceId, quantity: 1 }],
+      });
+
+      manager.findOne.mockImplementation((entity: unknown) => {
+        if (entity === Court) return Promise.resolve(court);
+        if (entity === User) return Promise.resolve(user);
+        if (entity === AddOnService) {
+          return Promise.resolve({
+            id: addOnServiceId,
+            name: 'Thuê bóng',
+            price: 20000,
+            venue: { id: 'a-completely-different-venue-id' },
+          } as AddOnService);
+        }
+        return Promise.resolve(null);
+      });
+
+      await expect(service.create(user.id, dto)).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 

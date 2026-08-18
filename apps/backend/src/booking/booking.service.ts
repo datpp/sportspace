@@ -30,8 +30,10 @@ import { RevenueTimeseriesPointDto } from './dto/revenue-timeseries-point.dto';
 import { MerchantBookingsQueryDto } from './dto/merchant-bookings-query.dto';
 import { PaginatedDto } from '../common/dto/paginated.dto';
 import { buildPaginationMeta } from '../common/pagination.util';
-import { Booking } from './entities/booking.entity';
+import { Booking, BookingServiceSummary } from './entities/booking.entity';
 import { Payment } from '../payment/entities/payment.entity';
+import { AddOnService } from '../addon-services/entities/add-on-service.entity';
+import { BookingServiceItem } from '../addon-services/entities/booking-service-item.entity';
 import {
   calculateRefundPercentage,
   combineBookingDateTime,
@@ -77,6 +79,7 @@ export class BookingService {
       async (manager) => {
         const court = await manager.findOne(Court, {
           where: { id: dto.courtId },
+          relations: { venue: true },
         });
         if (!court) {
           throw new NotFoundException('Sân không tồn tại');
@@ -93,13 +96,31 @@ export class BookingService {
           dto.startTime,
         );
 
-        const totalAmount = await this.computeTotalAmount(
+        let totalAmount = await this.computeTotalAmount(
           manager,
           court,
           dto.bookingDate,
           dto.startTime,
           dto.endTime,
         );
+
+        const serviceSummaries: BookingServiceSummary[] = [];
+        const resolvedServices: { addOnService: AddOnService; quantity: number }[] =
+          [];
+        for (const item of dto.services ?? []) {
+          const addOnService = await manager.findOne(AddOnService, {
+            where: { id: item.addOnServiceId },
+            relations: { venue: true },
+          });
+          if (!addOnService || addOnService.venue.id !== court.venue.id) {
+            throw new BadRequestException(
+              'Dịch vụ không thuộc cụm sân của sân đã chọn',
+            );
+          }
+          totalAmount += Number(addOnService.price) * item.quantity;
+          resolvedServices.push({ addOnService, quantity: item.quantity });
+        }
+
         const booking = manager.create(Booking, {
           court,
           user,
@@ -109,7 +130,27 @@ export class BookingService {
           status: BookingStatus.PENDING,
           totalAmount,
         });
-        return manager.save(Booking, booking);
+        const saved = await manager.save(Booking, booking);
+
+        for (const { addOnService, quantity } of resolvedServices) {
+          const item = manager.create(BookingServiceItem, {
+            booking: saved,
+            addOnService,
+            quantity,
+            unitPrice: addOnService.price,
+          });
+          await manager.save(BookingServiceItem, item);
+          serviceSummaries.push({
+            id: item.id,
+            name: addOnService.name,
+            quantity,
+            unitPrice: Number(addOnService.price),
+          });
+        }
+        if (serviceSummaries.length > 0) {
+          saved.services = serviceSummaries;
+        }
+        return saved;
       },
     );
 

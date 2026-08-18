@@ -22,6 +22,20 @@ export class BookingPaymentSummary {
   refundAmount: number | null;
 }
 
+export class BookingServiceSummary {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  quantity: number;
+
+  @ApiProperty()
+  unitPrice: number;
+}
+
 @Index('uq_booking_slot', ['court', 'bookingDate', 'startTime'], {
   unique: true,
   where: `status IN ('PENDING','CONFIRMED')`,
@@ -69,6 +83,9 @@ export class Booking {
 
   @ApiProperty({ type: () => BookingPaymentSummary, required: false })
   payment?: BookingPaymentSummary;
+
+  @ApiProperty({ type: () => [BookingServiceSummary], required: false })
+  services?: BookingServiceSummary[];
 
   @ApiProperty()
   @CreateDateColumn()
