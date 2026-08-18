@@ -35,11 +35,10 @@ export class VenueService {
   // Deliberately does NOT .leftJoinAndSelect('venue.courts', 'courts'):
   // neither the merchant nor admin venues list UI reads `venue.courts`,
   // so it's dropped to keep this query lighter. (This is NOT a
-  // correctness fix — see the identical note on findAllForAdmin above:
-  // the project's TypeORM version already protects a joined one-to-many
-  // + .skip()/.take() query from fan-out via a two-step distinct-ID-
-  // then-hydrate query. Drop it for cost, not because leaving it in
-  // would paginate incorrectly.)
+  // correctness fix — the project's TypeORM version already protects a
+  // joined one-to-many + .skip()/.take() query from fan-out via a
+  // two-step distinct-ID-then-hydrate query. Drop it for cost, not
+  // because leaving it in would paginate incorrectly.)
   async findByOwner(
     ownerId: string,
     query: MerchantVenuesQueryDto,
