@@ -1,26 +1,87 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAddonServiceDto } from './dto/create-addon-service.dto';
-import { UpdateAddonServiceDto } from './dto/update-addon-service.dto';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { Role } from '@sportspace/shared';
+import { AddOnService } from './entities/add-on-service.entity';
+import { Venue } from '../venue/entities/venue.entity';
+import { CreateAddOnServiceDto } from './dto/create-addon-service.dto';
+import { UpdateAddOnServiceDto } from './dto/update-addon-service.dto';
+import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @Injectable()
 export class AddonServicesService {
-  create(createAddonServiceDto: CreateAddonServiceDto) {
-    return 'This action adds a new addonService';
+  constructor(
+    @InjectRepository(AddOnService)
+    private readonly serviceRepo: Repository<AddOnService>,
+    @InjectDataSource() private readonly dataSource: DataSource,
+  ) {}
+
+  async create(
+    dto: CreateAddOnServiceDto,
+    user: AuthenticatedUser,
+  ): Promise<AddOnService> {
+    const venue = await this.dataSource.getRepository(Venue).findOne({
+      where: { id: dto.venueId },
+      relations: { owner: true },
+    });
+    if (!venue) {
+      throw new NotFoundException('Cụm sân không tồn tại');
+    }
+    this.assertOwnerOrAdmin(venue, user);
+
+    const addOnService = this.serviceRepo.create({
+      venue,
+      name: dto.name,
+      price: dto.price,
+      description: dto.description ?? null,
+    });
+    return this.serviceRepo.save(addOnService);
   }
 
-  findAll() {
-    return `This action returns all addonServices`;
+  findAll(venueId: string): Promise<AddOnService[]> {
+    return this.serviceRepo.find({
+      where: { venue: { id: venueId } },
+      relations: { venue: true },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} addonService`;
+  async findOne(id: string): Promise<AddOnService> {
+    const addOnService = await this.serviceRepo.findOne({
+      where: { id },
+      relations: { venue: { owner: true } },
+    });
+    if (!addOnService) {
+      throw new NotFoundException('Dịch vụ không tồn tại');
+    }
+    return addOnService;
   }
 
-  update(id: number, updateAddonServiceDto: UpdateAddonServiceDto) {
-    return `This action updates a #${id} addonService`;
+  async update(
+    id: string,
+    dto: UpdateAddOnServiceDto,
+    user: AuthenticatedUser,
+  ): Promise<AddOnService> {
+    const addOnService = await this.findOne(id);
+    this.assertOwnerOrAdmin(addOnService.venue, user);
+    Object.assign(addOnService, dto);
+    return this.serviceRepo.save(addOnService);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} addonService`;
+  async remove(id: string, user: AuthenticatedUser): Promise<void> {
+    const addOnService = await this.findOne(id);
+    this.assertOwnerOrAdmin(addOnService.venue, user);
+    await this.serviceRepo.remove(addOnService);
+  }
+
+  private assertOwnerOrAdmin(venue: Venue, user: AuthenticatedUser): void {
+    if (user.role !== Role.ADMIN && venue.owner.id !== user.id) {
+      throw new ForbiddenException(
+        'Bạn không có quyền thao tác trên dịch vụ của sân này',
+      );
+    }
   }
 }
