@@ -171,6 +171,39 @@ describe('User admin (e2e)', () => {
       .expect(200);
   });
 
+  it('filters the user list by isLocked', async () => {
+    await request(app.getHttpServer())
+      .patch(`/users/${player.id}/lock`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const lockedRes = await request(app.getHttpServer())
+      .get('/users')
+      .query({ isLocked: 'true' })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(
+      lockedRes.body.data.some((u: { id: string }) => u.id === player.id),
+    ).toBe(true);
+    expect(
+      lockedRes.body.data.every((u: { isLocked: boolean }) => u.isLocked === true),
+    ).toBe(true);
+
+    const unlockedRes = await request(app.getHttpServer())
+      .get('/users')
+      .query({ isLocked: 'false' })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(
+      unlockedRes.body.data.some((u: { id: string }) => u.id === player.id),
+    ).toBe(false);
+
+    await request(app.getHttpServer())
+      .patch(`/users/${player.id}/unlock`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+  });
+
   it('filters the user list by role', async () => {
     const res = await request(app.getHttpServer())
       .get('/users')

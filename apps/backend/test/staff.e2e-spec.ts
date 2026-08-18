@@ -98,7 +98,7 @@ describe('Staff + Shift (e2e)', () => {
     expect(res.body.data).toHaveLength(1);
   });
 
-  it('searches staff by name or phone and filters by isActive', async () => {
+  it('searches staff by name or phone', async () => {
     const res = await request(app.getHttpServer())
       .get('/staff')
       .query({ venueId, q: 'not-a-real-staff-name-xyz' })
@@ -144,6 +144,25 @@ describe('Staff + Shift (e2e)', () => {
       .expect(200);
 
     expect(res.body.isActive).toBe(false);
+  });
+
+  it('filters staff by isActive', async () => {
+    const activeRes = await request(app.getHttpServer())
+      .get('/staff')
+      .query({ venueId, isActive: 'true' })
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .expect(200);
+    expect(activeRes.body.data).toHaveLength(0);
+
+    const inactiveRes = await request(app.getHttpServer())
+      .get('/staff')
+      .query({ venueId, isActive: 'false' })
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .expect(200);
+    expect(inactiveRes.body.data.some((s: { id: string }) => s.id === staffId)).toBe(true);
+    expect(
+      inactiveRes.body.data.every((s: { isActive: boolean }) => s.isActive === false),
+    ).toBe(true);
   });
 
   it('DELETE /staff/:id — xoá nhân viên (xoá ca làm trước do FK ON DELETE NO ACTION)', async () => {
