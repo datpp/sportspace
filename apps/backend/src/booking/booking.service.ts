@@ -171,6 +171,7 @@ export class BookingService {
       relations: { court: true, user: true },
     });
     await this.attachPaymentSummaries(bookings);
+    await this.attachServiceSummaries(bookings);
     return bookings;
   }
 
@@ -401,6 +402,33 @@ export class BookingService {
           status: payment.status,
           refundAmount: payment.refundAmount,
         };
+      }
+    }
+  }
+
+  private async attachServiceSummaries(bookings: Booking[]): Promise<void> {
+    if (bookings.length === 0) {
+      return;
+    }
+    const items = await this.dataSource.getRepository(BookingServiceItem).find({
+      where: { booking: { id: In(bookings.map((b) => b.id)) } },
+      relations: { booking: true, addOnService: true },
+    });
+    const byBookingId = new Map<string, BookingServiceSummary[]>();
+    for (const item of items) {
+      const list = byBookingId.get(item.booking.id) ?? [];
+      list.push({
+        id: item.id,
+        name: item.addOnService.name,
+        quantity: item.quantity,
+        unitPrice: Number(item.unitPrice),
+      });
+      byBookingId.set(item.booking.id, list);
+    }
+    for (const booking of bookings) {
+      const services = byBookingId.get(booking.id);
+      if (services) {
+        booking.services = services;
       }
     }
   }

@@ -12,6 +12,8 @@ import { AppModule } from '../src/app.module';
 import { Court } from '../src/venue/entities/court.entity';
 import { User } from '../src/user/entities/user.entity';
 import { Venue } from '../src/venue/entities/venue.entity';
+import { AddOnService } from '../src/addon-services/entities/add-on-service.entity';
+import { BookingServiceItem } from '../src/addon-services/entities/booking-service-item.entity';
 import { signVnpayParams, toVnpayAmount } from '../src/payment/vnpay.util';
 
 const SEED_PASSWORD = 'Password123!';
@@ -545,5 +547,47 @@ describe('Booking (e2e)', () => {
         .expect(200);
       expect(res.body.data).toHaveLength(0);
     });
+  });
+
+  it('full flow: merchant creates a service, player books with it, listing shows the itemized breakdown', async () => {
+    const serviceRes = await request(app.getHttpServer())
+      .post('/addon-services')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ venueId: venue.id, name: 'Thuê bóng', price: 20000 })
+      .expect(201);
+
+    const bookingRes = await request(app.getHttpServer())
+      .post('/bookings')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        courtId: court.id,
+        bookingDate: '2026-09-20',
+        startTime: '08:00',
+        endTime: '09:00',
+        services: [{ addOnServiceId: serviceRes.body.id, quantity: 2 }],
+      })
+      .expect(201);
+    expect(bookingRes.body.services).toEqual([
+      expect.objectContaining({ name: 'Thuê bóng', quantity: 2, unitPrice: 20000 }),
+    ]);
+    createdBookingIds.push(bookingRes.body.id);
+
+    const listRes = await request(app.getHttpServer())
+      .get('/bookings')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    const found = (listRes.body as { id: string; services?: unknown[] }[]).find(
+      (b) => b.id === bookingRes.body.id,
+    );
+    expect(found?.services).toEqual([
+      expect.objectContaining({ name: 'Thuê bóng', quantity: 2, unitPrice: 20000 }),
+    ]);
+
+    await dataSource
+      .getRepository(BookingServiceItem)
+      .delete({ booking: { id: bookingRes.body.id } });
+    await dataSource
+      .getRepository(AddOnService)
+      .delete({ id: serviceRes.body.id });
   });
 });

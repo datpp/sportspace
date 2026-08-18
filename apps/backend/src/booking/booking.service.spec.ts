@@ -21,6 +21,7 @@ import { Court } from '../venue/entities/court.entity';
 import { Venue } from '../venue/entities/venue.entity';
 import { User } from '../user/entities/user.entity';
 import { AddOnService } from '../addon-services/entities/add-on-service.entity';
+import { BookingServiceItem } from '../addon-services/entities/booking-service-item.entity';
 import { RedisService } from '../redis/redis.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { NotificationService } from '../notification/notification.service';
@@ -853,6 +854,33 @@ describe('BookingService', () => {
       expect(
         result.find((b) => b.id === unpaidBooking.id)?.payment,
       ).toBeUndefined();
+    });
+
+    it('attaches itemized service summaries to each booking that has them', async () => {
+      const user = buildUser();
+      const booking = { id: faker.string.uuid(), user, court: buildCourt() } as Booking;
+      bookingRepo.find.mockResolvedValue([booking]);
+      paymentRepo.find.mockResolvedValue([]);
+      const serviceItemRepo = createMock<Repository<BookingServiceItem>>();
+      serviceItemRepo.find.mockResolvedValue([
+        {
+          id: 'item-1',
+          booking: { id: booking.id } as Booking,
+          addOnService: { name: 'Thuê bóng' } as AddOnService,
+          quantity: 2,
+          unitPrice: 20000,
+        } as BookingServiceItem,
+      ]);
+      dataSource.getRepository.mockImplementation((entity: unknown) => {
+        if (entity === BookingServiceItem) return serviceItemRepo;
+        throw new Error(`Unexpected entity in test: ${String(entity)}`);
+      });
+
+      const result = await service.findAll(buildAuthUser({ id: user.id, role: Role.PLAYER }));
+
+      expect(result[0].services).toEqual([
+        expect.objectContaining({ name: 'Thuê bóng', quantity: 2, unitPrice: 20000 }),
+      ]);
     });
   });
 
