@@ -293,15 +293,21 @@ describe('BookingService', () => {
       manager.findOne.mockImplementation((entity: unknown) => {
         if (entity === Court) return Promise.resolve(court);
         if (entity === User) return Promise.resolve(user);
-        if (entity === AddOnService) {
-          return Promise.resolve({
-            id: addOnServiceId,
-            name: 'Thuê bóng',
-            price: 20000,
-            venue: { id: court.venue?.id ?? 'venue-1' },
-          } as AddOnService);
-        }
         return Promise.resolve(null);
+      });
+      manager.find.mockImplementation((entity: unknown) => {
+        if (entity === AddOnService) {
+          return Promise.resolve([
+            {
+              id: addOnServiceId,
+              name: 'Thuê bóng',
+              price: 20000,
+              isActive: true,
+              venue: { id: court.venue?.id ?? 'venue-1' },
+            } as AddOnService,
+          ]);
+        }
+        return Promise.resolve([]);
       });
 
       const result = await service.create(user.id, dto);
@@ -325,29 +331,31 @@ describe('BookingService', () => {
         ],
       });
 
-      manager.findOne.mockImplementation((entity: unknown, opts?: unknown) => {
+      manager.findOne.mockImplementation((entity: unknown) => {
         if (entity === Court) return Promise.resolve(court);
         if (entity === User) return Promise.resolve(user);
+        return Promise.resolve(null);
+      });
+      manager.find.mockImplementation((entity: unknown) => {
         if (entity === AddOnService) {
-          const where = (opts as { where?: { id?: string } })?.where;
-          if (where?.id === serviceAId) {
-            return Promise.resolve({
+          return Promise.resolve([
+            {
               id: serviceAId,
               name: 'Thuê bóng',
               price: 20000,
+              isActive: true,
               venue: { id: court.venue?.id ?? 'venue-1' },
-            } as AddOnService);
-          }
-          if (where?.id === serviceBId) {
-            return Promise.resolve({
+            } as AddOnService,
+            {
               id: serviceBId,
               name: 'Nước uống',
               price: 10000,
+              isActive: true,
               venue: { id: court.venue?.id ?? 'venue-1' },
-            } as AddOnService);
-          }
+            } as AddOnService,
+          ]);
         }
-        return Promise.resolve(null);
+        return Promise.resolve([]);
       });
 
       const result = await service.create(user.id, dto);
@@ -372,15 +380,53 @@ describe('BookingService', () => {
       manager.findOne.mockImplementation((entity: unknown) => {
         if (entity === Court) return Promise.resolve(court);
         if (entity === User) return Promise.resolve(user);
-        if (entity === AddOnService) {
-          return Promise.resolve({
-            id: addOnServiceId,
-            name: 'Thuê bóng',
-            price: 20000,
-            venue: { id: 'a-completely-different-venue-id' },
-          } as AddOnService);
-        }
         return Promise.resolve(null);
+      });
+      manager.find.mockImplementation((entity: unknown) => {
+        if (entity === AddOnService) {
+          return Promise.resolve([
+            {
+              id: addOnServiceId,
+              name: 'Thuê bóng',
+              price: 20000,
+              isActive: true,
+              venue: { id: 'a-completely-different-venue-id' },
+            } as AddOnService,
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      await expect(service.create(user.id, dto)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects booking a service that has been deactivated (isActive: false)', async () => {
+      const court = buildCourt();
+      const user = buildUser();
+      const addOnServiceId = faker.string.uuid();
+      const dto = buildCreateDto({
+        courtId: court.id,
+        services: [{ addOnServiceId, quantity: 1 }],
+      });
+
+      manager.findOne.mockImplementation((entity: unknown) => {
+        if (entity === Court) return Promise.resolve(court);
+        if (entity === User) return Promise.resolve(user);
+        return Promise.resolve(null);
+      });
+      manager.find.mockImplementation((entity: unknown) => {
+        if (entity === AddOnService) {
+          return Promise.resolve([
+            {
+              id: addOnServiceId,
+              name: 'Thuê bóng',
+              price: 20000,
+              isActive: false,
+              venue: { id: court.venue?.id ?? 'venue-1' },
+            } as AddOnService,
+          ]);
+        }
+        return Promise.resolve([]);
       });
 
       await expect(service.create(user.id, dto)).rejects.toBeInstanceOf(BadRequestException);

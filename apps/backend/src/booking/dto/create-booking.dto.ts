@@ -1,6 +1,7 @@
 import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsDateString,
   IsOptional,
@@ -32,6 +33,7 @@ export class CreateBookingDto {
   @ApiPropertyOptional({ type: () => [BookingServiceInputDto] })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(20)
   @ValidateNested({ each: true })
   @Type(() => BookingServiceInputDto)
   services?: BookingServiceInputDto[];

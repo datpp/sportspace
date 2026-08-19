@@ -161,6 +161,24 @@ describe('Booking (e2e)', () => {
       .expect(400);
   });
 
+  it('rejects a request with more than 20 services (400)', async () => {
+    const services = Array.from({ length: 21 }, () => ({
+      addOnServiceId: faker.string.uuid(),
+      quantity: 1,
+    }));
+    await request(app.getHttpServer())
+      .post('/bookings')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        courtId: court.id,
+        bookingDate: '2026-09-01',
+        startTime: '09:00',
+        endTime: '10:00',
+        services,
+      })
+      .expect(400);
+  });
+
   it('creates a PENDING booking for the authenticated user, price computed from basePrice (201)', async () => {
     const res = await request(app.getHttpServer())
       .post('/bookings')

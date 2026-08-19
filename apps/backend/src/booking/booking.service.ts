@@ -104,17 +104,27 @@ export class BookingService {
           dto.endTime,
         );
 
+        const requestedServices = dto.services ?? [];
+        const foundServices = requestedServices.length
+          ? await manager.find(AddOnService, {
+              where: { id: In(requestedServices.map((s) => s.addOnServiceId)) },
+              relations: { venue: true },
+            })
+          : [];
+        const foundById = new Map(foundServices.map((s) => [s.id, s]));
+
         const serviceSummaries: BookingServiceSummary[] = [];
         const resolvedServices: { addOnService: AddOnService; quantity: number }[] =
           [];
-        for (const item of dto.services ?? []) {
-          const addOnService = await manager.findOne(AddOnService, {
-            where: { id: item.addOnServiceId },
-            relations: { venue: true },
-          });
-          if (!addOnService || addOnService.venue.id !== court.venue.id) {
+        for (const item of requestedServices) {
+          const addOnService = foundById.get(item.addOnServiceId);
+          if (
+            !addOnService ||
+            addOnService.venue.id !== court.venue.id ||
+            !addOnService.isActive
+          ) {
             throw new BadRequestException(
-              'Dịch vụ không thuộc cụm sân của sân đã chọn',
+              'Dịch vụ không thuộc cụm sân của sân đã chọn hoặc hiện không khả dụng',
             );
           }
           totalAmount += Number(addOnService.price) * item.quantity;
