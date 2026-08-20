@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { BookingStatus, PaymentStatus, Role } from '@sportspace/shared';
+import { BookingStatus, CourtStatus, PaymentStatus, Role } from '@sportspace/shared';
 import {
   DataSource,
   EntityManager,
@@ -31,6 +31,7 @@ import { MerchantBookingsQueryDto } from './dto/merchant-bookings-query.dto';
 import { PaginatedDto } from '../common/dto/paginated.dto';
 import { buildPaginationMeta } from '../common/pagination.util';
 import { Booking, BookingServiceSummary } from './entities/booking.entity';
+import { CourtBlock } from '../venue/entities/court-block.entity';
 import { Payment } from '../payment/entities/payment.entity';
 import { AddOnService } from '../addon-services/entities/add-on-service.entity';
 import { BookingServiceItem } from '../addon-services/entities/booking-service-item.entity';
@@ -89,11 +90,23 @@ export class BookingService {
           throw new NotFoundException('Người dùng không tồn tại');
         }
 
+        if (court.status !== CourtStatus.ACTIVE) {
+          throw new ConflictException('Sân đang bảo trì, không thể đặt');
+        }
+
         await this.assertSlotFree(
           manager,
           dto.courtId,
           dto.bookingDate,
           dto.startTime,
+        );
+
+        await this.assertNoBlockOverlap(
+          manager,
+          dto.courtId,
+          dto.bookingDate,
+          dto.startTime,
+          dto.endTime,
         );
 
         let totalAmount = await this.computeTotalAmount(
@@ -229,7 +242,19 @@ export class BookingService {
           throw new NotFoundException('Sân không tồn tại');
         }
 
+        if (court.status !== CourtStatus.ACTIVE) {
+          throw new ConflictException('Sân đang bảo trì, không thể đặt');
+        }
+
         await this.assertSlotFree(manager, courtId, bookingDate, startTime, id);
+
+        await this.assertNoBlockOverlap(
+          manager,
+          courtId,
+          bookingDate,
+          startTime,
+          endTime,
+        );
 
         const totalAmount = await this.computeTotalAmount(
           manager,
@@ -656,6 +681,25 @@ export class BookingService {
     const existing = await qb.getOne();
     if (existing) {
       throw new ConflictException('Ô giờ đã được đặt');
+    }
+  }
+
+  private async assertNoBlockOverlap(
+    manager: EntityManager,
+    courtId: string,
+    bookingDate: string,
+    startTime: string,
+    endTime: string,
+  ): Promise<void> {
+    const blocks = await manager.find(CourtBlock, {
+      where: { court: { id: courtId }, blockDate: bookingDate },
+    });
+    const overlaps = blocks.some(
+      (b) =>
+        b.startTime.slice(0, 5) < endTime && startTime < b.endTime.slice(0, 5),
+    );
+    if (overlaps) {
+      throw new ConflictException('Ô giờ đang bị chặn, không thể đặt');
     }
   }
 

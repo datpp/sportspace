@@ -12,7 +12,7 @@ import {
   MoreThanOrEqual,
   Repository,
 } from 'typeorm';
-import { BookingStatus, Role } from '@sportspace/shared';
+import { BookingStatus, CourtStatus, Role } from '@sportspace/shared';
 import { Court } from './entities/court.entity';
 import { Venue } from './entities/venue.entity';
 import { PriceRule } from './entities/price-rule.entity';
@@ -163,7 +163,9 @@ export class CourtService {
       },
     });
     const hasBookingOverlap = overlapping.some(
-      (b) => b.startTime.slice(0, 5) < dto.endTime && dto.startTime < b.endTime.slice(0, 5),
+      (b) =>
+        b.startTime.slice(0, 5) < dto.endTime.slice(0, 5) &&
+        dto.startTime.slice(0, 5) < b.endTime.slice(0, 5),
     );
     if (hasBookingOverlap) {
       throw new ConflictException(
@@ -220,6 +222,10 @@ export class CourtService {
       activeBookings.map((b) => b.startTime.slice(0, 5)),
     );
 
+    const blocks = await this.dataSource.getRepository(CourtBlock).find({
+      where: { court: { id: courtId }, blockDate: query.date },
+    });
+
     const slots: SlotDto[] = [];
     for (let hour = OPERATING_START_HOUR; hour < OPERATING_END_HOUR; hour++) {
       const startTime = `${String(hour).padStart(2, '0')}:00`;
@@ -230,11 +236,18 @@ export class CourtService {
         startTime,
         endTime,
       );
+      const isBlocked = blocks.some(
+        (b) =>
+          b.startTime.slice(0, 5) < endTime && startTime < b.endTime.slice(0, 5),
+      );
       slots.push({
         startTime,
         endTime,
         price,
-        available: !bookedStartTimes.has(startTime),
+        available:
+          court.status === CourtStatus.ACTIVE &&
+          !bookedStartTimes.has(startTime) &&
+          !isBlocked,
       });
     }
     return slots;

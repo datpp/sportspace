@@ -6,7 +6,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { BookingStatus, PaymentStatus, Role } from '@sportspace/shared';
+import { BookingStatus, CourtStatus, PaymentStatus, Role } from '@sportspace/shared';
 import {
   DataSource,
   EntityManager,
@@ -22,6 +22,7 @@ import { Venue } from '../venue/entities/venue.entity';
 import { User } from '../user/entities/user.entity';
 import { AddOnService } from '../addon-services/entities/add-on-service.entity';
 import { BookingServiceItem } from '../addon-services/entities/booking-service-item.entity';
+import { CourtBlock } from '../venue/entities/court-block.entity';
 import { RedisService } from '../redis/redis.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { NotificationService } from '../notification/notification.service';
@@ -37,6 +38,7 @@ function buildCourt(overrides: Partial<Court> = {}): Court {
     name: faker.word.words(2),
     sport: 'football',
     basePrice: faker.number.int({ min: 100_000, max: 500_000 }),
+    status: CourtStatus.ACTIVE,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -135,6 +137,7 @@ describe('BookingService', () => {
     manager.save.mockImplementation((_entity, data) =>
       Promise.resolve(data as Booking),
     );
+    manager.find.mockResolvedValue([]);
 
     (queryRunner as unknown as { manager: EntityManager }).manager = manager;
     dataSource.createQueryRunner.mockReturnValue(queryRunner);
@@ -430,6 +433,56 @@ describe('BookingService', () => {
       });
 
       await expect(service.create(user.id, dto)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects booking a court that is under MAINTENANCE', async () => {
+      const court = buildCourt({ status: CourtStatus.MAINTENANCE });
+      const user = buildUser();
+      const dto = buildCreateDto({ courtId: court.id });
+
+      manager.findOne.mockImplementation((entity: unknown) => {
+        if (entity === Court) return Promise.resolve(court);
+        if (entity === User) return Promise.resolve(user);
+        return Promise.resolve(null);
+      });
+
+      await expect(service.create(user.id, dto)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+    });
+
+    it('rejects booking a slot that overlaps an existing CourtBlock', async () => {
+      const court = buildCourt({ status: CourtStatus.ACTIVE });
+      const user = buildUser();
+      const dto = buildCreateDto({
+        courtId: court.id,
+        startTime: '10:00',
+        endTime: '11:00',
+      });
+
+      manager.findOne.mockImplementation((entity: unknown) => {
+        if (entity === Court) return Promise.resolve(court);
+        if (entity === User) return Promise.resolve(user);
+        return Promise.resolve(null);
+      });
+      manager.find.mockImplementation((entity: unknown) => {
+        if (entity === CourtBlock) {
+          return Promise.resolve([
+            {
+              id: 'blk1',
+              blockDate: dto.bookingDate,
+              startTime: '10:30:00',
+              endTime: '11:30:00',
+              reason: 'x',
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      await expect(service.create(user.id, dto)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
     });
   });
 
@@ -1056,6 +1109,73 @@ describe('BookingService', () => {
           buildAuthUser({ role: Role.PLAYER }),
         ),
       ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects rescheduling into a court under MAINTENANCE', async () => {
+      const owner = buildUser();
+      const newCourt = buildCourt({ status: CourtStatus.MAINTENANCE });
+      const current = buildBookingRow({
+        user: owner,
+        bookingDate: '2026-08-10',
+        startTime: '09:00',
+        endTime: '10:00',
+      });
+      bookingRepo.findOne.mockResolvedValue(current);
+      manager.findOne.mockImplementation((entity: unknown) => {
+        if (entity === Court) return Promise.resolve(newCourt);
+        return Promise.resolve(null);
+      });
+
+      await expect(
+        service.update(
+          current.id,
+          { courtId: newCourt.id, startTime: '14:00', endTime: '15:00' },
+          buildAuthUser({ id: owner.id }),
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('rejects rescheduling into a slot that overlaps an existing CourtBlock', async () => {
+      const owner = buildUser();
+      const newCourt = buildCourt({ status: CourtStatus.ACTIVE });
+      const current = buildBookingRow({
+        user: owner,
+        bookingDate: '2026-08-10',
+        startTime: '09:00',
+        endTime: '10:00',
+      });
+      bookingRepo.findOne.mockResolvedValue(current);
+      manager.findOne.mockImplementation((entity: unknown) => {
+        if (entity === Court) return Promise.resolve(newCourt);
+        return Promise.resolve(null);
+      });
+      manager.find.mockImplementation((entity: unknown) => {
+        if (entity === CourtBlock) {
+          return Promise.resolve([
+            {
+              id: 'blk1',
+              blockDate: '2026-08-11',
+              startTime: '14:30:00',
+              endTime: '15:30:00',
+              reason: 'x',
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      await expect(
+        service.update(
+          current.id,
+          {
+            courtId: newCourt.id,
+            bookingDate: '2026-08-11',
+            startTime: '14:00',
+            endTime: '15:00',
+          },
+          buildAuthUser({ id: owner.id }),
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 

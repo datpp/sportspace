@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
-import { BookingStatus, Role } from '@sportspace/shared';
+import { BookingStatus, CourtStatus, Role } from '@sportspace/shared';
 import { CourtService } from './court.service';
 import { Court } from './entities/court.entity';
 import { Venue } from './entities/venue.entity';
@@ -42,6 +42,7 @@ function buildCourt(overrides: Partial<Court> = {}): Court {
     name: 'Sân 1',
     sport: 'football',
     basePrice: 200_000,
+    status: CourtStatus.ACTIVE,
     ...overrides,
   } as Court;
 }
@@ -64,18 +65,21 @@ describe('CourtService', () => {
   let venueRepo: DeepMocked<Repository<Venue>>;
   let priceRuleRepo: DeepMocked<Repository<PriceRule>>;
   let bookingRepo: DeepMocked<Repository<Booking>>;
+  let blockRepo: DeepMocked<Repository<CourtBlock>>;
 
   beforeEach(() => {
     courtRepo = createMock<Repository<Court>>();
     venueRepo = createMock<Repository<Venue>>();
     priceRuleRepo = createMock<Repository<PriceRule>>();
     bookingRepo = createMock<Repository<Booking>>();
+    blockRepo = createMock<Repository<CourtBlock>>();
     dataSource = createMock<DataSource>();
 
     dataSource.getRepository.mockImplementation((entity: unknown) => {
       if (entity === Venue) return venueRepo;
       if (entity === PriceRule) return priceRuleRepo;
       if (entity === Booking) return bookingRepo;
+      if (entity === CourtBlock) return blockRepo;
       throw new Error(`Unexpected entity in test: ${String(entity)}`);
     });
 
@@ -90,6 +94,7 @@ describe('CourtService', () => {
       Promise.resolve(p as PriceRule),
     );
     bookingRepo.find.mockResolvedValue([]);
+    blockRepo.find.mockResolvedValue([]);
 
     service = new CourtService(courtRepo, dataSource);
   });
@@ -227,6 +232,45 @@ describe('CourtService', () => {
       const tenAm = slots.find((s) => s.startTime === '10:00');
       expect(tenAm?.available).toBe(true);
       expect(tenAm?.price).toBe(200_000);
+    });
+
+    it('marks every slot unavailable when the court is under MAINTENANCE', async () => {
+      const court = buildCourt({ status: CourtStatus.MAINTENANCE });
+      courtRepo.findOne.mockResolvedValue(court);
+      bookingRepo.find.mockResolvedValue([]);
+      blockRepo.find.mockResolvedValue([]);
+      priceRuleRepo.findOne.mockResolvedValue(null);
+
+      const slots = await service.getSlots(court.id, { date: '2026-09-01' });
+
+      expect(slots.every((s) => s.available === false)).toBe(true);
+    });
+
+    it('marks a slot unavailable when it overlaps a CourtBlock', async () => {
+      const court = buildCourt({ status: CourtStatus.ACTIVE });
+      courtRepo.findOne.mockResolvedValue(court);
+      bookingRepo.find.mockResolvedValue([]);
+      blockRepo.find.mockResolvedValue([
+        {
+          id: 'blk1',
+          court,
+          blockDate: '2026-09-01',
+          startTime: '10:30:00',
+          endTime: '11:30:00',
+          reason: 'x',
+          createdAt: new Date(),
+        } as CourtBlock,
+      ]);
+      priceRuleRepo.findOne.mockResolvedValue(null);
+
+      const slots = await service.getSlots(court.id, { date: '2026-09-01' });
+
+      const slot10 = slots.find((s) => s.startTime === '10:00');
+      const slot11 = slots.find((s) => s.startTime === '11:00');
+      const slot12 = slots.find((s) => s.startTime === '12:00');
+      expect(slot10?.available).toBe(false);
+      expect(slot11?.available).toBe(false);
+      expect(slot12?.available).toBe(true);
     });
   });
 
