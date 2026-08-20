@@ -10,6 +10,7 @@ import {
   getUsers,
   getDisputes,
   getSystemConfig,
+  getAddonServices,
 } from '@sportspace/shared';
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:3000';
@@ -34,5 +35,6 @@ export function createAuthenticatedApiClient(accessToken: string) {
     users: getUsers(instance),
     disputes: getDisputes(instance),
     systemConfig: getSystemConfig(instance),
+    addonServices: getAddonServices(instance),
   };
 }

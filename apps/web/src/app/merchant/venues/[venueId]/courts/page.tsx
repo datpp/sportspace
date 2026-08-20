@@ -47,6 +47,9 @@ export default async function CourtsPage({
           / {venueName}
         </p>
         <h1 className="text-xl font-semibold">Sân con của {venueName}</h1>
+        <Link href={`/merchant/venues/${venueId}/services`} className="text-sm hover:underline">
+          Dịch vụ đi kèm
+        </Link>
       </div>
 
       <SearchInput placeholder="Tìm theo tên sân hoặc bộ môn" />
