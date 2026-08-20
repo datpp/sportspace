@@ -9,11 +9,13 @@ import { User } from '../user/entities/user.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
     PassportModule,
+    MailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

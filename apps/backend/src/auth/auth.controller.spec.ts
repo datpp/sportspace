@@ -60,4 +60,24 @@ describe('AuthController', () => {
     expect(service.login).toHaveBeenCalledWith(dto);
     expect(result).toBe(expected);
   });
+
+  it('forgotPassword() delegates to AuthService.forgotPassword', async () => {
+    const dto = { email: faker.internet.email() };
+    service.forgotPassword.mockResolvedValue(undefined);
+
+    const result = await controller.forgotPassword(dto);
+
+    expect(service.forgotPassword).toHaveBeenCalledWith(dto);
+    expect(result).toBeUndefined();
+  });
+
+  it('resetPassword() delegates to AuthService.resetPassword', async () => {
+    const dto = { token: 'a-token', newPassword: 'NewPassword123' };
+    service.resetPassword.mockResolvedValue(undefined);
+
+    const result = await controller.resetPassword(dto);
+
+    expect(service.resetPassword).toHaveBeenCalledWith(dto);
+    expect(result).toBeUndefined();
+  });
 });

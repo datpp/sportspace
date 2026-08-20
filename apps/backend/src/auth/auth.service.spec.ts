@@ -1,6 +1,7 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { faker } from '@faker-js/faker';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   UnauthorizedException,
@@ -10,9 +11,11 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Role } from '@sportspace/shared';
+import * as crypto from 'crypto';
 import { AuthService } from './auth.service';
 import { User } from '../user/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
+import { MailService } from '../mail/mail.service';
 
 function buildUser(overrides: Partial<User> = {}): User {
   return {
@@ -24,6 +27,8 @@ function buildUser(overrides: Partial<User> = {}): User {
     role: Role.PLAYER,
     isLocked: false,
     fcmToken: null,
+    resetPasswordTokenHash: null,
+    resetPasswordExpiresAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -45,12 +50,14 @@ describe('AuthService', () => {
   let jwtService: DeepMocked<JwtService>;
   let config: DeepMocked<ConfigService>;
   let queryBuilder: DeepMocked<SelectQueryBuilder<User>>;
+  let mailService: DeepMocked<MailService>;
 
   beforeEach(() => {
     userRepo = createMock<Repository<User>>();
     jwtService = createMock<JwtService>();
     config = createMock<ConfigService>();
     queryBuilder = createMock<SelectQueryBuilder<User>>();
+    mailService = createMock<MailService>();
 
     queryBuilder.addSelect.mockReturnValue(queryBuilder);
     queryBuilder.where.mockReturnValue(queryBuilder);
@@ -68,7 +75,7 @@ describe('AuthService', () => {
       (payload: unknown) => `signed:${JSON.stringify(payload)}`,
     );
 
-    service = new AuthService(userRepo, jwtService, config);
+    service = new AuthService(userRepo, jwtService, config, mailService);
   });
 
   describe('register', () => {
@@ -145,6 +152,75 @@ describe('AuthService', () => {
       await expect(
         service.login({ email: user.email, password }),
       ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('stores a hashed token and sends an email when the user exists', async () => {
+      const user = buildUser();
+      userRepo.findOne.mockResolvedValue(user);
+      config.get.mockImplementation((key: string) => {
+        if (key === 'WEB_URL') return 'http://localhost:3001';
+        return undefined;
+      });
+
+      await service.forgotPassword({ email: user.email });
+
+      expect(userRepo.update).toHaveBeenCalledWith(
+        user.id,
+        expect.objectContaining({
+          resetPasswordTokenHash: expect.any(String),
+          resetPasswordExpiresAt: expect.any(Date),
+        }),
+      );
+      expect(mailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+        user.email,
+        expect.stringContaining('http://localhost:3001/reset-password?token='),
+      );
+    });
+
+    it('does nothing and does not call sendMail when the email does not exist', async () => {
+      userRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.forgotPassword({ email: 'nobody@example.com' }),
+      ).resolves.toBeUndefined();
+      expect(userRepo.update).not.toHaveBeenCalled();
+      expect(mailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('updates the password and clears the reset fields for a valid unexpired token', async () => {
+      const rawToken = 'a-raw-token';
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const user = buildUser({
+        resetPasswordTokenHash: tokenHash,
+        resetPasswordExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      });
+      userRepo.findOne.mockResolvedValue(user);
+
+      await service.resetPassword({ token: rawToken, newPassword: 'NewPassword123' });
+
+      expect(userRepo.update).toHaveBeenCalledWith(
+        user.id,
+        expect.objectContaining({
+          resetPasswordTokenHash: null,
+          resetPasswordExpiresAt: null,
+        }),
+      );
+      const updateArg = userRepo.update.mock.calls[0][1] as { passwordHash: string };
+      expect(
+        await bcrypt.compare('NewPassword123', updateArg.passwordHash),
+      ).toBe(true);
+    });
+
+    it('throws BadRequestException for an unknown or expired token', async () => {
+      userRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.resetPassword({ token: 'bad-token', newPassword: 'NewPassword123' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 });
