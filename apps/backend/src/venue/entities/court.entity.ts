@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { CourtStatus } from '@sportspace/shared';
 import { Venue } from './venue.entity';
 import { PriceRule } from './price-rule.entity';
 import { decimalTransformer } from '../../database/decimal.transformer';
@@ -46,6 +47,10 @@ export class Court {
     transformer: decimalTransformer,
   })
   basePrice: number;
+
+  @ApiProperty({ enum: CourtStatus })
+  @Column({ type: 'enum', enum: CourtStatus, default: CourtStatus.ACTIVE })
+  status: CourtStatus;
 
   @ApiProperty()
   @CreateDateColumn()

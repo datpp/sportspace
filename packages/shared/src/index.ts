@@ -14,6 +14,7 @@ export { VenueStatus } from './enums/venue-status.enum';
 export { MatchStatus } from './enums/match-status.enum';
 export { MatchParticipantStatus } from './enums/match-participant-status.enum';
 export { DisputeStatus } from './enums/dispute-status.enum';
+export { CourtStatus } from './enums/court-status.enum';
 // One line per orval tag folder under ./generated/ (each @ApiTags() in a
 // backend controller creates one). Adding a new controller tag without a
 // matching line here silently leaves its client functions unreachable from
