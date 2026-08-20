@@ -12,6 +12,7 @@ import { User } from '../src/user/entities/user.entity';
 import { Venue } from '../src/venue/entities/venue.entity';
 import { Court } from '../src/venue/entities/court.entity';
 import { PriceRule } from '../src/venue/entities/price-rule.entity';
+import { Booking } from '../src/booking/entities/booking.entity';
 
 const SEED_PASSWORD = 'Password123!';
 
@@ -28,6 +29,7 @@ describe('Venue + Court (e2e)', () => {
   let venueId: string;
   let courtId: string;
   let rejectedVenueId: string;
+  let bookingId: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -85,6 +87,9 @@ describe('Venue + Court (e2e)', () => {
   });
 
   afterAll(async () => {
+    if (bookingId) {
+      await dataSource.getRepository(Booking).delete({ id: bookingId });
+    }
     if (courtId) {
       await dataSource
         .getRepository(PriceRule)
@@ -283,5 +288,33 @@ describe('Venue + Court (e2e)', () => {
       .expect(200);
     expect(res.body.data).toHaveLength(0);
     expect(res.body.meta).toMatchObject({ page: 1, limit: 20 });
+  });
+
+  it('marks the slot as unavailable once a player has booked it, leaving others untouched', async () => {
+    const bookingRes = await request(app.getHttpServer())
+      .post('/bookings')
+      .set('Authorization', `Bearer ${playerToken}`)
+      .send({
+        courtId,
+        bookingDate: '2026-08-10',
+        startTime: '07:00',
+        endTime: '08:00',
+      })
+      .expect(201);
+    bookingId = bookingRes.body.id;
+
+    const res = await request(app.getHttpServer())
+      .get(`/courts/${courtId}/slots`)
+      .query({ date: '2026-08-10' })
+      .expect(200);
+
+    const bookedSlot = res.body.find(
+      (s: { startTime: string }) => s.startTime === '07:00',
+    );
+    const freeSlot = res.body.find(
+      (s: { startTime: string }) => s.startTime === '08:00',
+    );
+    expect(bookedSlot.available).toBe(false);
+    expect(freeSlot.available).toBe(true);
   });
 });

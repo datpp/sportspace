@@ -154,7 +154,10 @@ export class CourtService {
         status: In([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
       },
     });
-    const bookedStartTimes = new Set(activeBookings.map((b) => b.startTime));
+    const bookedStartTimes = new Set(
+      // Postgres returns `time` columns as "HH:mm:ss"; slots are "HH:mm".
+      activeBookings.map((b) => b.startTime.slice(0, 5)),
+    );
 
     const slots: SlotDto[] = [];
     for (let hour = OPERATING_START_HOUR; hour < OPERATING_END_HOUR; hour++) {
