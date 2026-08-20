@@ -42,6 +42,16 @@ export class User {
   @Column({ nullable: true, type: 'varchar' })
   fcmToken: string | null;
 
+  // No @ApiProperty(): the raw token is never stored (only this hash), and
+  // this field must never leak into any API response either way — same
+  // rule as passwordHash/fcmToken.
+  @Column({ type: 'varchar', nullable: true })
+  resetPasswordTokenHash: string | null;
+
+  // No @ApiProperty(): internal expiry bookkeeping, same rule as above.
+  @Column({ type: 'timestamptz', nullable: true })
+  resetPasswordExpiresAt: Date | null;
+
   @ApiProperty()
   @CreateDateColumn()
   createdAt: Date;
