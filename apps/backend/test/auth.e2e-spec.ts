@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
@@ -170,6 +171,31 @@ describe('Forgot/reset password (e2e)', () => {
       .post('/auth/login')
       .send({ email: user.email, password: 'NewPassword456' })
       .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/auth/reset-password')
+      .send({ token, newPassword: 'AnotherPassword789' })
+      .expect(400);
+
+    await dataSource.getRepository(User).delete({ id: user.id });
+  });
+
+  it('rejects reset-password with a correct-hash token that has already expired (400)', async () => {
+    const rawToken = 'expired-e2e-token';
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const passwordHash = await bcrypt.hash('OldPassword123', 10);
+    const user = await dataSource.getRepository(User).save({
+      email: faker.internet.email(),
+      passwordHash,
+      fullName: faker.person.fullName(),
+      resetPasswordTokenHash: tokenHash,
+      resetPasswordExpiresAt: new Date(Date.now() - 60 * 1000),
+    });
+
+    await request(app.getHttpServer())
+      .post('/auth/reset-password')
+      .send({ token: rawToken, newPassword: 'NewPassword456' })
+      .expect(400);
 
     await dataSource.getRepository(User).delete({ id: user.id });
   });

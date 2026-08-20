@@ -42,14 +42,16 @@ export class User {
   @Column({ nullable: true, type: 'varchar' })
   fcmToken: string | null;
 
-  // No @ApiProperty(): the raw token is never stored (only this hash), and
-  // this field must never leak into any API response either way — same
-  // rule as passwordHash/fcmToken.
-  @Column({ type: 'varchar', nullable: true })
+  // select: false is what actually keeps this out of API responses (no
+  // ClassSerializerInterceptor is registered, so @ApiProperty()'s absence
+  // alone does not stop it from being selected and serialized) — same
+  // mechanism as passwordHash above. resetPassword() only needs this in a
+  // WHERE clause, never in a SELECT, so this is safe.
+  @Column({ type: 'varchar', nullable: true, select: false })
   resetPasswordTokenHash: string | null;
 
-  // No @ApiProperty(): internal expiry bookkeeping, same rule as above.
-  @Column({ type: 'timestamptz', nullable: true })
+  // select: false — same reasoning as resetPasswordTokenHash above.
+  @Column({ type: 'timestamptz', nullable: true, select: false })
   resetPasswordExpiresAt: Date | null;
 
   @ApiProperty()
