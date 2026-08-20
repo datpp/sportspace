@@ -10,7 +10,7 @@ export function ForgotPasswordForm() {
 
   if (state?.success) {
     return (
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
         Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.
       </p>
     );

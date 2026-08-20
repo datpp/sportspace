@@ -72,4 +72,13 @@ describe('LoginScreen', () => {
 
     expect(navigate).toHaveBeenCalledWith('Register');
   });
+
+  it('điều hướng sang ForgotPassword khi bấm link', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await user.press(screen.getByTestId('login-go-forgot-password'));
+
+    expect(navigate).toHaveBeenCalledWith('ForgotPassword');
+  });
 });

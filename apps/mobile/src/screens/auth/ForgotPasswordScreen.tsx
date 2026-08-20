@@ -6,6 +6,8 @@ import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function ForgotPasswordScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -13,14 +15,19 @@ export function ForgotPasswordScreen({ navigation }: Props) {
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async () => {
-    if (!email.trim()) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
       setError('Vui lòng nhập email');
+      return;
+    }
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      setError('Email không hợp lệ');
       return;
     }
     setError(null);
     setIsSubmitting(true);
     try {
-      await authApi.authControllerForgotPassword({ email: email.trim() });
+      await authApi.authControllerForgotPassword({ email: trimmedEmail });
       setSuccess(true);
     } catch {
       setError('Không thể gửi yêu cầu, vui lòng thử lại');
