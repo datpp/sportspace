@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -15,9 +16,12 @@ import { BookingStatus, Role } from '@sportspace/shared';
 import { Court } from './entities/court.entity';
 import { Venue } from './entities/venue.entity';
 import { PriceRule } from './entities/price-rule.entity';
+import { CourtBlock } from './entities/court-block.entity';
 import { CreateCourtDto } from './dto/create-court.dto';
 import { UpdateCourtDto } from './dto/update-court.dto';
 import { CreatePriceRuleDto } from './dto/create-price-rule.dto';
+import { CreateCourtBlockDto } from './dto/create-court-block.dto';
+import { CourtBlockQueryDto } from './dto/court-block-query.dto';
 import { SlotQueryDto } from './dto/slot-query.dto';
 import { SlotDto } from './dto/slot.dto';
 import { FindCourtsQueryDto } from './dto/find-courts-query.dto';
@@ -140,6 +144,63 @@ export class CourtService {
       .delete({ id: priceRuleId, court: { id: courtId } });
     if (!result.affected) {
       throw new NotFoundException('Price rule không tồn tại');
+    }
+  }
+
+  async createBlock(
+    courtId: string,
+    dto: CreateCourtBlockDto,
+    user: AuthenticatedUser,
+  ): Promise<CourtBlock> {
+    const court = await this.findOne(courtId);
+    this.assertOwnerOrAdmin(court.venue, user);
+
+    const overlapping = await this.dataSource.getRepository(Booking).find({
+      where: {
+        court: { id: courtId },
+        bookingDate: dto.blockDate,
+        status: In([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+      },
+    });
+    const hasBookingOverlap = overlapping.some(
+      (b) => b.startTime.slice(0, 5) < dto.endTime && dto.startTime < b.endTime.slice(0, 5),
+    );
+    if (hasBookingOverlap) {
+      throw new ConflictException(
+        'Đã có đơn đặt sân trong khung giờ này, không thể chặn',
+      );
+    }
+
+    const blockRepo = this.dataSource.getRepository(CourtBlock);
+    const block = blockRepo.create({ ...dto, court });
+    return blockRepo.save(block);
+  }
+
+  async listBlocks(
+    courtId: string,
+    query: CourtBlockQueryDto,
+  ): Promise<CourtBlock[]> {
+    return this.dataSource.getRepository(CourtBlock).find({
+      where: {
+        court: { id: courtId },
+        ...(query.date ? { blockDate: query.date } : {}),
+      },
+    });
+  }
+
+  async removeBlock(
+    courtId: string,
+    blockId: string,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    const court = await this.findOne(courtId);
+    this.assertOwnerOrAdmin(court.venue, user);
+
+    const result = await this.dataSource
+      .getRepository(CourtBlock)
+      .delete({ id: blockId, court: { id: courtId } });
+    if (!result.affected) {
+      throw new NotFoundException('Khoảng chặn không tồn tại');
     }
   }
 

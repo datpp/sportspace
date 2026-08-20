@@ -1,12 +1,17 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { faker } from '@faker-js/faker';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
-import { Role } from '@sportspace/shared';
+import { BookingStatus, Role } from '@sportspace/shared';
 import { CourtService } from './court.service';
 import { Court } from './entities/court.entity';
 import { Venue } from './entities/venue.entity';
 import { PriceRule } from './entities/price-rule.entity';
+import { CourtBlock } from './entities/court-block.entity';
 import { Booking } from '../booking/entities/booking.entity';
 import { User } from '../user/entities/user.entity';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -222,6 +227,90 @@ describe('CourtService', () => {
       const tenAm = slots.find((s) => s.startTime === '10:00');
       expect(tenAm?.available).toBe(true);
       expect(tenAm?.price).toBe(200_000);
+    });
+  });
+
+  describe('createBlock', () => {
+    it('creates a block when user is the venue owner', async () => {
+      const owner = buildUser();
+      const court = buildCourt({ venue: buildVenue({ owner }) });
+      courtRepo.findOne.mockResolvedValue(court);
+      const blockRepo = createMock<Repository<CourtBlock>>();
+      blockRepo.find.mockResolvedValue([]);
+      blockRepo.create.mockImplementation(
+        ((data: object) => data) as typeof blockRepo.create,
+      );
+      blockRepo.save.mockImplementation((b) =>
+        Promise.resolve(b as CourtBlock),
+      );
+      dataSource.getRepository.mockImplementation((entity: unknown) => {
+        if (entity === Booking) return bookingRepo;
+        if (entity === CourtBlock) return blockRepo;
+        throw new Error(`Unexpected entity in test: ${String(entity)}`);
+      });
+
+      const result = await service.createBlock(
+        court.id,
+        {
+          blockDate: '2026-09-01',
+          startTime: '10:00',
+          endTime: '11:00',
+          reason: 'Bảo trì mặt sân',
+        },
+        buildAuthUser({ id: owner.id }),
+      );
+
+      expect(result.reason).toBe('Bảo trì mặt sân');
+    });
+
+    it('rejects a block that overlaps an existing active booking (409)', async () => {
+      const owner = buildUser();
+      const court = buildCourt({ venue: buildVenue({ owner }) });
+      courtRepo.findOne.mockResolvedValue(court);
+      bookingRepo.find.mockResolvedValue([
+        {
+          id: 'b1',
+          bookingDate: '2026-09-01',
+          startTime: '10:30:00',
+          endTime: '11:30:00',
+          status: BookingStatus.CONFIRMED,
+        } as Booking,
+      ]);
+      dataSource.getRepository.mockImplementation((entity: unknown) => {
+        if (entity === Booking) return bookingRepo;
+        throw new Error(`Unexpected entity in test: ${String(entity)}`);
+      });
+
+      await expect(
+        service.createBlock(
+          court.id,
+          {
+            blockDate: '2026-09-01',
+            startTime: '10:00',
+            endTime: '11:00',
+            reason: 'Bảo trì',
+          },
+          buildAuthUser({ id: owner.id }),
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('rejects when user is not the venue owner', async () => {
+      const court = buildCourt();
+      courtRepo.findOne.mockResolvedValue(court);
+
+      await expect(
+        service.createBlock(
+          court.id,
+          {
+            blockDate: '2026-09-01',
+            startTime: '10:00',
+            endTime: '11:00',
+            reason: 'X',
+          },
+          buildAuthUser(),
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 });

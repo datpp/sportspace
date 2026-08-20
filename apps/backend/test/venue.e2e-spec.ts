@@ -317,4 +317,47 @@ describe('Venue + Court (e2e)', () => {
     expect(bookedSlot.available).toBe(false);
     expect(freeSlot.available).toBe(true);
   });
+
+  it('lets the owning MERCHANT toggle court status to MAINTENANCE and back', async () => {
+    const maintRes = await request(app.getHttpServer())
+      .patch(`/courts/${courtId}`)
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .send({ status: 'MAINTENANCE' })
+      .expect(200);
+    expect(maintRes.body.status).toBe('MAINTENANCE');
+
+    const activeRes = await request(app.getHttpServer())
+      .patch(`/courts/${courtId}`)
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .send({ status: 'ACTIVE' })
+      .expect(200);
+    expect(activeRes.body.status).toBe('ACTIVE');
+  });
+
+  it('lets the owning MERCHANT create, list, and remove a court block', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post(`/courts/${courtId}/blocks`)
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .send({
+        blockDate: '2026-09-05',
+        startTime: '10:00',
+        endTime: '11:00',
+        reason: 'Sự kiện riêng',
+      })
+      .expect(201);
+    const blockId = createRes.body.id;
+
+    const listRes = await request(app.getHttpServer())
+      .get(`/courts/${courtId}/blocks`)
+      .query({ date: '2026-09-05' })
+      .expect(200);
+    expect((listRes.body as { id: string }[]).map((b) => b.id)).toContain(
+      blockId,
+    );
+
+    await request(app.getHttpServer())
+      .delete(`/courts/${courtId}/blocks/${blockId}`)
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .expect(200);
+  });
 });

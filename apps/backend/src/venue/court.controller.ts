@@ -21,11 +21,14 @@ import { CourtService } from './court.service';
 import { CreateCourtDto } from './dto/create-court.dto';
 import { UpdateCourtDto } from './dto/update-court.dto';
 import { CreatePriceRuleDto } from './dto/create-price-rule.dto';
+import { CreateCourtBlockDto } from './dto/create-court-block.dto';
+import { CourtBlockQueryDto } from './dto/court-block-query.dto';
 import { SlotQueryDto } from './dto/slot-query.dto';
 import { SlotDto } from './dto/slot.dto';
 import { FindCourtsQueryDto } from './dto/find-courts-query.dto';
 import { Court } from './entities/court.entity';
 import { PriceRule } from './entities/price-rule.entity';
+import { CourtBlock } from './entities/court-block.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -121,5 +124,39 @@ export class CourtController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.courtService.removePriceRule(id, priceRuleId, user);
+  }
+
+  @Post(':id/blocks')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.MERCHANT, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Chặn một khoảng giờ (không cho đặt) trên sân' })
+  @ApiCreatedResponse({ type: CourtBlock })
+  createBlock(
+    @Param('id') id: string,
+    @Body() dto: CreateCourtBlockDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.courtService.createBlock(id, dto, user);
+  }
+
+  @Get(':id/blocks')
+  @ApiOperation({ summary: 'Danh sách khoảng giờ bị chặn của sân' })
+  @ApiOkResponse({ type: [CourtBlock] })
+  listBlocks(@Param('id') id: string, @Query() query: CourtBlockQueryDto) {
+    return this.courtService.listBlocks(id, query);
+  }
+
+  @Delete(':id/blocks/:blockId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.MERCHANT, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Bỏ chặn một khoảng giờ' })
+  removeBlock(
+    @Param('id') id: string,
+    @Param('blockId') blockId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.courtService.removeBlock(id, blockId, user);
   }
 }
