@@ -1,39 +1,51 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useAuth } from '../../auth/AuthContext';
+import { authApi } from '../../api/client';
 import type { AuthStackParamList } from '../../navigation/types';
 
-type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
+type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
-export function LoginScreen({ navigation }: Props) {
-  const { login } = useAuth();
+export function ForgotPasswordScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async () => {
-    if (!email.trim() || !password) {
-      setError('Vui lòng nhập email và mật khẩu');
+    if (!email.trim()) {
+      setError('Vui lòng nhập email');
       return;
     }
     setError(null);
     setIsSubmitting(true);
     try {
-      await login({ email: email.trim(), password });
+      await authApi.authControllerForgotPassword({ email: email.trim() });
+      setSuccess(true);
     } catch {
-      setError('Sai email hoặc mật khẩu');
+      setError('Không thể gửi yêu cầu, vui lòng thử lại');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (success) {
+    return (
+      <View style={styles.container} testID="forgot-password-success">
+        <Text style={styles.title}>Kiểm tra email của bạn</Text>
+        <Text>Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu.</Text>
+        <Pressable testID="forgot-password-back-to-login" onPress={() => navigation.goBack()}>
+          <Text style={styles.link}>Quay lại đăng nhập</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container} testID="login-screen">
-      <Text style={styles.title}>Đăng nhập</Text>
+    <View style={styles.container} testID="forgot-password-screen">
+      <Text style={styles.title}>Quên mật khẩu</Text>
       <TextInput
-        testID="login-email"
+        testID="forgot-password-email"
         style={styles.input}
         placeholder="Email"
         autoCapitalize="none"
@@ -41,21 +53,13 @@ export function LoginScreen({ navigation }: Props) {
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
-        testID="login-password"
-        style={styles.input}
-        placeholder="Mật khẩu"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
       {error ? (
-        <Text testID="login-error" style={styles.error}>
+        <Text testID="forgot-password-error" style={styles.error}>
           {error}
         </Text>
       ) : null}
       <Pressable
-        testID="login-submit"
+        testID="forgot-password-submit"
         style={styles.button}
         onPress={handleSubmit}
         disabled={isSubmitting}
@@ -63,14 +67,8 @@ export function LoginScreen({ navigation }: Props) {
         {isSubmitting ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Đăng nhập</Text>
+          <Text style={styles.buttonText}>Gửi link đặt lại mật khẩu</Text>
         )}
-      </Pressable>
-      <Pressable testID="login-go-register" onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.link}>Chưa có tài khoản? Đăng ký</Text>
-      </Pressable>
-      <Pressable testID="login-go-forgot-password" onPress={() => navigation.navigate('ForgotPassword')}>
-        <Text style={styles.link}>Quên mật khẩu?</Text>
       </Pressable>
     </View>
   );
