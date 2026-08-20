@@ -88,3 +88,14 @@ export async function deleteCourt(venueId: string, courtId: string): Promise<voi
   await courts.courtControllerRemove(courtId);
   revalidatePath(coursePath(venueId));
 }
+
+export async function toggleCourtStatus(
+  venueId: string,
+  courtId: string,
+  nextStatus: 'ACTIVE' | 'MAINTENANCE',
+): Promise<void> {
+  const session = await requireSession();
+  const { courts } = createAuthenticatedApiClient(session.accessToken);
+  await courts.courtControllerUpdate(courtId, { status: nextStatus });
+  revalidatePath(coursePath(venueId));
+}

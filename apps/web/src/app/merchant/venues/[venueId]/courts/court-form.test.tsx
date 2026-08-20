@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { useActionState } from 'react';
-import type { Court } from '@sportspace/shared';
+import { CourtStatus, type Court } from '@sportspace/shared';
 
 vi.mock('react', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react')>();
@@ -18,6 +18,7 @@ const sampleCourt: Court = {
   name: 'Sân 1',
   sport: 'football',
   basePrice: 200000,
+  status: CourtStatus.ACTIVE,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };

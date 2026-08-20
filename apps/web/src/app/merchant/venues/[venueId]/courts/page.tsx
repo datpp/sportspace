@@ -5,7 +5,7 @@ import { handleApiError } from '@/lib/handle-api-error';
 import { SearchInput } from '@/components/list/search-input';
 import { Pagination } from '@/components/list/pagination';
 import { CourtForm } from './court-form';
-import { deleteCourt } from './actions';
+import { deleteCourt, toggleCourtStatus } from './actions';
 
 export default async function CourtsPage({
   params,
@@ -70,6 +70,21 @@ export default async function CourtsPage({
               <Link href={`/merchant/venues/${venueId}/courts/${court.id}/price-rules`} className="hover:underline">
                 Giá theo khung giờ
               </Link>
+              <Link href={`/merchant/venues/${venueId}/courts/${court.id}/blocks`} className="hover:underline">
+                Chặn giờ
+              </Link>
+              <form
+                action={toggleCourtStatus.bind(
+                  null,
+                  venueId,
+                  court.id,
+                  court.status === 'MAINTENANCE' ? 'ACTIVE' : 'MAINTENANCE',
+                )}
+              >
+                <button type="submit" className="hover:underline">
+                  {court.status === 'MAINTENANCE' ? 'Mở lại sân' : 'Đóng bảo trì'}
+                </button>
+              </form>
               <form action={deleteCourt.bind(null, venueId, court.id)}>
                 <button type="submit" className="text-red-600 hover:underline dark:text-red-400">
                   Xoá
