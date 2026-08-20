@@ -6,11 +6,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { BookingStatus, CourtStatus, PaymentStatus, Role } from '@sportspace/shared';
 import {
   DataSource,
   EntityManager,
   In,
+  LessThan,
   LessThanOrEqual,
   MoreThanOrEqual,
   Repository,
@@ -47,6 +49,7 @@ import { RejectBookingDto } from './dto/reject-booking.dto';
 const SLOT_LOCK_TTL_SECONDS = 10;
 const ACTIVE_STATUSES = [BookingStatus.PENDING, BookingStatus.CONFIRMED];
 const POSTGRES_UNIQUE_VIOLATION = '23505';
+const STALE_PENDING_MINUTES = 5;
 
 function isUniqueViolation(err: unknown): boolean {
   const code =
@@ -411,6 +414,53 @@ export class BookingService {
     );
 
     return booking;
+  }
+
+  /**
+   * A PENDING booking with no Payment row at all is a booking left for
+   * merchant review (FR-M04) — never selected here, at any age. Only a
+   * PENDING booking whose Payment is itself still PENDING (an abandoned
+   * VNPAY checkout) is a candidate; Payment.updatedAt is the clock so a
+   * retried checkout restarts the 5-minute window.
+   */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async expireStalePendingBookings(): Promise<void> {
+    const threshold = new Date(Date.now() - STALE_PENDING_MINUTES * 60 * 1000);
+    const stalePayments = await this.paymentRepo.find({
+      where: {
+        status: PaymentStatus.PENDING,
+        updatedAt: LessThan(threshold),
+        booking: { status: BookingStatus.PENDING },
+      },
+      relations: { booking: { court: true } },
+    });
+
+    for (const payment of stalePayments) {
+      const booking = payment.booking;
+      let expired = false;
+
+      await this.dataSource.transaction(async (manager) => {
+        const updateResult = await manager.update(
+          Booking,
+          { id: booking.id, status: BookingStatus.PENDING },
+          { status: BookingStatus.CANCELLED },
+        );
+        if (updateResult.affected === 0) {
+          return;
+        }
+        await manager.update(Payment, { id: payment.id }, { status: PaymentStatus.FAILED });
+        expired = true;
+      });
+
+      if (expired) {
+        this.realtimeGateway.broadcastSlotUpdate({
+          courtId: booking.court.id,
+          bookingDate: booking.bookingDate,
+          startTime: booking.startTime,
+          status: BookingStatus.CANCELLED,
+        });
+      }
+    }
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<void> {

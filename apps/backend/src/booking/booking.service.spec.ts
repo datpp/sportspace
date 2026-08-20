@@ -13,6 +13,7 @@ import {
   QueryRunner,
   Repository,
   SelectQueryBuilder,
+  UpdateResult,
 } from 'typeorm';
 import { BookingService } from './booking.service';
 import { Booking } from './entities/booking.entity';
@@ -1295,6 +1296,116 @@ describe('BookingService', () => {
       );
       expect(result).toHaveLength(12);
       expect(result.every((p) => /^\d{4}-\d{2}$/.test(p.bucket))).toBe(true);
+    });
+  });
+
+  describe('expireStalePendingBookings', () => {
+    function mockTransaction(updateResults: { affected: number }[]): DeepMocked<EntityManager> {
+      let call = 0;
+      const transactionManager = createMock<EntityManager>();
+      transactionManager.update.mockImplementation(() =>
+        Promise.resolve(updateResults[call++] as UpdateResult),
+      );
+      dataSource.transaction.mockImplementation(
+        ((work: (manager: EntityManager) => Promise<void>) =>
+          work(transactionManager)) as typeof dataSource.transaction,
+      );
+      return transactionManager;
+    }
+
+    it('cancels a PENDING booking whose PENDING payment has not been touched in over 5 minutes', async () => {
+      const court = buildCourt();
+      const booking = buildBookingRow({
+        status: BookingStatus.PENDING,
+        court,
+        bookingDate: '2026-09-01',
+        startTime: '10:00',
+      });
+      const staleUpdatedAt = new Date(Date.now() - 6 * 60 * 1000);
+      const payment = buildPaymentRow({
+        status: PaymentStatus.PENDING,
+        booking,
+        updatedAt: staleUpdatedAt,
+      });
+      paymentRepo.find.mockResolvedValue([payment]);
+      mockTransaction([{ affected: 1 }, { affected: 1 }]);
+
+      await service.expireStalePendingBookings();
+
+      expect(paymentRepo.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: PaymentStatus.PENDING,
+            booking: { status: BookingStatus.PENDING },
+          }),
+        }),
+      );
+      expect(realtimeGateway.broadcastSlotUpdate).toHaveBeenCalledWith({
+        courtId: court.id,
+        bookingDate: booking.bookingDate,
+        startTime: booking.startTime,
+        status: BookingStatus.CANCELLED,
+      });
+    });
+
+    it('leaves alone a PENDING booking whose PENDING payment was touched less than 5 minutes ago', async () => {
+      paymentRepo.find.mockResolvedValue([]);
+
+      await service.expireStalePendingBookings();
+
+      expect(realtimeGateway.broadcastSlotUpdate).not.toHaveBeenCalled();
+    });
+
+    it('never selects a PENDING booking with no Payment row at all (FR-M04 merchant-review case)', async () => {
+      // The query itself excludes these (inner-joined to Payment) — this test
+      // locks in that the query the implementation issues cannot match a
+      // paymentless booking, by asserting the where clause paymentRepo.find
+      // was called with is scoped to payment.status, never booking alone.
+      paymentRepo.find.mockResolvedValue([]);
+
+      await service.expireStalePendingBookings();
+
+      const callArg = paymentRepo.find.mock.calls[0][0] as {
+        where: { status: PaymentStatus };
+      };
+      expect(callArg.where.status).toBe(PaymentStatus.PENDING);
+      expect(realtimeGateway.broadcastSlotUpdate).not.toHaveBeenCalled();
+    });
+
+    it('flips the Payment to FAILED alongside cancelling the booking', async () => {
+      const court = buildCourt();
+      const booking = buildBookingRow({ status: BookingStatus.PENDING, court });
+      const payment = buildPaymentRow({
+        status: PaymentStatus.PENDING,
+        booking,
+        updatedAt: new Date(Date.now() - 10 * 60 * 1000),
+      });
+      paymentRepo.find.mockResolvedValue([payment]);
+      const transactionManager = mockTransaction([{ affected: 1 }, { affected: 1 }]);
+
+      await service.expireStalePendingBookings();
+
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        Payment,
+        { id: payment.id },
+        { status: PaymentStatus.FAILED },
+      );
+    });
+
+    it('does not broadcast when the guarded booking update affects 0 rows (concurrently resolved)', async () => {
+      const court = buildCourt();
+      const booking = buildBookingRow({ status: BookingStatus.PENDING, court });
+      const payment = buildPaymentRow({
+        status: PaymentStatus.PENDING,
+        booking,
+        updatedAt: new Date(Date.now() - 10 * 60 * 1000),
+      });
+      paymentRepo.find.mockResolvedValue([payment]);
+      mockTransaction([{ affected: 0 }]);
+
+      await service.expireStalePendingBookings();
+
+      expect(realtimeGateway.broadcastSlotUpdate).not.toHaveBeenCalled();
     });
   });
 
