@@ -35,7 +35,12 @@ async function renderScreen() {
         route={{
           key: 'CourtSlots',
           name: 'CourtSlots',
-          params: { courtId: 'court-1', courtName: 'Sân số 1', venueName: 'Sân test' },
+          params: {
+            venueId: 'venue-1',
+            courtId: 'court-1',
+            courtName: 'Sân số 1',
+            venueName: 'Sân test',
+          },
         }}
       />
     </NavigationContainer>,

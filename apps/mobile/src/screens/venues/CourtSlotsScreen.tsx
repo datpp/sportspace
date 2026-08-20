@@ -19,7 +19,7 @@ const DAY_OPTIONS = Array.from({ length: 4 }, (_, i) => {
 });
 
 export function CourtSlotsScreen({ route, navigation }: Props) {
-  const { courtId, courtName, venueName } = route.params;
+  const { venueId, courtId, courtName, venueName } = route.params;
   const [selectedDate, setSelectedDate] = useState<Date>(DAY_OPTIONS[0]);
   const [slots, setSlots] = useState<SlotDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +127,7 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
               style={[styles.slot, !item.available && styles.slotDisabled]}
               onPress={() =>
                 navigation.navigate('BookingConfirm', {
+                  venueId,
                   courtId,
                   courtName,
                   venueName,

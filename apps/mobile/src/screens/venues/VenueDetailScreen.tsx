@@ -93,6 +93,7 @@ export function VenueDetailScreen({ route, navigation }: Props) {
               style={styles.card}
               onPress={() =>
                 navigation.navigate('CourtSlots', {
+                  venueId,
                   courtId: item.id,
                   courtName: item.name,
                   venueName: venue.name,

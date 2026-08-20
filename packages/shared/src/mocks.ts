@@ -23,3 +23,4 @@ export * from './generated/staff/staff.msw';
 export * from './generated/reviews/reviews.msw';
 export * from './generated/disputes/disputes.msw';
 export * from './generated/system-config/system-config.msw';
+export * from './generated/addon-services/addon-services.msw';

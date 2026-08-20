@@ -29,6 +29,7 @@ const navigation = {
 } as unknown as NativeStackNavigationProp<VenuesStackParamList, 'BookingConfirm'>;
 
 const params = {
+  venueId: 'venue-1',
   courtId: 'court-1',
   courtName: 'Sân số 1',
   venueName: 'Sân test',
@@ -203,5 +204,53 @@ describe('BookingConfirmScreen', () => {
     await user.press(screen.getByTestId('booking-pay-submit'));
 
     expect(await screen.findByTestId('payment-checkout-error')).toBeTruthy();
+  });
+
+  it('hiển thị danh sách dịch vụ, chọn dịch vụ cộng vào tổng tiền hiển thị trước khi đặt', async () => {
+    server.use(
+      http.get('*/addon-services', () =>
+        HttpResponse.json([
+          { id: 'svc-1', name: 'Thuê bóng', price: 20000, description: null, isActive: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        ]),
+      ),
+    );
+    const user = userEvent.setup();
+    await renderScreen();
+
+    expect(await screen.findByTestId('service-item-svc-1')).toBeTruthy();
+    await user.press(screen.getByTestId('service-checkbox-svc-1'));
+
+    expect(screen.getByTestId('booking-total')).toHaveTextContent('220.000');
+  });
+
+  it('gửi dịch vụ đã chọn khi đặt sân', async () => {
+    server.use(
+      http.get('*/addon-services', () =>
+        HttpResponse.json([
+          { id: 'svc-1', name: 'Thuê bóng', price: 20000, description: null, isActive: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        ]),
+      ),
+    );
+    let capturedBody: unknown;
+    server.use(
+      http.post('*/bookings', async ({ request }) => {
+        capturedBody = await request.json();
+        return HttpResponse.json(
+          getBookingControllerCreateResponseMock({ status: BookingStatus.PENDING, createdAt: new Date().toISOString() }),
+          { status: 201 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await screen.findByTestId('service-item-svc-1');
+    await user.press(screen.getByTestId('service-checkbox-svc-1'));
+    await user.press(screen.getByTestId('booking-confirm-submit'));
+
+    await screen.findByTestId('booking-success');
+    expect(capturedBody).toMatchObject({
+      services: [{ addOnServiceId: 'svc-1', quantity: 1 }],
+    });
   });
 });

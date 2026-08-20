@@ -65,6 +65,7 @@ describe('VenueDetailScreen', () => {
     await user.press(court);
 
     expect(navigate).toHaveBeenCalledWith('CourtSlots', {
+      venueId: 'venue-1',
       courtId: 'court-1',
       courtName: 'Sân số 1',
       venueName: venue.name,

@@ -6,8 +6,9 @@ export type AuthStackParamList = {
 export type VenuesStackParamList = {
   VenueList: undefined;
   VenueDetail: { venueId: string; venueName: string };
-  CourtSlots: { courtId: string; courtName: string; venueName: string };
+  CourtSlots: { venueId: string; courtId: string; courtName: string; venueName: string };
   BookingConfirm: {
+    venueId: string;
     courtId: string;
     courtName: string;
     venueName: string;

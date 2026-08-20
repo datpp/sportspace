@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { isAxiosError } from 'axios';
-import type { Booking } from '@sportspace/shared';
-import { bookingsApi } from '../../api/client';
+import type { AddOnService, Booking } from '@sportspace/shared';
+import { addonServicesApi, bookingsApi } from '../../api/client';
 import { startVnpayCheckout } from '../../payments/checkout';
 import { pollBookingUntilConfirmed } from '../../payments/pollBookingStatus';
 import type { VenuesStackParamList } from '../../navigation/types';
@@ -24,20 +24,54 @@ type PaymentState =
   | 'checkout-error';
 
 export function BookingConfirmScreen({ route, navigation }: Props) {
-  const { courtId, courtName, venueName, bookingDate, startTime, endTime, price } = route.params;
+  const { venueId, courtId, courtName, venueName, bookingDate, startTime, endTime, price } =
+    route.params;
   const [status, setStatus] = useState<Status>('idle');
   const [booking, setBooking] = useState<Booking | null>(null);
   const [remainingMs, setRemainingMs] = useState(HOLD_DURATION_MS);
   const [paymentState, setPaymentState] = useState<PaymentState>('idle');
+  const [services, setServices] = useState<AddOnService[]>([]);
+  const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    addonServicesApi
+      .addonServicesControllerFindAll({ venueId })
+      .then(({ data }) => setServices(data.filter((s) => s.isActive)))
+      .catch(() => {
+        // Dịch vụ đi kèm không phải dữ liệu bắt buộc để đặt sân — lỗi ở đây không chặn màn hình.
+      });
+  }, [venueId]);
+
+  const toggleService = (serviceId: string) => {
+    setSelectedQuantities((prev) => {
+      const next = { ...prev };
+      if (next[serviceId]) {
+        delete next[serviceId];
+      } else {
+        next[serviceId] = 1;
+      }
+      return next;
+    });
+  };
+
+  const servicesTotal = services.reduce(
+    (sum, s) => (selectedQuantities[s.id] ? sum + Number(s.price) * selectedQuantities[s.id] : sum),
+    0,
+  );
+  const displayTotal = price + servicesTotal;
 
   const handleConfirm = async () => {
     setStatus('submitting');
     try {
+      const selectedServices = Object.entries(selectedQuantities)
+        .filter(([, qty]) => qty > 0)
+        .map(([addOnServiceId, quantity]) => ({ addOnServiceId, quantity }));
       const { data } = await bookingsApi.bookingControllerCreate({
         courtId,
         bookingDate,
         startTime,
         endTime,
+        ...(selectedServices.length > 0 ? { services: selectedServices } : {}),
       });
       setBooking(data);
       setStatus('success');
@@ -126,7 +160,9 @@ export function BookingConfirmScreen({ route, navigation }: Props) {
         <Text>
           {bookingDate} {startTime}-{endTime}
         </Text>
-        <Text style={styles.price}>{price.toLocaleString('vi-VN')} đ</Text>
+        <Text style={styles.price}>
+          <Text testID="booking-total">{displayTotal.toLocaleString('vi-VN')}</Text> đ
+        </Text>
 
         {paymentState === 'verifying' ? (
           <View testID="payment-verifying" style={styles.centerRow}>
@@ -201,7 +237,32 @@ export function BookingConfirmScreen({ route, navigation }: Props) {
       <Text>
         {bookingDate}: {startTime} - {endTime}
       </Text>
-      <Text style={styles.price}>{price.toLocaleString('vi-VN')} đ</Text>
+      {services.length > 0 ? (
+        <View style={styles.servicesSection}>
+          <Text style={styles.servicesTitle}>Dịch vụ đi kèm</Text>
+          {services.map((s) => (
+            <Pressable
+              key={s.id}
+              testID={`service-item-${s.id}`}
+              style={styles.serviceRow}
+              onPress={() => toggleService(s.id)}
+            >
+              <View
+                testID={`service-checkbox-${s.id}`}
+                style={[
+                  styles.checkbox,
+                  selectedQuantities[s.id] ? styles.checkboxChecked : null,
+                ]}
+              />
+              <Text style={styles.serviceName}>{s.name}</Text>
+              <Text style={styles.servicePrice}>{Number(s.price).toLocaleString('vi-VN')} đ</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+      <Text style={styles.price}>
+        <Text testID="booking-total">{displayTotal.toLocaleString('vi-VN')}</Text> đ
+      </Text>
       {status === 'error' ? (
         <Text testID="booking-error" style={styles.errorText}>
           Đặt sân thất bại, vui lòng thử lại
@@ -233,4 +294,11 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontWeight: '600' },
   link: { color: '#1d4ed8', fontWeight: '600', textAlign: 'center' },
   centerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  servicesSection: { gap: 6 },
+  servicesTitle: { fontSize: 14, fontWeight: '700' },
+  serviceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  checkbox: { width: 20, height: 20, borderWidth: 1, borderColor: '#1d4ed8', borderRadius: 4 },
+  checkboxChecked: { backgroundColor: '#1d4ed8' },
+  serviceName: { flex: 1 },
+  servicePrice: { color: '#555' },
 });

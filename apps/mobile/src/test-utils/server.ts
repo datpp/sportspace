@@ -11,6 +11,7 @@ import {
   getPaymentsMock,
   getReviewsMock,
   getVenuesMock,
+  getAddonServicesMock,
 } from '@sportspace/shared/mocks';
 
 // Các getXMock() trả về HttpHandler[] được type từ gói con 'msw' (qua *.msw.ts),
@@ -27,5 +28,6 @@ export const server = setupServer(
     ...getNotificationsMock(),
     ...getMatchesMock(),
     ...getReviewsMock(),
+    ...getAddonServicesMock(),
   ] as unknown as Parameters<typeof setupServer>),
 );

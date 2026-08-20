@@ -8,6 +8,7 @@ import {
   getPayments,
   getReviews,
   getVenues,
+  getAddonServices,
 } from '@sportspace/shared';
 import { getAccessToken } from '../auth/session';
 
@@ -52,3 +53,4 @@ export const paymentsApi = getPayments(apiClient);
 export const notificationsApi = getNotifications(apiClient);
 export const matchesApi = getMatches(apiClient);
 export const reviewsApi = getReviews(apiClient);
+export const addonServicesApi = getAddonServices(apiClient);
