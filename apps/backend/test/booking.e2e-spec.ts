@@ -768,6 +768,36 @@ describe('Booking (e2e)', () => {
       createdBookingIds.push(retryRes.body.id as string);
     });
 
+    it('leaves a booking whose checkout happened moments ago untouched — proves the 5-minute threshold is real, not a no-op', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-27',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      const bookingId = createRes.body.id as string;
+      createdBookingIds.push(bookingId);
+
+      await request(app.getHttpServer())
+        .post(`/payments/${bookingId}/checkout`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({})
+        .expect(201);
+
+      const bookingService = app.get(BookingService);
+      await bookingService.expireStalePendingBookings();
+
+      const stillPending = await request(app.getHttpServer())
+        .get(`/bookings/${bookingId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(stillPending.body.status).toBe('PENDING');
+    });
+
     it('leaves a PENDING booking with no Payment row untouched, no matter how old (FR-M04 case)', async () => {
       const createRes = await request(app.getHttpServer())
         .post('/bookings')

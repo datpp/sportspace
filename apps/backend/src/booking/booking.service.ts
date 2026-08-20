@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
@@ -12,7 +13,6 @@ import {
   DataSource,
   EntityManager,
   In,
-  LessThan,
   LessThanOrEqual,
   MoreThanOrEqual,
   Repository,
@@ -60,6 +60,8 @@ function isUniqueViolation(err: unknown): boolean {
 
 @Injectable()
 export class BookingService {
+  private readonly logger = new Logger(BookingService.name);
+
   constructor(
     @InjectRepository(Booking)
     private readonly bookingRepo: Repository<Booking>,
@@ -422,43 +424,64 @@ export class BookingService {
    * PENDING booking whose Payment is itself still PENDING (an abandoned
    * VNPAY checkout) is a candidate; Payment.updatedAt is the clock so a
    * retried checkout restarts the 5-minute window.
+   *
+   * The staleness check runs entirely in Postgres (`now() - interval`)
+   * rather than binding a JS `Date` parameter: TypeORM's postgres driver
+   * hydrates "timestamp without time zone" columns (Payment.updatedAt) by
+   * re-interpreting the stored UTC digits as local wall-clock time, which
+   * silently shifts every read by the server process's UTC offset — on a
+   * non-UTC host this makes a JS-Date-bound `updatedAt < :threshold`
+   * comparison wrong (see the `to_char` workaround for the same class of
+   * issue in getMerchantRevenueTimeseries). Comparing server-side sidesteps
+   * that entirely, since `now()` and the stored column are both native
+   * Postgres UTC values.
    */
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_MINUTE, { waitForCompletion: true })
   async expireStalePendingBookings(): Promise<void> {
-    const threshold = new Date(Date.now() - STALE_PENDING_MINUTES * 60 * 1000);
-    const stalePayments = await this.paymentRepo.find({
-      where: {
-        status: PaymentStatus.PENDING,
-        updatedAt: LessThan(threshold),
-        booking: { status: BookingStatus.PENDING },
-      },
-      relations: { booking: { court: true } },
-    });
+    const stalePayments = await this.paymentRepo
+      .createQueryBuilder('payment')
+      .innerJoinAndSelect('payment.booking', 'booking')
+      .innerJoinAndSelect('booking.court', 'court')
+      .where('payment.status = :paymentStatus', {
+        paymentStatus: PaymentStatus.PENDING,
+      })
+      .andWhere('booking.status = :bookingStatus', {
+        bookingStatus: BookingStatus.PENDING,
+      })
+      .andWhere(`payment."updatedAt" < now() - interval '${STALE_PENDING_MINUTES} minutes'`)
+      .getMany();
 
     for (const payment of stalePayments) {
       const booking = payment.booking;
-      let expired = false;
 
-      await this.dataSource.transaction(async (manager) => {
-        const updateResult = await manager.update(
-          Booking,
-          { id: booking.id, status: BookingStatus.PENDING },
-          { status: BookingStatus.CANCELLED },
-        );
-        if (updateResult.affected === 0) {
-          return;
-        }
-        await manager.update(Payment, { id: payment.id }, { status: PaymentStatus.FAILED });
-        expired = true;
-      });
+      try {
+        let expired = false;
 
-      if (expired) {
-        this.realtimeGateway.broadcastSlotUpdate({
-          courtId: booking.court.id,
-          bookingDate: booking.bookingDate,
-          startTime: booking.startTime,
-          status: BookingStatus.CANCELLED,
+        await this.dataSource.transaction(async (manager) => {
+          const updateResult = await manager.update(
+            Booking,
+            { id: booking.id, status: BookingStatus.PENDING },
+            { status: BookingStatus.CANCELLED },
+          );
+          if (updateResult.affected === 0) {
+            return;
+          }
+          await manager.update(Payment, { id: payment.id }, { status: PaymentStatus.FAILED });
+          expired = true;
         });
+
+        if (expired) {
+          this.realtimeGateway.broadcastSlotUpdate({
+            courtId: booking.court.id,
+            bookingDate: booking.bookingDate,
+            startTime: booking.startTime,
+            status: BookingStatus.CANCELLED,
+          });
+        }
+      } catch (err) {
+        this.logger.error(
+          `Không thể hủy booking ${booking.id} quá hạn thanh toán: ${err instanceof Error ? err.message : err}`,
+        );
       }
     }
   }

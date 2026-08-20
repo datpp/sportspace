@@ -1300,6 +1300,17 @@ describe('BookingService', () => {
   });
 
   describe('expireStalePendingBookings', () => {
+    let paymentQueryBuilder: DeepMocked<SelectQueryBuilder<Payment>>;
+
+    beforeEach(() => {
+      paymentQueryBuilder = createMock<SelectQueryBuilder<Payment>>();
+      paymentQueryBuilder.innerJoinAndSelect.mockReturnValue(paymentQueryBuilder);
+      paymentQueryBuilder.where.mockReturnValue(paymentQueryBuilder);
+      paymentQueryBuilder.andWhere.mockReturnValue(paymentQueryBuilder);
+      paymentQueryBuilder.getMany.mockResolvedValue([]);
+      paymentRepo.createQueryBuilder.mockReturnValue(paymentQueryBuilder);
+    });
+
     function mockTransaction(updateResults: { affected: number }[]): DeepMocked<EntityManager> {
       let call = 0;
       const transactionManager = createMock<EntityManager>();
@@ -1327,18 +1338,21 @@ describe('BookingService', () => {
         booking,
         updatedAt: staleUpdatedAt,
       });
-      paymentRepo.find.mockResolvedValue([payment]);
+      paymentQueryBuilder.getMany.mockResolvedValue([payment]);
       mockTransaction([{ affected: 1 }, { affected: 1 }]);
 
       await service.expireStalePendingBookings();
 
-      expect(paymentRepo.find).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            status: PaymentStatus.PENDING,
-            booking: { status: BookingStatus.PENDING },
-          }),
-        }),
+      expect(paymentQueryBuilder.where).toHaveBeenCalledWith(
+        expect.stringContaining('payment.status'),
+        expect.objectContaining({ paymentStatus: PaymentStatus.PENDING }),
+      );
+      expect(paymentQueryBuilder.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('booking.status'),
+        expect.objectContaining({ bookingStatus: BookingStatus.PENDING }),
+      );
+      expect(paymentQueryBuilder.andWhere).toHaveBeenCalledWith(
+        expect.stringMatching(/updatedAt.*<.*now\(\)/),
       );
       expect(realtimeGateway.broadcastSlotUpdate).toHaveBeenCalledWith({
         courtId: court.id,
@@ -1349,26 +1363,27 @@ describe('BookingService', () => {
     });
 
     it('leaves alone a PENDING booking whose PENDING payment was touched less than 5 minutes ago', async () => {
-      paymentRepo.find.mockResolvedValue([]);
+      paymentQueryBuilder.getMany.mockResolvedValue([]);
 
       await service.expireStalePendingBookings();
 
       expect(realtimeGateway.broadcastSlotUpdate).not.toHaveBeenCalled();
     });
 
-    it('never selects a PENDING booking with no Payment row at all (FR-M04 merchant-review case)', async () => {
-      // The query itself excludes these (inner-joined to Payment) — this test
-      // locks in that the query the implementation issues cannot match a
-      // paymentless booking, by asserting the where clause paymentRepo.find
-      // was called with is scoped to payment.status, never booking alone.
-      paymentRepo.find.mockResolvedValue([]);
+    it('drives the query from the Payment side, scoped by payment.status (never from Booking alone)', async () => {
+      // Only asserts the shape of the where clause the query builder was
+      // configured with — the real FR-M04 regression guard (a PENDING
+      // booking with no Payment row at all is never touched, no matter how
+      // old) is proven in the e2e suite, since it depends on the actual SQL
+      // inner join semantics, not on what this mock happens to return.
+      paymentQueryBuilder.getMany.mockResolvedValue([]);
 
       await service.expireStalePendingBookings();
 
-      const callArg = paymentRepo.find.mock.calls[0][0] as {
-        where: { status: PaymentStatus };
-      };
-      expect(callArg.where.status).toBe(PaymentStatus.PENDING);
+      expect(paymentQueryBuilder.where).toHaveBeenCalledWith(
+        expect.stringContaining('payment.status'),
+        expect.objectContaining({ paymentStatus: PaymentStatus.PENDING }),
+      );
       expect(realtimeGateway.broadcastSlotUpdate).not.toHaveBeenCalled();
     });
 
@@ -1380,7 +1395,7 @@ describe('BookingService', () => {
         booking,
         updatedAt: new Date(Date.now() - 10 * 60 * 1000),
       });
-      paymentRepo.find.mockResolvedValue([payment]);
+      paymentQueryBuilder.getMany.mockResolvedValue([payment]);
       const transactionManager = mockTransaction([{ affected: 1 }, { affected: 1 }]);
 
       await service.expireStalePendingBookings();
@@ -1400,7 +1415,7 @@ describe('BookingService', () => {
         booking,
         updatedAt: new Date(Date.now() - 10 * 60 * 1000),
       });
-      paymentRepo.find.mockResolvedValue([payment]);
+      paymentQueryBuilder.getMany.mockResolvedValue([payment]);
       mockTransaction([{ affected: 0 }]);
 
       await service.expireStalePendingBookings();
