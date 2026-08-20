@@ -16,6 +16,7 @@ import { StaffModule } from './staff/staff.module';
 import { SystemConfigModule } from './system-config/system-config.module';
 import { DisputeModule } from './dispute/dispute.module';
 import { AddonServicesModule } from './addon-services/addon-services.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { AddonServicesModule } from './addon-services/addon-services.module';
     SystemConfigModule,
     DisputeModule,
     AddonServicesModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],
