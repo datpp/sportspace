@@ -2806,6 +2806,174 @@
           "disputes"
         ]
       }
+    },
+    "/addon-services": {
+      "post": {
+        "operationId": "AddonServicesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAddOnServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddOnService"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Thêm dịch vụ đi kèm cho cụm sân",
+        "tags": [
+          "addon-services"
+        ]
+      },
+      "get": {
+        "operationId": "AddonServicesController_findAll",
+        "parameters": [
+          {
+            "name": "venueId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AddOnService"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách dịch vụ đi kèm theo cụm sân",
+        "tags": [
+          "addon-services"
+        ]
+      }
+    },
+    "/addon-services/{id}": {
+      "get": {
+        "operationId": "AddonServicesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddOnService"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "addon-services"
+        ]
+      },
+      "patch": {
+        "operationId": "AddonServicesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAddOnServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddOnService"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "addon-services"
+        ]
+      },
+      "delete": {
+        "operationId": "AddonServicesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "addon-services"
+        ]
+      }
     }
   },
   "info": {
@@ -3054,6 +3222,29 @@
           "refundAmount"
         ]
       },
+      "BookingServiceSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unitPrice": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "quantity",
+          "unitPrice"
+        ]
+      },
       "Booking": {
         "type": "object",
         "properties": {
@@ -3088,6 +3279,12 @@
           },
           "payment": {
             "$ref": "#/components/schemas/BookingPaymentSummary"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingServiceSummary"
+            }
           },
           "createdAt": {
             "format": "date-time",
@@ -3623,6 +3820,21 @@
           "items"
         ]
       },
+      "BookingServiceInputDto": {
+        "type": "object",
+        "properties": {
+          "addOnServiceId": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "addOnServiceId",
+          "quantity"
+        ]
+      },
       "CreateBookingDto": {
         "type": "object",
         "properties": {
@@ -3637,6 +3849,12 @@
           },
           "endTime": {
             "type": "string"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingServiceInputDto"
+            }
           }
         },
         "required": [
@@ -3660,6 +3878,12 @@
           },
           "endTime": {
             "type": "string"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingServiceInputDto"
+            }
           }
         }
       },
@@ -4058,6 +4282,82 @@
           "status",
           "resolutionNote"
         ]
+      },
+      "CreateAddOnServiceDto": {
+        "type": "object",
+        "properties": {
+          "venueId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "venueId",
+          "name",
+          "price"
+        ]
+      },
+      "AddOnService": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "description": {
+            "type": "object",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "price",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateAddOnServiceDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
       }
     }
   }

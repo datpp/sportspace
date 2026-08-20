@@ -34,3 +34,4 @@ export * from './generated/staff/staff';
 export * from './generated/reviews/reviews';
 export * from './generated/disputes/disputes';
 export * from './generated/system-config/system-config';
+export * from './generated/addon-services/addon-services';
