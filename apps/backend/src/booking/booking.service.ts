@@ -696,7 +696,8 @@ export class BookingService {
     });
     const overlaps = blocks.some(
       (b) =>
-        b.startTime.slice(0, 5) < endTime && startTime < b.endTime.slice(0, 5),
+        b.startTime.slice(0, 5) < endTime.slice(0, 5) &&
+        startTime.slice(0, 5) < b.endTime.slice(0, 5),
     );
     if (overlaps) {
       throw new ConflictException('Ô giờ đang bị chặn, không thể đặt');

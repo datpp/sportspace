@@ -484,6 +484,38 @@ describe('BookingService', () => {
         ConflictException,
       );
     });
+
+    it('does not falsely reject a booking adjacent to (not overlapping) a block, even with HH:mm:ss input', async () => {
+      const court = buildCourt({ status: CourtStatus.ACTIVE });
+      const user = buildUser();
+      const dto = buildCreateDto({
+        courtId: court.id,
+        startTime: '09:00:00',
+        endTime: '10:00:00',
+      });
+
+      manager.findOne.mockImplementation((entity: unknown) => {
+        if (entity === Court) return Promise.resolve(court);
+        if (entity === User) return Promise.resolve(user);
+        return Promise.resolve(null);
+      });
+      manager.find.mockImplementation((entity: unknown) => {
+        if (entity === CourtBlock) {
+          return Promise.resolve([
+            {
+              id: 'blk1',
+              blockDate: dto.bookingDate,
+              startTime: '10:00:00',
+              endTime: '11:00:00',
+              reason: 'x',
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      await expect(service.create(user.id, dto)).resolves.toBeDefined();
+    });
   });
 
   describe('cancel', () => {
