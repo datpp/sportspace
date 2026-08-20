@@ -2,7 +2,7 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { faker } from '@faker-js/faker';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Repository, SelectQueryBuilder } from 'typeorm';
-import { Role, VenueStatus } from '@sportspace/shared';
+import { CourtStatus, Role, VenueStatus } from '@sportspace/shared';
 import { VenueService } from './venue.service';
 import { Venue } from './entities/venue.entity';
 import { User } from '../user/entities/user.entity';
@@ -262,8 +262,8 @@ describe('VenueService', () => {
       expect(queryBuilder.innerJoin).toHaveBeenCalledWith(
         'venue.courts',
         'court',
-        'court.sport = :sport',
-        { sport: 'football' },
+        'court.sport = :sport AND court.status = :courtStatus',
+        { sport: 'football', courtStatus: CourtStatus.ACTIVE },
       );
       expect(queryBuilder.distinct).toHaveBeenCalledWith(true);
     });

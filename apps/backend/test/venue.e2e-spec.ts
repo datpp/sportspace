@@ -223,6 +223,28 @@ describe('Venue + Court (e2e)', () => {
     expect(res.body.some((v: { id: string }) => v.id === venueId)).toBe(true);
   });
 
+  it('excludes a venue from sport search when its only matching court is under MAINTENANCE', async () => {
+    await request(app.getHttpServer())
+      .patch(`/courts/${courtId}`)
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .send({ status: 'MAINTENANCE' })
+      .expect(200);
+
+    const res = await request(app.getHttpServer())
+      .get('/venues')
+      .query({ sport: 'football' })
+      .expect(200);
+    expect(res.body.some((v: { id: string }) => v.id === venueId)).toBe(
+      false,
+    );
+
+    await request(app.getHttpServer())
+      .patch(`/courts/${courtId}`)
+      .set('Authorization', `Bearer ${merchantToken}`)
+      .send({ status: 'ACTIVE' })
+      .expect(200);
+  });
+
   it('never shows a REJECTED venue in public search', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/venues')

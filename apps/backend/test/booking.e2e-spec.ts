@@ -14,6 +14,7 @@ import { User } from '../src/user/entities/user.entity';
 import { Venue } from '../src/venue/entities/venue.entity';
 import { AddOnService } from '../src/addon-services/entities/add-on-service.entity';
 import { BookingServiceItem } from '../src/addon-services/entities/booking-service-item.entity';
+import { CourtBlock } from '../src/venue/entities/court-block.entity';
 import { signVnpayParams, toVnpayAmount } from '../src/payment/vnpay.util';
 
 const SEED_PASSWORD = 'Password123!';
@@ -122,6 +123,9 @@ describe('Booking (e2e)', () => {
         .execute();
       await dataSource.getRepository('bookings').delete(createdBookingIds);
     }
+    await dataSource
+      .getRepository(CourtBlock)
+      .delete({ court: { id: court.id } });
     await dataSource.getRepository(Court).delete({ id: court.id });
     await dataSource.getRepository(Venue).delete({ id: venue.id });
     // Payment IPN confirmation now writes to `notifications`, so those rows
@@ -607,5 +611,105 @@ describe('Booking (e2e)', () => {
     await dataSource
       .getRepository(AddOnService)
       .delete({ id: serviceRes.body.id });
+  });
+
+  it('rejects a booking attempt on a MAINTENANCE court (409)', async () => {
+    await request(app.getHttpServer())
+      .patch(`/courts/${court.id}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ status: 'MAINTENANCE' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/bookings')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        courtId: court.id,
+        bookingDate: '2026-09-10',
+        startTime: '09:00',
+        endTime: '10:00',
+      })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .patch(`/courts/${court.id}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ status: 'ACTIVE' })
+      .expect(200);
+  });
+
+  it('rejects creating a block over an already-booked slot, and rejects booking a blocked slot', async () => {
+    const bookingRes = await request(app.getHttpServer())
+      .post('/bookings')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        courtId: court.id,
+        bookingDate: '2026-09-11',
+        startTime: '09:00',
+        endTime: '10:00',
+      })
+      .expect(201);
+    createdBookingIds.push(bookingRes.body.id);
+
+    await request(app.getHttpServer())
+      .post(`/courts/${court.id}/blocks`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        blockDate: '2026-09-11',
+        startTime: '09:00',
+        endTime: '10:00',
+        reason: 'x',
+      })
+      .expect(409);
+
+    const blockRes = await request(app.getHttpServer())
+      .post(`/courts/${court.id}/blocks`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        blockDate: '2026-09-12',
+        startTime: '14:00',
+        endTime: '15:00',
+        reason: 'Sự kiện',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/bookings')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        courtId: court.id,
+        bookingDate: '2026-09-12',
+        startTime: '14:00',
+        endTime: '15:00',
+      })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .delete(`/courts/${court.id}/blocks/${blockRes.body.id}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+  });
+
+  it('slot listing correctly excludes both a MAINTENANCE court and a blocked window', async () => {
+    await request(app.getHttpServer())
+      .post(`/courts/${court.id}/blocks`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        blockDate: '2026-09-13',
+        startTime: '16:00',
+        endTime: '17:00',
+        reason: 'x',
+      })
+      .expect(201);
+
+    const res = await request(app.getHttpServer())
+      .get(`/courts/${court.id}/slots`)
+      .query({ date: '2026-09-13' })
+      .expect(200);
+
+    const blockedSlot = res.body.find(
+      (s: { startTime: string }) => s.startTime === '16:00',
+    );
+    expect(blockedSlot.available).toBe(false);
   });
 });

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Role, VenueStatus } from '@sportspace/shared';
+import { CourtStatus, Role, VenueStatus } from '@sportspace/shared';
 import { CreateVenueDto } from './dto/create-venue.dto';
 import { UpdateVenueDto } from './dto/update-venue.dto';
 import { FindVenuesQueryDto } from './dto/find-venues-query.dto';
@@ -113,9 +113,12 @@ export class VenueService {
       .where('venue.status = :status', { status: VenueStatus.APPROVED });
 
     if (query.sport) {
-      qb.innerJoin('venue.courts', 'court', 'court.sport = :sport', {
-        sport: query.sport,
-      }).distinct(true);
+      qb.innerJoin(
+        'venue.courts',
+        'court',
+        'court.sport = :sport AND court.status = :courtStatus',
+        { sport: query.sport, courtStatus: CourtStatus.ACTIVE },
+      ).distinct(true);
     }
 
     if (query.lat !== undefined && query.lng !== undefined) {
