@@ -16,6 +16,8 @@ import { AddOnService } from '../src/addon-services/entities/add-on-service.enti
 import { BookingServiceItem } from '../src/addon-services/entities/booking-service-item.entity';
 import { CourtBlock } from '../src/venue/entities/court-block.entity';
 import { signVnpayParams, toVnpayAmount } from '../src/payment/vnpay.util';
+import { Payment } from '../src/payment/entities/payment.entity';
+import { BookingService } from '../src/booking/booking.service';
 
 const SEED_PASSWORD = 'Password123!';
 
@@ -711,5 +713,88 @@ describe('Booking (e2e)', () => {
       (s: { startTime: string }) => s.startTime === '16:00',
     );
     expect(blockedSlot.available).toBe(false);
+  });
+
+  describe('Stale PENDING booking expiry', () => {
+    it('cancels a booking whose checkout was abandoned over 5 minutes ago, freeing the slot', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-25',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      const bookingId = createRes.body.id as string;
+      createdBookingIds.push(bookingId);
+
+      await request(app.getHttpServer())
+        .post(`/payments/${bookingId}/checkout`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({})
+        .expect(201);
+
+      await dataSource.query(
+        `UPDATE payments SET "updatedAt" = now() - interval '10 minutes' WHERE booking_id = $1`,
+        [bookingId],
+      );
+
+      const bookingService = app.get(BookingService);
+      await bookingService.expireStalePendingBookings();
+
+      const cancelled = await request(app.getHttpServer())
+        .get(`/bookings/${bookingId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(cancelled.body.status).toBe('CANCELLED');
+
+      const payment = await dataSource
+        .getRepository(Payment)
+        .findOne({ where: { booking: { id: bookingId } } });
+      expect(payment?.status).toBe('FAILED');
+
+      const retryRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-25',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      createdBookingIds.push(retryRes.body.id as string);
+    });
+
+    it('leaves a PENDING booking with no Payment row untouched, no matter how old (FR-M04 case)', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/bookings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          courtId: court.id,
+          bookingDate: '2026-09-26',
+          startTime: '08:00',
+          endTime: '09:00',
+        })
+        .expect(201);
+      const bookingId = createRes.body.id as string;
+      createdBookingIds.push(bookingId);
+
+      await dataSource.query(
+        `UPDATE bookings SET "createdAt" = now() - interval '1 day' WHERE id = $1`,
+        [bookingId],
+      );
+
+      const bookingService = app.get(BookingService);
+      await bookingService.expireStalePendingBookings();
+
+      const stillPending = await request(app.getHttpServer())
+        .get(`/bookings/${bookingId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(stillPending.body.status).toBe('PENDING');
+    });
   });
 });
