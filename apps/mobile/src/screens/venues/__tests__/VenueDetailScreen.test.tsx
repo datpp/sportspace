@@ -51,6 +51,7 @@ describe('VenueDetailScreen', () => {
           name: 'Sân số 1',
           sport: 'Bóng đá',
           basePrice: 200000,
+          status: 'ACTIVE',
           priceRules: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
