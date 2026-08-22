@@ -1401,6 +1401,11 @@ describe('BookingService', () => {
       await service.expireStalePendingBookings();
 
       expect(transactionManager.update).toHaveBeenCalledWith(
+        Booking,
+        { id: booking.id, status: BookingStatus.PENDING },
+        { status: BookingStatus.CANCELLED },
+      );
+      expect(transactionManager.update).toHaveBeenCalledWith(
         Payment,
         { id: payment.id },
         { status: PaymentStatus.FAILED },
