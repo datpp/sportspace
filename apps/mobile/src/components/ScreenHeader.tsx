@@ -12,10 +12,13 @@ export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
 
   return (
     <View
-      style={[
-        styles.base,
-        { backgroundColor: colors.sidebar, paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg },
-      ]}
+      testID="screen-header"
+      style={{
+        backgroundColor: colors.sidebar,
+        paddingHorizontal: spacing.lg,
+        paddingTop: spacing.xl,
+        paddingBottom: spacing.lg,
+      }}
     >
       <Text style={[styles.title, { color: colors.sidebarForeground }]}>{title}</Text>
       {subtitle ? (
@@ -28,7 +31,6 @@ export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
 }
 
 const styles = StyleSheet.create({
-  base: {},
   title: { fontSize: 20, fontWeight: '800' },
   subtitle: { fontSize: 12, marginTop: 2 },
 });
