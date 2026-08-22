@@ -1,50 +1,46 @@
-import { lightColors, darkColors } from '../colors';
-import { lightStatusColors, darkStatusColors } from '../statusColors';
-import { spacing } from '../spacing';
-import { radius } from '../radius';
-import { typography } from '../typography';
-import type { Theme } from '../useTheme';
+import { renderHook } from '@testing-library/react-native';
+import { useTheme } from '../useTheme';
+
+jest.mock('react-native/Libraries/Utilities/useColorScheme', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
 
 describe('useTheme', () => {
-  it('returns light theme object with correct structure', () => {
-    const lightTheme: Theme = {
-      colors: lightColors,
-      statusColors: lightStatusColors,
-      spacing,
-      radius,
-      typography,
-      scheme: 'light',
-    };
-    expect(lightTheme.colors.background).toBe('#f8fafc');
-    expect(lightTheme.scheme).toBe('light');
+  const mockUseColorScheme = require('react-native/Libraries/Utilities/useColorScheme').default as jest.Mock;
+
+  beforeEach(() => {
+    mockUseColorScheme.mockClear();
   });
 
-  it('returns dark theme object with correct structure', () => {
-    const darkTheme: Theme = {
-      colors: darkColors,
-      statusColors: darkStatusColors,
-      spacing,
-      radius,
-      typography,
-      scheme: 'dark',
-    };
-    expect(darkTheme.colors.background).toBe('#1e293b');
-    expect(darkTheme.scheme).toBe('dark');
+  it('returns light colors when the OS scheme is light', async () => {
+    mockUseColorScheme.mockReturnValue('light');
+    const { result } = await renderHook(() => useTheme());
+    expect(result.current.colors.background).toBe('#f8fafc');
+    expect(result.current.scheme).toBe('light');
+    expect(result.current.statusColors.success.bg).toBe('#ecfdf5');
   });
 
-  it('colors have all required properties', () => {
-    const theme: Theme = {
-      colors: lightColors,
-      statusColors: lightStatusColors,
-      spacing,
-      radius,
-      typography,
-      scheme: 'light',
-    };
-    expect(theme.colors).toHaveProperty('background');
-    expect(theme.colors).toHaveProperty('foreground');
-    expect(theme.colors).toHaveProperty('card');
-    expect(theme.colors).toHaveProperty('primary');
-    expect(theme.colors).toHaveProperty('danger');
+  it('returns dark colors when the OS scheme is dark', async () => {
+    mockUseColorScheme.mockReturnValue('dark');
+    const { result } = await renderHook(() => useTheme());
+    expect(result.current.colors.background).toBe('#1e293b');
+    expect(result.current.scheme).toBe('dark');
+    expect(result.current.statusColors.success.bg).toBe('#022c22');
+  });
+
+  it('falls back to light when the OS scheme is null (unknown)', async () => {
+    mockUseColorScheme.mockReturnValue(null);
+    const { result } = await renderHook(() => useTheme());
+    expect(result.current.scheme).toBe('light');
+    expect(result.current.colors.background).toBe('#f8fafc');
+    expect(result.current.statusColors.danger.text).toBe('#b91c1c');
+  });
+
+  it('falls back to light when the OS scheme is undefined', async () => {
+    mockUseColorScheme.mockReturnValue(undefined);
+    const { result } = await renderHook(() => useTheme());
+    expect(result.current.scheme).toBe('light');
+    expect(result.current.colors.background).toBe('#f8fafc');
   });
 });
