@@ -67,6 +67,10 @@ export class Venue {
   @Column({ type: 'varchar', default: VenueStatus.PENDING })
   status: VenueStatus;
 
+  @ApiProperty({ type: [String] })
+  @Column({ type: 'simple-json', default: '[]' })
+  images: string[];
+
   @ApiProperty()
   @CreateDateColumn()
   createdAt: Date;

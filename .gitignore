@@ -1,6 +1,8 @@
 node_modules/
 dist/
 build/
+apps/backend/uploads/venues/*
+!apps/backend/uploads/venues/.gitkeep
 .next/
 .expo/
 .expo-shared/
