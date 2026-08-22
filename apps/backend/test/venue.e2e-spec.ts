@@ -1,11 +1,13 @@
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { faker } from '@faker-js/faker';
 import * as bcrypt from 'bcrypt';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { Role } from '@sportspace/shared';
 import request from 'supertest';
-import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { User } from '../src/user/entities/user.entity';
@@ -13,11 +15,12 @@ import { Venue } from '../src/venue/entities/venue.entity';
 import { Court } from '../src/venue/entities/court.entity';
 import { PriceRule } from '../src/venue/entities/price-rule.entity';
 import { Booking } from '../src/booking/entities/booking.entity';
+import { UPLOADS_ROOT_DIR } from '../src/venue/venue-uploads.constants';
 
 const SEED_PASSWORD = 'Password123!';
 
 describe('Venue + Court (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: NestExpressApplication;
   let dataSource: DataSource;
   let merchant: User;
   let otherMerchant: User;
@@ -36,10 +39,11 @@ describe('Venue + Court (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, transform: true }),
     );
+    app.useStaticAssets(UPLOADS_ROOT_DIR, { prefix: '/uploads' });
     await app.init();
 
     dataSource = moduleFixture.get<DataSource>(getDataSourceToken());
@@ -381,5 +385,57 @@ describe('Venue + Court (e2e)', () => {
       .delete(`/courts/${courtId}/blocks/${blockId}`)
       .set('Authorization', `Bearer ${merchantToken}`)
       .expect(200);
+  });
+
+  describe('Venue images', () => {
+    const fixturePath = join(__dirname, 'fixtures', 'sample-venue-image.jpg');
+
+    it('uploads an image, returns it in the list, then deletes it and removes the file', async () => {
+      const uploadRes = await request(app.getHttpServer())
+        .post(`/venues/${venueId}/images`)
+        .set('Authorization', `Bearer ${merchantToken}`)
+        .attach('file', fixturePath)
+        .expect(201);
+
+      expect(uploadRes.body.images.length).toBe(1);
+      const imagePath = uploadRes.body.images[0] as string;
+      expect(imagePath).toMatch(/^\/uploads\/venues\/.+\.jpg$/);
+
+      const diskPath = join(__dirname, '..', 'uploads', imagePath.replace('/uploads/', ''));
+      expect(existsSync(diskPath)).toBe(true);
+
+      const getRes = await request(app.getHttpServer())
+        .get(`/venues/${venueId}`)
+        .expect(200);
+      expect(getRes.body.images).toContain(imagePath);
+
+      const staticRes = await request(app.getHttpServer()).get(imagePath).expect(200);
+      expect(staticRes.headers['content-type']).toContain('image');
+
+      const deleteRes = await request(app.getHttpServer())
+        .delete(`/venues/${venueId}/images`)
+        .set('Authorization', `Bearer ${merchantToken}`)
+        .send({ url: imagePath })
+        .expect(200);
+      expect(deleteRes.body.images).not.toContain(imagePath);
+      expect(existsSync(diskPath)).toBe(false);
+    });
+
+    it('rejects an upload from a non-owner merchant (403)', async () => {
+      await request(app.getHttpServer())
+        .post(`/venues/${venueId}/images`)
+        .set('Authorization', `Bearer ${otherMerchantToken}`)
+        .attach('file', fixturePath)
+        .expect(403);
+    });
+
+    it('rejects a non-image file with 400', async () => {
+      const textFixture = join(__dirname, 'fixtures', 'not-an-image.txt');
+      await request(app.getHttpServer())
+        .post(`/venues/${venueId}/images`)
+        .set('Authorization', `Bearer ${merchantToken}`)
+        .attach('file', textFixture)
+        .expect(400);
+    });
   });
 });
