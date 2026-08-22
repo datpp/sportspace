@@ -1,8 +1,9 @@
 import * as fs from 'fs/promises';
-import { join, extname } from 'path';
+import { join } from 'path';
 import { randomUUID } from 'crypto';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -21,13 +22,27 @@ import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interfa
 import { PaginatedDto } from '../common/dto/paginated.dto';
 import { buildPaginationMeta } from '../common/pagination.util';
 import { VENUE_UPLOADS_DIR } from './venue-uploads.constants';
+import { RedisService } from '../redis/redis.service';
 
 const MAX_VENUE_IMAGES = 8;
+const IMAGES_LOCK_TTL_SECONDS = 10;
+
+// Extension is derived from the already-validated mimetype, never from
+// `file.originalname` — the two are independently attacker-controlled in
+// the same multipart part, so trusting originalname's extension lets a
+// `Content-Type: image/jpeg` upload with `filename="payload.html"` get
+// served back by express.static as text/html (stored XSS).
+const EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+};
 
 @Injectable()
 export class VenueService {
   constructor(
     @InjectRepository(Venue) private readonly venueRepo: Repository<Venue>,
+    private readonly redisService: RedisService,
   ) {}
 
   create(ownerId: string, dto: CreateVenueDto): Promise<Venue> {
@@ -187,20 +202,22 @@ export class VenueService {
     user: AuthenticatedUser,
     file: Express.Multer.File,
   ): Promise<Venue> {
-    const venue = await this.findOne(id);
-    this.assertOwnerOrAdmin(venue, user);
-    if (venue.images.length >= MAX_VENUE_IMAGES) {
-      throw new BadRequestException(
-        `Cụm sân chỉ được tối đa ${MAX_VENUE_IMAGES} ảnh`,
-      );
-    }
+    return this.withImagesLock(id, async () => {
+      const venue = await this.findOne(id);
+      this.assertOwnerOrAdmin(venue, user);
+      if (venue.images.length >= MAX_VENUE_IMAGES) {
+        throw new BadRequestException(
+          `Cụm sân chỉ được tối đa ${MAX_VENUE_IMAGES} ảnh`,
+        );
+      }
 
-    await fs.mkdir(VENUE_UPLOADS_DIR, { recursive: true });
-    const filename = `${randomUUID()}${extname(file.originalname)}`;
-    await fs.writeFile(join(VENUE_UPLOADS_DIR, filename), file.buffer);
+      await fs.mkdir(VENUE_UPLOADS_DIR, { recursive: true });
+      const filename = `${randomUUID()}${EXT_BY_MIME[file.mimetype]}`;
+      await fs.writeFile(join(VENUE_UPLOADS_DIR, filename), file.buffer);
 
-    venue.images = [...venue.images, `/uploads/venues/${filename}`];
-    return this.venueRepo.save(venue);
+      venue.images = [...venue.images, `/uploads/venues/${filename}`];
+      return this.venueRepo.save(venue);
+    });
   }
 
   async removeImage(
@@ -208,27 +225,29 @@ export class VenueService {
     user: AuthenticatedUser,
     url: string,
   ): Promise<Venue> {
-    const venue = await this.findOne(id);
-    this.assertOwnerOrAdmin(venue, user);
+    return this.withImagesLock(id, async () => {
+      const venue = await this.findOne(id);
+      this.assertOwnerOrAdmin(venue, user);
 
-    if (!venue.images.includes(url)) {
-      throw new NotFoundException('Ảnh không thuộc cụm sân này');
-    }
-
-    venue.images = venue.images.filter((img) => img !== url);
-    const saved = await this.venueRepo.save(venue);
-
-    const filename = url.split('/').pop();
-    if (filename) {
-      try {
-        await fs.unlink(join(VENUE_UPLOADS_DIR, filename));
-      } catch {
-        // File already gone from disk — not fatal, the DB record is the
-        // source of truth and it's already updated above.
+      if (!venue.images.includes(url)) {
+        throw new NotFoundException('Ảnh không thuộc cụm sân này');
       }
-    }
 
-    return saved;
+      venue.images = venue.images.filter((img) => img !== url);
+      const saved = await this.venueRepo.save(venue);
+
+      const filename = url.split('/').pop();
+      if (filename) {
+        try {
+          await fs.unlink(join(VENUE_UPLOADS_DIR, filename));
+        } catch {
+          // File already gone from disk — not fatal, the DB record is the
+          // source of truth and it's already updated above.
+        }
+      }
+
+      return saved;
+    });
   }
 
   private assertOwnerOrAdmin(venue: Venue, user: AuthenticatedUser): void {
@@ -236,6 +255,31 @@ export class VenueService {
       throw new ForbiddenException(
         'Bạn không có quyền thao tác trên cụm sân này',
       );
+    }
+  }
+
+  // addImage/removeImage are read-modify-write over the whole `images`
+  // array — concurrent calls for the same venue must be serialized or the
+  // last writer silently drops the others' changes (CLAUDE.md §6 layer-1).
+  private async withImagesLock<T>(
+    venueId: string,
+    work: () => Promise<T>,
+  ): Promise<T> {
+    const lockKey = `lock:venue:${venueId}:images`;
+    const lockToken = await this.redisService.acquireLock(
+      lockKey,
+      IMAGES_LOCK_TTL_SECONDS,
+    );
+    if (!lockToken) {
+      throw new ConflictException(
+        'Cụm sân đang được cập nhật ảnh, vui lòng thử lại',
+      );
+    }
+
+    try {
+      return await work();
+    } finally {
+      await this.redisService.releaseLock(lockKey, lockToken);
     }
   }
 }

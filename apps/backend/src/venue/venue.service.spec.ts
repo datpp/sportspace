@@ -3,6 +3,7 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { faker } from '@faker-js/faker';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { VenueService } from './venue.service';
 import { Venue } from './entities/venue.entity';
 import { User } from '../user/entities/user.entity';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { RedisService } from '../redis/redis.service';
 
 jest.mock('fs/promises');
 
@@ -57,11 +59,14 @@ describe('VenueService', () => {
   let service: VenueService;
   let venueRepo: DeepMocked<Repository<Venue>>;
   let queryBuilder: DeepMocked<SelectQueryBuilder<Venue>>;
+  let redisService: DeepMocked<RedisService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     venueRepo = createMock<Repository<Venue>>();
     queryBuilder = createMock<SelectQueryBuilder<Venue>>();
+    redisService = createMock<RedisService>();
+    redisService.acquireLock.mockResolvedValue('lock-token');
 
     queryBuilder.where.mockReturnValue(queryBuilder);
     queryBuilder.innerJoin.mockReturnValue(queryBuilder);
@@ -84,7 +89,7 @@ describe('VenueService', () => {
     );
     venueRepo.save.mockImplementation((v) => Promise.resolve(v as Venue));
 
-    service = new VenueService(venueRepo);
+    service = new VenueService(venueRepo, redisService);
   });
 
   describe('create', () => {
@@ -395,6 +400,7 @@ describe('VenueService', () => {
       (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
       const file = {
         originalname: 'photo.jpg',
+        mimetype: 'image/jpeg',
         buffer: Buffer.from('fake-image-bytes'),
       } as Express.Multer.File;
 
@@ -410,12 +416,35 @@ describe('VenueService', () => {
       );
     });
 
+    it("derives the stored extension from the mimetype, ignoring originalname's extension", async () => {
+      const owner = buildUser();
+      const venue = buildVenue({ owner, images: [] });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+      venueRepo.save.mockImplementation((v) => Promise.resolve(v as Venue));
+      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
+      (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+      // Attacker sends a validated image/jpeg mimetype but an
+      // attacker-controlled .html filename — must not be trusted.
+      const file = {
+        originalname: 'payload.html',
+        mimetype: 'image/jpeg',
+        buffer: Buffer.from('fake-image-bytes'),
+      } as Express.Multer.File;
+
+      const result = await service.addImage(venue.id, authUser, file);
+
+      expect(result.images[0]).toMatch(/^\/uploads\/venues\/.+\.jpg$/);
+      expect(result.images[0]).not.toMatch(/\.html$/);
+    });
+
     it('rejects a non-owner, non-admin uploader', async () => {
       const venue = buildVenue({ owner: buildUser(), images: [] });
       const otherUser = buildAuthUser({ id: 'someone-else', role: Role.MERCHANT });
       venueRepo.findOne.mockResolvedValue(venue);
       const file = {
         originalname: 'photo.jpg',
+        mimetype: 'image/jpeg',
         buffer: Buffer.from('fake-image-bytes'),
       } as Express.Multer.File;
 
@@ -435,6 +464,7 @@ describe('VenueService', () => {
       venueRepo.findOne.mockResolvedValue(venue);
       const file = {
         originalname: 'ninth.jpg',
+        mimetype: 'image/jpeg',
         buffer: Buffer.from('fake-image-bytes'),
       } as Express.Multer.File;
 
@@ -442,6 +472,111 @@ describe('VenueService', () => {
         BadRequestException,
       );
       expect(fs.writeFile).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when the images lock is already held', async () => {
+      const owner = buildUser();
+      const venue = buildVenue({ owner, images: [] });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      redisService.acquireLock.mockResolvedValue(null);
+      const file = {
+        originalname: 'photo.jpg',
+        mimetype: 'image/jpeg',
+        buffer: Buffer.from('fake-image-bytes'),
+      } as Express.Multer.File;
+
+      await expect(service.addImage(venue.id, authUser, file)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(venueRepo.findOne).not.toHaveBeenCalled();
+    });
+
+    it('releases the lock after a successful upload', async () => {
+      const owner = buildUser();
+      const venue = buildVenue({ owner, images: [] });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+      venueRepo.save.mockImplementation((v) => Promise.resolve(v as Venue));
+      redisService.acquireLock.mockResolvedValue('token-abc');
+      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
+      (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+      const file = {
+        originalname: 'photo.jpg',
+        mimetype: 'image/jpeg',
+        buffer: Buffer.from('fake-image-bytes'),
+      } as Express.Multer.File;
+
+      await service.addImage(venue.id, authUser, file);
+
+      expect(redisService.acquireLock).toHaveBeenCalledWith(
+        `lock:venue:${venue.id}:images`,
+        expect.any(Number),
+      );
+      expect(redisService.releaseLock).toHaveBeenCalledWith(
+        `lock:venue:${venue.id}:images`,
+        'token-abc',
+      );
+    });
+
+    it('releases the lock even when the upload is rejected', async () => {
+      const venue = buildVenue({ owner: buildUser(), images: [] });
+      const otherUser = buildAuthUser({ id: 'someone-else', role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+      redisService.acquireLock.mockResolvedValue('token-xyz');
+      const file = {
+        originalname: 'photo.jpg',
+        mimetype: 'image/jpeg',
+        buffer: Buffer.from('fake-image-bytes'),
+      } as Express.Multer.File;
+
+      await expect(service.addImage(venue.id, otherUser, file)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(redisService.releaseLock).toHaveBeenCalledWith(
+        `lock:venue:${venue.id}:images`,
+        'token-xyz',
+      );
+    });
+
+    it('releases the lock even when an unexpected error occurs mid-operation (disk write failure)', async () => {
+      const owner = buildUser();
+      const venue = buildVenue({ owner, images: [] });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+      redisService.acquireLock.mockResolvedValue('token-disk-fail');
+      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
+      (fs.writeFile as jest.Mock).mockRejectedValue(new Error('disk full'));
+      const file = {
+        originalname: 'photo.jpg',
+        mimetype: 'image/jpeg',
+        buffer: Buffer.from('fake-image-bytes'),
+      } as Express.Multer.File;
+
+      await expect(service.addImage(venue.id, authUser, file)).rejects.toThrow(
+        'disk full',
+      );
+      expect(redisService.releaseLock).toHaveBeenCalledWith(
+        `lock:venue:${venue.id}:images`,
+        'token-disk-fail',
+      );
+      expect(venueRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('does not attempt to release a lock it never acquired', async () => {
+      const owner = buildUser();
+      const venue = buildVenue({ owner, images: [] });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      redisService.acquireLock.mockResolvedValue(null);
+      const file = {
+        originalname: 'photo.jpg',
+        mimetype: 'image/jpeg',
+        buffer: Buffer.from('fake-image-bytes'),
+      } as Express.Multer.File;
+
+      await expect(service.addImage(venue.id, authUser, file)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(redisService.releaseLock).not.toHaveBeenCalled();
     });
   });
 
@@ -510,6 +645,53 @@ describe('VenueService', () => {
         ),
       ).rejects.toThrow(NotFoundException);
       expect(venueRepo.save).not.toHaveBeenCalled();
+      expect(fs.unlink).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when the images lock is already held', async () => {
+      const owner = buildUser();
+      const venue = buildVenue({ owner, images: ['/uploads/venues/a.jpg'] });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      redisService.acquireLock.mockResolvedValue(null);
+
+      await expect(
+        service.removeImage(venue.id, authUser, '/uploads/venues/a.jpg'),
+      ).rejects.toThrow(ConflictException);
+      expect(venueRepo.findOne).not.toHaveBeenCalled();
+    });
+
+    it('releases the lock after a successful removal', async () => {
+      const owner = buildUser();
+      const venue = buildVenue({ owner, images: ['/uploads/venues/a.jpg'] });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+      venueRepo.save.mockImplementation((v) => Promise.resolve(v as Venue));
+      redisService.acquireLock.mockResolvedValue('token-def');
+      (fs.unlink as jest.Mock).mockResolvedValue(undefined);
+
+      await service.removeImage(venue.id, authUser, '/uploads/venues/a.jpg');
+
+      expect(redisService.releaseLock).toHaveBeenCalledWith(
+        `lock:venue:${venue.id}:images`,
+        'token-def',
+      );
+    });
+
+    it('releases the lock even when the DB save fails mid-operation', async () => {
+      const owner = buildUser();
+      const venue = buildVenue({ owner, images: ['/uploads/venues/a.jpg'] });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+      venueRepo.save.mockRejectedValue(new Error('db connection lost'));
+      redisService.acquireLock.mockResolvedValue('token-db-fail');
+
+      await expect(
+        service.removeImage(venue.id, authUser, '/uploads/venues/a.jpg'),
+      ).rejects.toThrow('db connection lost');
+      expect(redisService.releaseLock).toHaveBeenCalledWith(
+        `lock:venue:${venue.id}:images`,
+        'token-db-fail',
+      );
       expect(fs.unlink).not.toHaveBeenCalled();
     });
   });

@@ -449,5 +449,80 @@ describe('Venue + Court (e2e)', () => {
         })
         .expect(413);
     });
+
+    it('derives the stored extension from the validated mimetype, not the attacker-controlled filename (N1)', async () => {
+      const htmlPayload = Buffer.from(
+        '<html><body><script>alert(document.domain)</script></body></html>',
+      );
+      const uploadRes = await request(app.getHttpServer())
+        .post(`/venues/${venueId}/images`)
+        .set('Authorization', `Bearer ${merchantToken}`)
+        .attach('file', htmlPayload, {
+          filename: 'payload.html',
+          contentType: 'image/jpeg',
+        })
+        .expect(201);
+
+      const imagePath = uploadRes.body.images[0] as string;
+      expect(imagePath).toMatch(/\.jpg$/);
+      expect(imagePath).not.toMatch(/\.html$/);
+
+      const staticRes = await request(app.getHttpServer())
+        .get(imagePath)
+        .expect(200);
+      expect(staticRes.headers['content-type']).not.toContain('text/html');
+
+      await request(app.getHttpServer())
+        .delete(`/venues/${venueId}/images`)
+        .set('Authorization', `Bearer ${merchantToken}`)
+        .send({ url: imagePath })
+        .expect(200);
+    });
+
+    it('serializes concurrent uploads so no successful write is silently lost or orphaned (N2)', async () => {
+      // The Redis lock is fail-fast (single acquire attempt, like booking's
+      // withSlotLock — see CLAUDE.md §6 layer-1): a request that loses the
+      // race gets an immediate 409, it never silently overwrites another
+      // request's write the way the pre-fix code did (all 201, most images
+      // vanish with no error at all). Task 5's client should still upload
+      // multi-selected images sequentially to avoid 409s in practice.
+      const concurrency = 5;
+      const results = await Promise.all(
+        Array.from({ length: concurrency }, () =>
+          request(app.getHttpServer())
+            .post(`/venues/${venueId}/images`)
+            .set('Authorization', `Bearer ${merchantToken}`)
+            .attach('file', fixturePath),
+        ),
+      );
+
+      for (const res of results) {
+        expect([201, 409]).toContain(res.status);
+      }
+      const succeeded = results.filter((res) => res.status === 201);
+      expect(succeeded.length).toBeGreaterThan(0);
+
+      const getRes = await request(app.getHttpServer())
+        .get(`/venues/${venueId}`)
+        .expect(200);
+      const images = getRes.body.images as string[];
+      // No lost updates: every accepted (201) upload is reflected in the
+      // DB, and nothing else snuck in or vanished.
+      expect(images.length).toBe(succeeded.length);
+      for (const res of succeeded) {
+        const lastImage = (res.body.images as string[]).at(-1);
+        expect(images).toContain(lastImage);
+      }
+
+      // Sequential cleanup — concurrent deletes would just re-demonstrate
+      // the same fail-fast lock contention this test already covers.
+      for (const url of images) {
+        await request(app.getHttpServer())
+          .delete(`/venues/${venueId}/images`)
+          .set('Authorization', `Bearer ${merchantToken}`)
+          .send({ url })
+          .expect(200);
+      }
+    });
   });
 });
