@@ -49,6 +49,9 @@ export default async function CourtsPage({
         <h1 className="text-xl font-semibold">Sân con của {venueName}</h1>
         <Link href={`/merchant/venues/${venueId}/services`} className="text-sm hover:underline">
           Dịch vụ đi kèm
+        </Link>{' '}
+        <Link href={`/merchant/venues/${venueId}/images`} className="text-sm hover:underline">
+          Ảnh cụm sân
         </Link>
       </div>
 
