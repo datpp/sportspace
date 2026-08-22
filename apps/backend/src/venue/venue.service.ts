@@ -1,5 +1,6 @@
 import * as fs from 'fs/promises';
-import { join } from 'path';
+import { join, extname } from 'path';
+import { randomUUID } from 'crypto';
 import {
   BadRequestException,
   ForbiddenException,
@@ -194,7 +195,11 @@ export class VenueService {
       );
     }
 
-    venue.images = [...venue.images, `/uploads/venues/${file.filename}`];
+    await fs.mkdir(VENUE_UPLOADS_DIR, { recursive: true });
+    const filename = `${randomUUID()}${extname(file.originalname)}`;
+    await fs.writeFile(join(VENUE_UPLOADS_DIR, filename), file.buffer);
+
+    venue.images = [...venue.images, `/uploads/venues/${filename}`];
     return this.venueRepo.save(venue);
   }
 
@@ -205,6 +210,10 @@ export class VenueService {
   ): Promise<Venue> {
     const venue = await this.findOne(id);
     this.assertOwnerOrAdmin(venue, user);
+
+    if (!venue.images.includes(url)) {
+      throw new NotFoundException('Ảnh không thuộc cụm sân này');
+    }
 
     venue.images = venue.images.filter((img) => img !== url);
     const saved = await this.venueRepo.save(venue);

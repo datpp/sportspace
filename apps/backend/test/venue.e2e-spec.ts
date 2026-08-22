@@ -437,5 +437,17 @@ describe('Venue + Court (e2e)', () => {
         .attach('file', textFixture)
         .expect(400);
     });
+
+    it('rejects an oversized file (>5MB) with 413', async () => {
+      const oversized = Buffer.alloc(6 * 1024 * 1024, 0);
+      await request(app.getHttpServer())
+        .post(`/venues/${venueId}/images`)
+        .set('Authorization', `Bearer ${merchantToken}`)
+        .attach('file', oversized, {
+          filename: 'too-big.jpg',
+          contentType: 'image/jpeg',
+        })
+        .expect(413);
+    });
   });
 });

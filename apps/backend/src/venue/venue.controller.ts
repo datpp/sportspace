@@ -1,5 +1,3 @@
-import { randomUUID } from 'crypto';
-import { extname } from 'path';
 import {
   BadRequestException,
   Body,
@@ -24,7 +22,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { diskStorage } from 'multer';
+import { memoryStorage } from 'multer';
 import { Role } from '@sportspace/shared';
 import { VenueService } from './venue.service';
 import { CreateVenueDto } from './dto/create-venue.dto';
@@ -37,7 +35,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
-import { VENUE_UPLOADS_DIR } from './venue-uploads.constants';
 
 const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -127,12 +124,7 @@ export class VenueController {
   @ApiOkResponse({ type: Venue })
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: VENUE_UPLOADS_DIR,
-        filename: (_req, file, cb) => {
-          cb(null, `${randomUUID()}${extname(file.originalname)}`);
-        },
-      }),
+      storage: memoryStorage(),
       limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
       fileFilter: (_req, file, cb) => {
         if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype)) {

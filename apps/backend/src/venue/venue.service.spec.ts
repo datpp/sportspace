@@ -59,6 +59,7 @@ describe('VenueService', () => {
   let queryBuilder: DeepMocked<SelectQueryBuilder<Venue>>;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     venueRepo = createMock<Repository<Venue>>();
     queryBuilder = createMock<SelectQueryBuilder<Venue>>();
 
@@ -384,28 +385,44 @@ describe('VenueService', () => {
   });
 
   describe('addImage', () => {
-    it('appends the file path and saves when the owner uploads', async () => {
+    it('writes the buffer to disk and appends the file path when the owner uploads', async () => {
       const owner = buildUser();
       const venue = buildVenue({ owner, images: [] });
       const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
       venueRepo.findOne.mockResolvedValue(venue);
       venueRepo.save.mockImplementation((v) => Promise.resolve(v as Venue));
-      const file = { filename: 'abc123.jpg' } as Express.Multer.File;
+      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
+      (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+      const file = {
+        originalname: 'photo.jpg',
+        buffer: Buffer.from('fake-image-bytes'),
+      } as Express.Multer.File;
 
       const result = await service.addImage(venue.id, authUser, file);
 
-      expect(result.images).toEqual(['/uploads/venues/abc123.jpg']);
+      expect(result.images).toEqual([
+        expect.stringMatching(/^\/uploads\/venues\/.+\.jpg$/),
+      ]);
+      expect(fs.mkdir).toHaveBeenCalled();
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        expect.stringContaining('.jpg'),
+        file.buffer,
+      );
     });
 
     it('rejects a non-owner, non-admin uploader', async () => {
       const venue = buildVenue({ owner: buildUser(), images: [] });
       const otherUser = buildAuthUser({ id: 'someone-else', role: Role.MERCHANT });
       venueRepo.findOne.mockResolvedValue(venue);
-      const file = { filename: 'abc123.jpg' } as Express.Multer.File;
+      const file = {
+        originalname: 'photo.jpg',
+        buffer: Buffer.from('fake-image-bytes'),
+      } as Express.Multer.File;
 
       await expect(service.addImage(venue.id, otherUser, file)).rejects.toThrow(
         ForbiddenException,
       );
+      expect(fs.writeFile).not.toHaveBeenCalled();
     });
 
     it('rejects the 9th image past the 8-image cap', async () => {
@@ -416,11 +433,15 @@ describe('VenueService', () => {
       });
       const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
       venueRepo.findOne.mockResolvedValue(venue);
-      const file = { filename: 'ninth.jpg' } as Express.Multer.File;
+      const file = {
+        originalname: 'ninth.jpg',
+        buffer: Buffer.from('fake-image-bytes'),
+      } as Express.Multer.File;
 
       await expect(service.addImage(venue.id, authUser, file)).rejects.toThrow(
         BadRequestException,
       );
+      expect(fs.writeFile).not.toHaveBeenCalled();
     });
   });
 
@@ -473,6 +494,23 @@ describe('VenueService', () => {
       await expect(
         service.removeImage(venue.id, otherUser, '/uploads/venues/a.jpg'),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it("rejects a url that does not belong to this venue's images, without touching disk", async () => {
+      const owner = buildUser();
+      const venue = buildVenue({ owner, images: ['/uploads/venues/a.jpg'] });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+
+      await expect(
+        service.removeImage(
+          venue.id,
+          authUser,
+          '/uploads/venues/belongs-to-another-venue.jpg',
+        ),
+      ).rejects.toThrow(NotFoundException);
+      expect(venueRepo.save).not.toHaveBeenCalled();
+      expect(fs.unlink).not.toHaveBeenCalled();
     });
   });
 });
