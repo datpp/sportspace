@@ -3,6 +3,7 @@ import type { AdminControllerGetVenuesStatus } from '@sportspace/shared';
 import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 import { handleApiError } from '@/lib/handle-api-error';
+import { assetUrl } from '@/lib/asset-url';
 import { SearchInput } from '@/components/list/search-input';
 import { FilterSelect } from '@/components/list/filter-select';
 import { Pagination } from '@/components/list/pagination';
@@ -91,6 +92,19 @@ export default async function AdminVenuesPage({
             <p className="text-xs text-zinc-400">
               Đăng ký lúc {new Date(venue.createdAt).toLocaleString('vi-VN')} — {venue.status}
             </p>
+            {venue.images.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto">
+                {venue.images.map((img) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={img}
+                    src={assetUrl(img)}
+                    alt=""
+                    className="h-16 w-16 flex-shrink-0 rounded object-cover"
+                  />
+                ))}
+              </div>
+            )}
             {venue.status === VenueStatus.PENDING && (
               <div className="flex gap-3">
                 <form action={approveVenue.bind(null, venue.id)}>
