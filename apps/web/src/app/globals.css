@@ -29,7 +29,7 @@
   --accent-foreground: #0f172a;
   --destructive: oklch(0.577 0.245 27.325);
   --border: #e2e8f0;
-  --input: oklch(0.922 0 0);
+  --input: #e2e8f0;
   --ring: #4f46e5;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -125,7 +125,7 @@
     --accent-foreground: #f1f5f9;
     --destructive: oklch(0.704 0.191 22.216);
     --border: #334155;
-    --input: oklch(1 0 0 / 15%);
+    --input: #334155;
     --ring: #6366f1;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);

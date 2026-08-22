@@ -13,7 +13,7 @@ export function DashboardSidebar({
   navItems: DashboardNavItem[];
 }) {
   return (
-    <aside className="flex flex-col gap-1 bg-sidebar p-4 sm:w-56">
+    <aside className="flex flex-col gap-1 bg-sidebar p-4 sm:w-56 sm:border-r sm:border-sidebar-active-bg">
       <p className="mb-3 px-2 text-xs font-bold uppercase tracking-wide text-sidebar-muted">
         {label}
       </p>
