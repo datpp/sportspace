@@ -162,11 +162,11 @@ export function VenueListScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  searchRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  searchRow: { flexDirection: 'row', gap: 8 },
   input: { flex: 1, borderWidth: 1 },
   banner: { paddingBottom: 8, gap: 4 },
   bannerLink: { fontWeight: '600' },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   cardTitle: { fontSize: 16, fontWeight: '700' },
-  cardDistance: { marginTop: 4, fontWeight: '600' },
+  cardDistance: { fontWeight: '600' },
 });

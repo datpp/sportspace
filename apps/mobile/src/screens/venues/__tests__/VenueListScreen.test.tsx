@@ -46,6 +46,13 @@ describe('VenueListScreen', () => {
     expect(screen.getByTestId('venue-list')).toBeTruthy();
   });
 
+  it('hiển thị ScreenHeader với tiêu đề "Tìm sân"', async () => {
+    await renderScreen();
+
+    expect(screen.getByTestId('screen-header')).toBeTruthy();
+    expect(screen.getByText('Tìm sân')).toBeTruthy();
+  });
+
   it('hiển thị empty state khi không có sân', async () => {
     server.use(http.get('*/venues', () => HttpResponse.json([], { status: 200 })));
 

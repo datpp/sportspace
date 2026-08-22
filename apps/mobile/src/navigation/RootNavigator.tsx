@@ -53,7 +53,11 @@ function VenuesNavigator() {
         headerTitleStyle: { color: colors.foreground, fontWeight: '700' },
       }}
     >
-      <VenuesStack.Screen name="VenueList" component={VenueListScreen} options={{ title: 'Tìm sân' }} />
+      <VenuesStack.Screen
+        name="VenueList"
+        component={VenueListScreen}
+        options={{ title: 'Tìm sân', headerShown: false }}
+      />
       <VenuesStack.Screen
         name="VenueDetail"
         component={VenueDetailScreen}
