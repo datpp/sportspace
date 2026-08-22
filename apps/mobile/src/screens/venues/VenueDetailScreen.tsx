@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Venue, VenueReviewsDto } from '@sportspace/shared';
-import { reviewsApi, venuesApi } from '../../api/client';
+import { API_BASE_URL, reviewsApi, venuesApi } from '../../api/client';
 import type { VenuesStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<VenuesStackParamList, 'VenueDetail'>;
@@ -77,6 +77,27 @@ export function VenueDetailScreen({ route, navigation }: Props) {
           </View>
         ) : null}
       </View>
+      {venue.images.length > 0 ? (
+        <FlatList
+          testID="venue-image-carousel"
+          horizontal
+          data={venue.images}
+          keyExtractor={(img) => img}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.imageCarousel}
+          renderItem={({ item, index }) => (
+            <Image
+              testID={`venue-image-${index}`}
+              source={{ uri: `${API_BASE_URL}${item}` }}
+              style={styles.venueImage}
+            />
+          )}
+        />
+      ) : (
+        <View testID="venue-image-placeholder" style={styles.venueImagePlaceholder}>
+          <Text style={styles.venueImagePlaceholderText}>Chưa có ảnh</Text>
+        </View>
+      )}
       {venue.courts.length === 0 ? (
         <View style={styles.centerFill} testID="venue-detail-no-courts">
           <Text>Sân này chưa có sân con nào</Text>
@@ -142,4 +163,15 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700' },
   cardSubtitle: { color: '#555', marginTop: 2 },
   cardPrice: { color: '#1d4ed8', marginTop: 4, fontWeight: '600' },
+  imageCarousel: { gap: 8, paddingVertical: 8 },
+  venueImage: { width: 240, height: 160, borderRadius: 8, backgroundColor: '#eee' },
+  venueImagePlaceholder: {
+    height: 160,
+    borderRadius: 8,
+    backgroundColor: '#eee',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 8,
+  },
+  venueImagePlaceholderText: { color: '#999' },
 });

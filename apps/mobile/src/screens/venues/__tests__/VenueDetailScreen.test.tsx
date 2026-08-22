@@ -73,6 +73,27 @@ describe('VenueDetailScreen', () => {
     });
   });
 
+  it('hiển thị carousel ảnh khi venue có ảnh', async () => {
+    const venue = getVenueControllerFindOneResponseMock({
+      images: ['/uploads/venues/a.jpg', '/uploads/venues/b.jpg'],
+    });
+    server.use(http.get('*/venues/:id', () => HttpResponse.json(venue, { status: 200 })));
+
+    await renderScreen();
+
+    expect(await screen.findByTestId('venue-image-carousel')).toBeTruthy();
+    expect(screen.getAllByTestId(/^venue-image-\d+$/)).toHaveLength(2);
+  });
+
+  it('hiển thị placeholder khi venue không có ảnh', async () => {
+    const venue = getVenueControllerFindOneResponseMock({ images: [] });
+    server.use(http.get('*/venues/:id', () => HttpResponse.json(venue, { status: 200 })));
+
+    await renderScreen();
+
+    expect(await screen.findByTestId('venue-image-placeholder')).toBeTruthy();
+  });
+
   it('hiển thị điểm đánh giá trung bình và danh sách đánh giá', async () => {
     server.use(
       http.get('*/reviews', () =>
