@@ -743,6 +743,105 @@
         ]
       }
     },
+    "/venues/{id}/images": {
+      "post": {
+        "operationId": "VenueController_uploadImage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tải ảnh lên cho cụm sân (tối đa 8 ảnh)",
+        "tags": [
+          "venues"
+        ]
+      },
+      "delete": {
+        "operationId": "VenueController_removeImage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteVenueImageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Xoá một ảnh khỏi cụm sân",
+        "tags": [
+          "venues"
+        ]
+      }
+    },
     "/courts": {
       "post": {
         "operationId": "CourtController_create",
@@ -3752,6 +3851,12 @@
               "REJECTED"
             ]
           },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "createdAt": {
             "format": "date-time",
             "type": "string"
@@ -3770,6 +3875,7 @@
           "lat",
           "lng",
           "status",
+          "images",
           "createdAt",
           "updatedAt"
         ]
@@ -3832,6 +3938,17 @@
             "type": "string"
           }
         }
+      },
+      "DeleteVenueImageDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ]
       },
       "CreateCourtDto": {
         "type": "object",
