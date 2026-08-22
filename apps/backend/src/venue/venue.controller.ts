@@ -121,7 +121,7 @@ export class VenueController {
       required: ['file'],
     },
   })
-  @ApiOkResponse({ type: Venue })
+  @ApiCreatedResponse({ type: Venue })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
