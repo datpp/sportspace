@@ -1,12 +1,19 @@
+import * as fs from 'fs/promises';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { faker } from '@faker-js/faker';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { CourtStatus, Role, VenueStatus } from '@sportspace/shared';
 import { VenueService } from './venue.service';
 import { Venue } from './entities/venue.entity';
 import { User } from '../user/entities/user.entity';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+
+jest.mock('fs/promises');
 
 function buildUser(overrides: Partial<User> = {}): User {
   return {
@@ -373,6 +380,99 @@ describe('VenueService', () => {
       expect(venueRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ status: VenueStatus.REJECTED }),
       );
+    });
+  });
+
+  describe('addImage', () => {
+    it('appends the file path and saves when the owner uploads', async () => {
+      const owner = buildUser();
+      const venue = buildVenue({ owner, images: [] });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+      venueRepo.save.mockImplementation((v) => Promise.resolve(v as Venue));
+      const file = { filename: 'abc123.jpg' } as Express.Multer.File;
+
+      const result = await service.addImage(venue.id, authUser, file);
+
+      expect(result.images).toEqual(['/uploads/venues/abc123.jpg']);
+    });
+
+    it('rejects a non-owner, non-admin uploader', async () => {
+      const venue = buildVenue({ owner: buildUser(), images: [] });
+      const otherUser = buildAuthUser({ id: 'someone-else', role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+      const file = { filename: 'abc123.jpg' } as Express.Multer.File;
+
+      await expect(service.addImage(venue.id, otherUser, file)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('rejects the 9th image past the 8-image cap', async () => {
+      const owner = buildUser();
+      const venue = buildVenue({
+        owner,
+        images: Array.from({ length: 8 }, (_, i) => `/uploads/venues/${i}.jpg`),
+      });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+      const file = { filename: 'ninth.jpg' } as Express.Multer.File;
+
+      await expect(service.addImage(venue.id, authUser, file)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('removeImage', () => {
+    it('removes the matching entry and best-effort deletes the file', async () => {
+      const owner = buildUser();
+      const venue = buildVenue({
+        owner,
+        images: ['/uploads/venues/a.jpg', '/uploads/venues/b.jpg'],
+      });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+      venueRepo.save.mockImplementation((v) => Promise.resolve(v as Venue));
+      (fs.unlink as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await service.removeImage(
+        venue.id,
+        authUser,
+        '/uploads/venues/a.jpg',
+      );
+
+      expect(result.images).toEqual(['/uploads/venues/b.jpg']);
+      expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining('a.jpg'));
+    });
+
+    it('does not throw when the file is already gone from disk', async () => {
+      const owner = buildUser();
+      const venue = buildVenue({ owner, images: ['/uploads/venues/a.jpg'] });
+      const authUser = buildAuthUser({ id: owner.id, role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+      venueRepo.save.mockImplementation((v) => Promise.resolve(v as Venue));
+      (fs.unlink as jest.Mock).mockRejectedValue(
+        Object.assign(new Error('not found'), { code: 'ENOENT' }),
+      );
+
+      const result = await service.removeImage(
+        venue.id,
+        authUser,
+        '/uploads/venues/a.jpg',
+      );
+
+      expect(result.images).toEqual([]);
+    });
+
+    it('rejects a non-owner, non-admin remover', async () => {
+      const venue = buildVenue({ owner: buildUser(), images: ['/uploads/venues/a.jpg'] });
+      const otherUser = buildAuthUser({ id: 'someone-else', role: Role.MERCHANT });
+      venueRepo.findOne.mockResolvedValue(venue);
+
+      await expect(
+        service.removeImage(venue.id, otherUser, '/uploads/venues/a.jpg'),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

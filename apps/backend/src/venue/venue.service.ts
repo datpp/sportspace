@@ -1,4 +1,7 @@
+import * as fs from 'fs/promises';
+import { join } from 'path';
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -16,6 +19,9 @@ import { User } from '../user/entities/user.entity';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { PaginatedDto } from '../common/dto/paginated.dto';
 import { buildPaginationMeta } from '../common/pagination.util';
+import { VENUE_UPLOADS_DIR } from './venue-uploads.constants';
+
+const MAX_VENUE_IMAGES = 8;
 
 @Injectable()
 export class VenueService {
@@ -173,6 +179,47 @@ export class VenueService {
     const venue = await this.findOne(id);
     venue.status = VenueStatus.REJECTED;
     return this.venueRepo.save(venue);
+  }
+
+  async addImage(
+    id: string,
+    user: AuthenticatedUser,
+    file: Express.Multer.File,
+  ): Promise<Venue> {
+    const venue = await this.findOne(id);
+    this.assertOwnerOrAdmin(venue, user);
+    if (venue.images.length >= MAX_VENUE_IMAGES) {
+      throw new BadRequestException(
+        `Cụm sân chỉ được tối đa ${MAX_VENUE_IMAGES} ảnh`,
+      );
+    }
+
+    venue.images = [...venue.images, `/uploads/venues/${file.filename}`];
+    return this.venueRepo.save(venue);
+  }
+
+  async removeImage(
+    id: string,
+    user: AuthenticatedUser,
+    url: string,
+  ): Promise<Venue> {
+    const venue = await this.findOne(id);
+    this.assertOwnerOrAdmin(venue, user);
+
+    venue.images = venue.images.filter((img) => img !== url);
+    const saved = await this.venueRepo.save(venue);
+
+    const filename = url.split('/').pop();
+    if (filename) {
+      try {
+        await fs.unlink(join(VENUE_UPLOADS_DIR, filename));
+      } catch {
+        // File already gone from disk — not fatal, the DB record is the
+        // source of truth and it's already updated above.
+      }
+    }
+
+    return saved;
   }
 
   private assertOwnerOrAdmin(venue: Venue, user: AuthenticatedUser): void {
