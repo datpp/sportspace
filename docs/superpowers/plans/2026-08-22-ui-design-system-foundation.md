@@ -241,8 +241,11 @@ const VARIANT_CLASSES = {
   warning: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
   danger: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
   neutral: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-  info: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300',
+  info: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200',
 } as const;
+// `info`'s dark text is indigo-200, not indigo-300 — Tailwind v4 renumbered its
+// indigo scale, and the spec's `#c7d2fe` matches v4's indigo-200, not indigo-300
+// (found and fixed during Task 2's review after being copied verbatim here).
 
 export type StatusBadgeVariant = keyof typeof VARIANT_CLASSES;
 
