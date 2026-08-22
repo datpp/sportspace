@@ -15,5 +15,6 @@ packages/shared/src/generated/
 .rtk/
 /.run/
 /.worktrees/
+/.superpowers/
 /CLAUDE.md
 /.claude/
