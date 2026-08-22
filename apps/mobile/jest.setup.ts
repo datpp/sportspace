@@ -1,5 +1,11 @@
 import 'react-native-gesture-handler/jestSetup';
 
+jest.mock('expo-modules-core', () => ({
+  Platform: {
+    select: (obj: Record<string, unknown>) => obj.web,
+  },
+}));
+
 jest.mock('expo-secure-store', () => {
   const store = new Map<string, string>();
   return {
