@@ -1422,6 +1422,36 @@ describe('BookingService', () => {
 
       expect(realtimeGateway.broadcastSlotUpdate).not.toHaveBeenCalled();
     });
+
+    it('isolates a per-payment transaction failure so the rest of the tick still gets processed', async () => {
+      const bookingA = buildBookingRow({ status: BookingStatus.PENDING });
+      const paymentA = buildPaymentRow({ status: PaymentStatus.PENDING, booking: bookingA });
+      const court = buildCourt();
+      const bookingB = buildBookingRow({ status: BookingStatus.PENDING, court });
+      const paymentB = buildPaymentRow({ status: PaymentStatus.PENDING, booking: bookingB });
+      paymentQueryBuilder.getMany.mockResolvedValue([paymentA, paymentB]);
+
+      const managerB = createMock<EntityManager>();
+      managerB.update.mockResolvedValue({ affected: 1 } as UpdateResult);
+      let call = 0;
+      dataSource.transaction.mockImplementation(((work: (manager: EntityManager) => Promise<void>) => {
+        call++;
+        if (call === 1) {
+          return Promise.reject(new Error('deadlock'));
+        }
+        return work(managerB);
+      }) as typeof dataSource.transaction);
+
+      await expect(service.expireStalePendingBookings()).resolves.toBeUndefined();
+
+      expect(realtimeGateway.broadcastSlotUpdate).toHaveBeenCalledTimes(1);
+      expect(realtimeGateway.broadcastSlotUpdate).toHaveBeenCalledWith({
+        courtId: court.id,
+        bookingDate: bookingB.bookingDate,
+        startTime: bookingB.startTime,
+        status: BookingStatus.CANCELLED,
+      });
+    });
   });
 
   function buildBookingRow(overrides: Partial<Booking> = {}): Booking {
