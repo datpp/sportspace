@@ -51,7 +51,7 @@ export default async function ShiftsPage({
         )}
         {shifts.map((shift) => (
           <Card key={shift.id}>
-            <CardContent className="flex items-center justify-between text-sm">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 text-sm">
               <span>
                 {shift.shiftDate} {formatTime(shift.startTime)}–{formatTime(shift.endTime)}
               </span>

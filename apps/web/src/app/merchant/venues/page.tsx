@@ -8,6 +8,7 @@ import { SearchInput } from '@/components/list/search-input';
 import { FilterSelect } from '@/components/list/filter-select';
 import { Pagination } from '@/components/list/pagination';
 import { buttonVariants } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge, type StatusBadgeVariant } from '@/components/status-badge';
 import { cn } from '@/lib/utils';
 
@@ -83,16 +84,16 @@ export default async function VenuesPage({
 
       <div className="flex flex-col gap-3">
         {venueList.map((venue) => (
-          <Link
-            key={venue.id}
-            href={`/merchant/venues/${venue.id}/courts`}
-            className="flex flex-col gap-1 rounded-lg border border-border bg-card p-4 text-sm shadow-sm transition-colors hover:bg-muted"
-          >
-            <span className="font-medium">{venue.name}</span>
-            <span className="text-muted-foreground">{venue.address}</span>
-            <StatusBadge variant={VENUE_STATUS_VARIANT[venue.status]}>
-              {VENUE_STATUS_LABEL[venue.status]}
-            </StatusBadge>
+          <Link key={venue.id} href={`/merchant/venues/${venue.id}/courts`} className="block">
+            <Card className="transition-colors hover:bg-muted">
+              <CardContent className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">{venue.name}</span>
+                <span className="text-muted-foreground">{venue.address}</span>
+                <StatusBadge variant={VENUE_STATUS_VARIANT[venue.status]}>
+                  {VENUE_STATUS_LABEL[venue.status]}
+                </StatusBadge>
+              </CardContent>
+            </Card>
           </Link>
         ))}
       </div>
