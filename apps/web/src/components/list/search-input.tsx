@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Input } from '@/components/ui/input';
 import { withParam } from './list-query';
 
 const DEBOUNCE_MS = 400;
@@ -31,12 +32,12 @@ export function SearchInput({
   }
 
   return (
-    <input
+    <Input
       type="search"
       value={value}
       onChange={(e) => handleChange(e.target.value)}
       placeholder={placeholder ?? 'Tìm kiếm...'}
-      className="rounded border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+      className="max-w-xs"
     />
   );
 }

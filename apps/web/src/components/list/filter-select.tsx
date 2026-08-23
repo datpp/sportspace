@@ -23,12 +23,12 @@ export function FilterSelect({
   }
 
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <label className="flex items-center gap-2 text-sm text-foreground">
       {label}
       <select
         value={current}
         onChange={(e) => handleChange(e.target.value)}
-        className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
