@@ -31,12 +31,14 @@ Every task applies these and only these. Where a file's existing classes differ 
 | `<button className="rounded border border-zinc-300 … dark:border-zinc-700">` (secondary) | `<Button variant="outline" …>` |
 | `<button className="… text-red-600 …">` / destructive button | `<Button variant="destructive" …>` |
 | `<label className="text-sm font-medium">` / `text-xs font-medium` | `<Label …>` from `@/components/ui/label` |
-| `rounded border border-zinc-200 p-4 … dark:border-zinc-800` (card-ish container) | `<Card>` + `<CardContent>` from `@/components/ui/card` |
+| `rounded border border-zinc-200 p-4 … dark:border-zinc-800` (card-ish container) | `<Card>` + `<CardContent>` from `@/components/ui/card` — **never pass `p-4` (or any `p-*`) to `CardContent`**, see the warning below |
 | `text-zinc-500`, `text-zinc-600 dark:text-zinc-400`, `text-zinc-400` | `text-muted-foreground` |
 | `text-red-600 dark:text-red-400` (error text) | `text-destructive` |
 | `border-zinc-200 dark:border-zinc-800` (bare divider/border) | `border-border` |
 | `bg-zinc-100 dark:bg-zinc-900` (subtle surface) | `bg-muted` |
 | raw status string in JSX (e.g. `{venue.status}`) | `<StatusBadge variant="…">{label}</StatusBadge>` per the mapping above |
+
+> **⚠️ `CardContent` padding trap** (found in Task 4's review, after the original wording here caused it): `Card` already supplies vertical padding via `py-(--card-spacing)`, and `CardContent` supplies horizontal padding via `px-(--card-spacing)`. Passing `p-4` in `CardContent`'s `className` makes `twMerge` treat it as a conflict and **delete** `px-(--card-spacing)`, leaving 32px vertical (Card's 16 + your 16) and 16px horizontal — visibly taller cards than the original. Write `<CardContent className="flex flex-col gap-2 text-sm">` with **no** `p-*` class; the result is exactly the 16px-all-round the old `p-4` div had.
 
 ---
 
@@ -353,7 +355,7 @@ git commit -m "feat(web): áp dụng hệ thống thiết kế cho trang chủ v
 - [ ] **Step 1: Migrate `admin/venues/page.tsx`**
 
 This page currently renders `Đăng ký lúc {…} — {venue.status}` as raw text and has approve/reject buttons. Convert:
-- Each venue's `<div className="flex flex-col gap-2 rounded border border-zinc-200 p-4 …">` → `<Card>` with `<CardContent className="flex flex-col gap-2 p-4 text-sm">`.
+- Each venue's `<div className="flex flex-col gap-2 rounded border border-zinc-200 p-4 …">` → `<Card>` with `<CardContent className="flex flex-col gap-2 text-sm">` (no `p-4` — see the CardContent padding trap warning in the Substitution Table).
 - `{venue.status}` → `<StatusBadge variant={…}>{…}</StatusBadge>` using the Global Constraints mapping (`APPROVED` → `success`, `PENDING` → `warning`, `REJECTED` → `danger`). Render a Vietnamese label inside the badge, matching the labels already used in this page's own `FilterSelect` options (`Chờ duyệt` / `Đã duyệt` / `Từ chối`) — read them from the file, do not invent new wording.
 - Approve button → `<Button size="sm">`; reject button → `<Button variant="destructive" size="sm">`.
 - The existing thumbnail strip's `<img>` block and its `venue.images.length > 0` guard: leave the logic alone, only swap any `zinc-*` classes.
