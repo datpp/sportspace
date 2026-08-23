@@ -7,8 +7,9 @@ import { handleApiError } from '@/lib/handle-api-error';
 import { SearchInput } from '@/components/list/search-input';
 import { FilterSelect } from '@/components/list/filter-select';
 import { Pagination } from '@/components/list/pagination';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { StatusBadge, type StatusBadgeVariant } from '@/components/status-badge';
+import { cn } from '@/lib/utils';
 
 // Nhãn và biến thể lấy từ FilterSelect "Trạng thái" phía trên — không tự đặt chữ mới.
 const VENUE_STATUS_LABEL: Record<VenueStatus, string> = {
@@ -55,9 +56,9 @@ export default async function VenuesPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Cụm sân của tôi</h1>
-        <Button render={<Link href="/merchant/venues/new" />} nativeButton={false}>
+        <Link href="/merchant/venues/new" className={cn(buttonVariants())}>
           Tạo cụm sân mới
-        </Button>
+        </Link>
       </div>
 
       <div className="flex flex-wrap gap-3">

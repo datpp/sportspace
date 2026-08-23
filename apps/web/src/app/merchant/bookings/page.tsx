@@ -108,9 +108,7 @@ export default async function MerchantBookingsPage({
               <div className="flex gap-3">
                 {booking.status === BookingStatus.PENDING && (
                   <form action={confirmBooking.bind(null, booking.id)}>
-                    <Button type="submit" size="sm">
-                      Xác nhận
-                    </Button>
+                    <Button type="submit">Xác nhận</Button>
                   </form>
                 )}
                 {booking.status !== BookingStatus.CANCELLED && (
@@ -119,7 +117,7 @@ export default async function MerchantBookingsPage({
                     className="flex items-center gap-2"
                   >
                     <Input type="text" name="reason" required placeholder="Lý do từ chối" />
-                    <Button type="submit" variant="destructive" size="sm">
+                    <Button type="submit" variant="destructive">
                       Từ chối
                     </Button>
                   </form>
