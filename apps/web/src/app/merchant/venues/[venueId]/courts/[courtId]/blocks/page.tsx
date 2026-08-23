@@ -66,12 +66,10 @@ export default async function BlocksPage({
         ))}
       </div>
 
-      <Card>
-        <CardContent className="flex flex-col gap-3 text-sm">
-          <h2 className="font-medium">Chặn khoảng giờ mới</h2>
-          <BlockForm venueId={venueId} courtId={courtId} />
-        </CardContent>
-      </Card>
+      <div className="rounded-lg border border-dashed border-border p-4">
+        <h2 className="mb-3 text-sm font-medium">Chặn khoảng giờ mới</h2>
+        <BlockForm venueId={venueId} courtId={courtId} />
+      </div>
     </div>
   );
 }

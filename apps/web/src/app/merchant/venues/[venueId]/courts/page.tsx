@@ -130,12 +130,10 @@ export default async function CourtsPage({
 
       <Pagination page={courtsPage.meta.page} totalPages={courtsPage.meta.totalPages} />
 
-      <Card>
-        <CardContent className="flex flex-col gap-3 text-sm">
-          <h2 className="font-medium">Thêm sân con mới</h2>
-          <CourtForm venueId={venueId} />
-        </CardContent>
-      </Card>
+      <div className="rounded-lg border border-dashed border-border p-4">
+        <h2 className="mb-3 text-sm font-medium">Thêm sân con mới</h2>
+        <CourtForm venueId={venueId} />
+      </div>
     </div>
   );
 }
