@@ -410,7 +410,19 @@ Currently shows `Trạng thái: {booking.status}` as raw text plus confirm/rejec
 
 - [ ] **Step 2: Migrate `merchant/venues/page.tsx`**
 
-Each venue is currently a whole-card `<Link>`. Keep it a `<Link>` (do **not** wrap in `Button` — this is a card-sized navigation target, not a button). Restyle the link's own classes to card-like: `flex flex-col gap-1 rounded-lg border border-border bg-card p-4 text-sm shadow-sm transition-colors hover:bg-muted`. Convert the `<span className="text-xs uppercase text-zinc-400">{venue.status}</span>` to a `<StatusBadge>`.
+Each venue is currently a whole-card `<Link>`. Keep it a `<Link>` (do **not** wrap in `Button` — this is a card-sized navigation target, not a button), but render a real `<Card>` **inside** it rather than hand-painting card-like classes onto the link:
+
+```tsx
+<Link key={venue.id} href={`/merchant/venues/${venue.id}/courts`} className="block">
+  <Card className="transition-colors hover:bg-muted">
+    <CardContent className="flex flex-col gap-1 text-sm">…</CardContent>
+  </Card>
+</Link>
+```
+
+> **⚠️ Do not hand-write card-like classes.** An earlier version of this step prescribed `rounded-lg border border-border bg-card p-4 shadow-sm`, which passes every check in this plan (all tokens, no `zinc-*`) yet renders *visibly differently* from every other card in the app: the real `Card` is `rounded-xl` + `ring-1 ring-foreground/10` with **no border and no shadow**. Worse, border+shadow is exactly the "cheap and bordery" look this redesign exists to remove — and this is the merchant landing page. Always compose the real `Card` so future `--card-spacing` changes propagate here too.
+
+Convert the `<span className="text-xs uppercase text-zinc-400">{venue.status}</span>` to a `<StatusBadge>`.
 
 - [ ] **Step 3: Migrate `merchant/revenue/page.tsx`**
 
