@@ -43,4 +43,34 @@ describe('PriceRuleForm', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Giờ bắt đầu phải trước giờ kết thúc');
   });
+
+  it('giữ nguyên các thuộc tính name/type mà Server Action phụ thuộc', () => {
+    vi.mocked(useActionState).mockReturnValue([{}, vi.fn(), false]);
+
+    const { container } = render(<PriceRuleForm venueId="venue-1" courtId="court-1" />);
+
+    const startTime = screen.getByLabelText(/giờ bắt đầu/i);
+    expect(startTime).toHaveAttribute('name', 'startTime');
+    expect(startTime).toHaveAttribute('type', 'time');
+    expect(startTime).toBeRequired();
+
+    const endTime = screen.getByLabelText(/giờ kết thúc/i);
+    expect(endTime).toHaveAttribute('name', 'endTime');
+    expect(endTime).toHaveAttribute('type', 'time');
+    expect(endTime).toBeRequired();
+
+    const price = screen.getByLabelText(/^giá/i);
+    expect(price).toHaveAttribute('name', 'price');
+    expect(price).toHaveAttribute('type', 'number');
+    expect(price).toHaveAttribute('min', '0');
+    expect(price).toHaveAttribute('step', '1000');
+    expect(price).toBeRequired();
+
+    const form = container.querySelector('form')!;
+    const fd = new FormData(form);
+    // Khớp đúng các key mà addPriceRule trong ./actions.ts đọc qua formData.get().
+    for (const key of ['dayOfWeek', 'startTime', 'endTime', 'price']) {
+      expect(fd.get(key)).not.toBeNull();
+    }
+  });
 });

@@ -1,3 +1,5 @@
+import { PageLoading } from '@/components/page-state';
+
 export default function AdminVenuesLoading() {
-  return <p className="text-sm text-zinc-500">Đang tải danh sách cụm sân chờ duyệt...</p>;
+  return <PageLoading message="Đang tải danh sách cụm sân chờ duyệt..." />;
 }

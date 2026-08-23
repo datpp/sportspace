@@ -42,4 +42,30 @@ describe('StaffForm', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Họ tên không hợp lệ');
   });
+
+  it('giữ nguyên các thuộc tính name/type mà Server Action phụ thuộc', () => {
+    vi.mocked(useActionState).mockReturnValue([{}, vi.fn(), false]);
+
+    const { container } = render(<StaffForm venueId="venue-1" />);
+
+    const fullName = screen.getByLabelText(/họ tên/i);
+    expect(fullName).toHaveAttribute('name', 'fullName');
+    expect(fullName).toBeRequired();
+
+    const phone = screen.getByLabelText(/số điện thoại/i);
+    expect(phone).toHaveAttribute('name', 'phone');
+    expect(phone).toHaveAttribute('type', 'tel');
+    expect(phone).toBeRequired();
+
+    const position = screen.getByLabelText(/chức vụ/i);
+    expect(position).toHaveAttribute('name', 'position');
+    expect(position).toBeRequired();
+
+    const form = container.querySelector('form')!;
+    const fd = new FormData(form);
+    // Khớp đúng các key mà addStaff trong ./actions.ts đọc qua formData.get().
+    for (const key of ['fullName', 'phone', 'position']) {
+      expect(fd.get(key)).not.toBeNull();
+    }
+  });
 });

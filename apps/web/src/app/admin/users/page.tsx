@@ -5,6 +5,9 @@ import { handleApiError } from '@/lib/handle-api-error';
 import { SearchInput } from '@/components/list/search-input';
 import { FilterSelect } from '@/components/list/filter-select';
 import { Pagination } from '@/components/list/pagination';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/components/status-badge';
 import { lockUser, unlockUser } from './actions';
 
 export default async function AdminUsersPage({
@@ -59,39 +62,29 @@ export default async function AdminUsersPage({
       </div>
 
       {userList.length === 0 && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Không tìm thấy người dùng phù hợp.
-        </p>
+        <p className="text-sm text-muted-foreground">Không tìm thấy người dùng phù hợp.</p>
       )}
 
       <div className="flex flex-col gap-3">
         {userList.map((user) => (
-          <div
-            key={user.id}
-            className="flex items-center justify-between gap-3 rounded border border-zinc-200 p-4 text-sm dark:border-zinc-800"
-          >
-            <div>
-              <p className="font-medium">{user.fullName}</p>
-              <p className="text-zinc-500">
-                {user.email} — {user.role}
-              </p>
-              {user.isLocked && (
-                <p className="text-xs font-medium text-red-600 dark:text-red-400">Đã khóa</p>
-              )}
-            </div>
-            <form action={(user.isLocked ? unlockUser : lockUser).bind(null, user.id)}>
-              <button
-                type="submit"
-                className={
-                  user.isLocked
-                    ? 'rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900'
-                    : 'rounded border border-red-300 px-3 py-1.5 text-sm text-red-600 dark:border-red-800 dark:text-red-400'
-                }
-              >
-                {user.isLocked ? 'Mở khóa' : 'Khóa'}
-              </button>
-            </form>
-          </div>
+          <Card key={user.id}>
+            <CardContent className="flex items-center justify-between gap-3 text-sm">
+              <div className="flex flex-col gap-1">
+                <p className="font-medium">{user.fullName}</p>
+                <p className="text-muted-foreground">
+                  {user.email} — {user.role}
+                </p>
+                <StatusBadge variant={user.isLocked ? 'neutral' : 'success'}>
+                  {user.isLocked ? 'Đã khóa' : 'Đang hoạt động'}
+                </StatusBadge>
+              </div>
+              <form action={(user.isLocked ? unlockUser : lockUser).bind(null, user.id)}>
+                <Button type="submit" variant={user.isLocked ? 'outline' : 'destructive'}>
+                  {user.isLocked ? 'Mở khóa' : 'Khóa'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         ))}
       </div>
 

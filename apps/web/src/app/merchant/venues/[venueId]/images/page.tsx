@@ -2,6 +2,7 @@ import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 import { handleApiError } from '@/lib/handle-api-error';
 import { assetUrl } from '@/lib/asset-url';
+import { Button } from '@/components/ui/button';
 import { ImageUploadForm } from './image-upload-form';
 import { deleteImage } from './actions';
 
@@ -27,7 +28,7 @@ export default async function VenueImagesPage({
       <h1 className="text-xl font-semibold">Ảnh cụm sân — {venue.name}</h1>
 
       {venue.images.length === 0 && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Chưa có ảnh nào.</p>
+        <p className="text-sm text-muted-foreground">Chưa có ảnh nào.</p>
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -40,19 +41,16 @@ export default async function VenueImagesPage({
               className="aspect-square w-full rounded object-cover"
             />
             <form action={deleteImage.bind(null, venueId, img)}>
-              <button
-                type="submit"
-                className="text-xs text-red-600 hover:underline dark:text-red-400"
-              >
+              <Button type="submit" variant="destructive">
                 Xoá
-              </button>
+              </Button>
             </form>
           </div>
         ))}
       </div>
 
       {venue.images.length < 8 && (
-        <div className="rounded border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
+        <div className="rounded-lg border border-dashed border-border p-4">
           <h2 className="mb-3 text-sm font-medium">Thêm ảnh mới ({venue.images.length}/8)</h2>
           <ImageUploadForm venueId={venueId} />
         </div>

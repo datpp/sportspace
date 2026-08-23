@@ -1,3 +1,5 @@
+import { PageLoading } from '@/components/page-state';
+
 export default function AdminDisputesLoading() {
-  return <p className="text-sm text-zinc-500">Đang tải danh sách khiếu nại...</p>;
+  return <PageLoading message="Đang tải danh sách khiếu nại..." />;
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { Button } from '@/components/ui/button';
 import { uploadImage, type ImageActionState } from './actions';
 
 const initialState: ImageActionState = {};
@@ -19,17 +20,13 @@ export function ImageUploadForm({ venueId }: { venueId: string }) {
         className="text-sm"
       />
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm text-destructive">
           {state.error}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
-      >
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? 'Đang tải lên...' : 'Tải ảnh lên'}
-      </button>
+      </Button>
     </form>
   );
 }

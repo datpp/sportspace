@@ -51,4 +51,32 @@ describe('CourtForm', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Không thể tạo sân');
   });
+
+  it('giữ nguyên các thuộc tính name/required mà Server Action phụ thuộc', () => {
+    vi.mocked(useActionState).mockReturnValue([{}, vi.fn(), false]);
+
+    const { container } = render(<CourtForm venueId="venue-1" />);
+
+    const name = screen.getByLabelText('Tên sân');
+    expect(name).toHaveAttribute('name', 'name');
+    expect(name).toBeRequired();
+
+    const sport = screen.getByLabelText('Bộ môn');
+    expect(sport).toHaveAttribute('name', 'sport');
+    expect(sport).toBeRequired();
+
+    const basePrice = screen.getByLabelText('Giá cơ bản (đ)');
+    expect(basePrice).toHaveAttribute('name', 'basePrice');
+    expect(basePrice).toHaveAttribute('type', 'number');
+    expect(basePrice).toHaveAttribute('min', '0');
+    expect(basePrice).toHaveAttribute('step', '1000');
+    expect(basePrice).toBeRequired();
+
+    const form = container.querySelector('form')!;
+    const fd = new FormData(form);
+    // Khớp đúng các key mà createCourt/updateCourt trong ./actions.ts đọc qua formData.get().
+    for (const key of ['name', 'sport', 'basePrice']) {
+      expect(fd.get(key)).not.toBeNull();
+    }
+  });
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 import { withParam } from './list-query';
 
 export function Pagination({
@@ -23,25 +24,27 @@ export function Pagination({
 
   return (
     <div className="flex items-center justify-between text-sm">
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="default"
         disabled={page <= 1}
         onClick={() => goTo(page - 1)}
-        className="rounded border border-zinc-300 px-3 py-1.5 disabled:opacity-40 dark:border-zinc-700"
       >
         Trước
-      </button>
-      <span className="text-zinc-500">
+      </Button>
+      <span className="text-muted-foreground">
         Trang {page} / {totalPages}
       </span>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="default"
         disabled={page >= totalPages}
         onClick={() => goTo(page + 1)}
-        className="rounded border border-zinc-300 px-3 py-1.5 disabled:opacity-40 dark:border-zinc-700"
       >
         Sau
-      </button>
+      </Button>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { PageLoading } from '@/components/page-state';
+
 export default function AdminUsersLoading() {
-  return <p className="text-sm text-zinc-500">Đang tải danh sách người dùng...</p>;
+  return <PageLoading message="Đang tải danh sách người dùng..." />;
 }

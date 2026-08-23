@@ -7,7 +7,23 @@ import { assetUrl } from '@/lib/asset-url';
 import { SearchInput } from '@/components/list/search-input';
 import { FilterSelect } from '@/components/list/filter-select';
 import { Pagination } from '@/components/list/pagination';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { StatusBadge, type StatusBadgeVariant } from '@/components/status-badge';
 import { approveVenue, rejectVenue } from './actions';
+
+// Nhãn và biến thể lấy từ FilterSelect "Trạng thái" phía trên — không tự đặt chữ mới.
+const VENUE_STATUS_LABEL: Record<VenueStatus, string> = {
+  [VenueStatus.PENDING]: 'Chờ duyệt',
+  [VenueStatus.APPROVED]: 'Đã duyệt',
+  [VenueStatus.REJECTED]: 'Từ chối',
+};
+
+const VENUE_STATUS_VARIANT: Record<VenueStatus, StatusBadgeVariant> = {
+  [VenueStatus.PENDING]: 'warning',
+  [VenueStatus.APPROVED]: 'success',
+  [VenueStatus.REJECTED]: 'danger',
+};
 
 export default async function AdminVenuesPage({
   searchParams,
@@ -70,62 +86,54 @@ export default async function AdminVenuesPage({
       </div>
 
       {venueList.length === 0 && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Không có cụm sân nào phù hợp.
-        </p>
+        <p className="text-sm text-muted-foreground">Không có cụm sân nào phù hợp.</p>
       )}
 
       <div className="flex flex-col gap-3">
         {venueList.map((venue) => (
-          <div
-            key={venue.id}
-            className="flex flex-col gap-2 rounded border border-zinc-200 p-4 text-sm dark:border-zinc-800"
-          >
-            <p className="font-medium">{venue.name}</p>
-            <p className="text-zinc-500">
-              {venue.address}
-              {venue.province ? ` — ${venue.province}` : ''}
-            </p>
-            <p className="text-zinc-500">
-              Chủ sở hữu: {venue.owner.fullName} ({venue.owner.email})
-            </p>
-            <p className="text-xs text-zinc-400">
-              Đăng ký lúc {new Date(venue.createdAt).toLocaleString('vi-VN')} — {venue.status}
-            </p>
-            {venue.images.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto">
-                {venue.images.map((img) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={img}
-                    src={assetUrl(img)}
-                    alt=""
-                    className="h-16 w-16 flex-shrink-0 rounded object-cover"
-                  />
-                ))}
+          <Card key={venue.id}>
+            <CardContent className="flex flex-col gap-2 text-sm">
+              <p className="font-medium">{venue.name}</p>
+              <p className="text-muted-foreground">
+                {venue.address}
+                {venue.province ? ` — ${venue.province}` : ''}
+              </p>
+              <p className="text-muted-foreground">
+                Chủ sở hữu: {venue.owner.fullName} ({venue.owner.email})
+              </p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Đăng ký lúc {new Date(venue.createdAt).toLocaleString('vi-VN')}</span>
+                <StatusBadge variant={VENUE_STATUS_VARIANT[venue.status]}>
+                  {VENUE_STATUS_LABEL[venue.status]}
+                </StatusBadge>
               </div>
-            )}
-            {venue.status === VenueStatus.PENDING && (
-              <div className="flex gap-3">
-                <form action={approveVenue.bind(null, venue.id)}>
-                  <button
-                    type="submit"
-                    className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
-                  >
-                    Duyệt
-                  </button>
-                </form>
-                <form action={rejectVenue.bind(null, venue.id)}>
-                  <button
-                    type="submit"
-                    className="rounded border border-red-300 px-3 py-1.5 text-sm text-red-600 dark:border-red-800 dark:text-red-400"
-                  >
-                    Từ chối
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
+              {venue.images.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto">
+                  {venue.images.map((img) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={img}
+                      src={assetUrl(img)}
+                      alt=""
+                      className="h-16 w-16 flex-shrink-0 rounded object-cover"
+                    />
+                  ))}
+                </div>
+              )}
+              {venue.status === VenueStatus.PENDING && (
+                <div className="flex gap-3">
+                  <form action={approveVenue.bind(null, venue.id)}>
+                    <Button type="submit">Duyệt</Button>
+                  </form>
+                  <form action={rejectVenue.bind(null, venue.id)}>
+                    <Button type="submit" variant="destructive">
+                      Từ chối
+                    </Button>
+                  </form>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         ))}
       </div>
 

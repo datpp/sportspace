@@ -2,6 +2,9 @@
 
 import { useActionState } from 'react';
 import { VIETNAM_PROVINCES } from '@sportspace/shared';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { createVenue, type CreateVenueActionState } from './actions';
 
 const initialState: CreateVenueActionState = {};
@@ -11,38 +14,22 @@ export function VenueForm() {
 
   return (
     <form action={formAction} className="flex w-full max-w-md flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="name" className="text-sm font-medium">
-          Tên cụm sân
-        </label>
-        <input
-          id="name"
-          name="name"
-          required
-          className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="name">Tên cụm sân</Label>
+        <Input id="name" name="name" required />
       </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="address" className="text-sm font-medium">
-          Địa chỉ
-        </label>
-        <input
-          id="address"
-          name="address"
-          required
-          className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="address">Địa chỉ</Label>
+        <Input id="address" name="address" required />
       </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="province" className="text-sm font-medium">
-          Tỉnh/Thành phố
-        </label>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="province">Tỉnh/Thành phố</Label>
         <select
           id="province"
           name="province"
           required
           defaultValue=""
-          className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="h-8 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
         >
           <option value="" disabled>
             Chọn tỉnh/thành
@@ -55,56 +42,32 @@ export function VenueForm() {
         </select>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="lat" className="text-sm font-medium">
-            Vĩ độ (lat)
-          </label>
-          <input
-            id="lat"
-            name="lat"
-            type="number"
-            step="any"
-            required
-            className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          />
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="lat">Vĩ độ (lat)</Label>
+          <Input id="lat" name="lat" type="number" step="any" required />
         </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="lng" className="text-sm font-medium">
-            Kinh độ (lng)
-          </label>
-          <input
-            id="lng"
-            name="lng"
-            type="number"
-            step="any"
-            required
-            className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          />
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="lng">Kinh độ (lng)</Label>
+          <Input id="lng" name="lng" type="number" step="any" required />
         </div>
       </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="description" className="text-sm font-medium">
-          Mô tả (không bắt buộc)
-        </label>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="description">Mô tả (không bắt buộc)</Label>
         <textarea
           id="description"
           name="description"
           rows={3}
-          className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
         />
       </div>
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm text-destructive">
           {state.error}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
-      >
+      <Button type="submit" disabled={pending} className="self-start">
         {pending ? 'Đang tạo...' : 'Tạo cụm sân'}
-      </button>
+      </Button>
     </form>
   );
 }

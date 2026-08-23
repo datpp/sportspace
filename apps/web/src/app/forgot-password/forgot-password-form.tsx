@@ -1,6 +1,9 @@
 'use client';
 
 import { useActionState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { forgotPassword, type ForgotPasswordActionState } from './actions';
 
 const initialState: ForgotPasswordActionState = {};
@@ -10,7 +13,7 @@ export function ForgotPasswordForm() {
 
   if (state?.success) {
     return (
-      <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p role="status" className="text-sm text-muted-foreground">
         Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.
       </p>
     );
@@ -18,31 +21,18 @@ export function ForgotPasswordForm() {
 
   return (
     <form action={formAction} className="flex w-full max-w-sm flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="email" className="text-sm font-medium">
-          Email
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="email">Email</Label>
+        <Input id="email" name="email" type="email" required autoComplete="email" />
       </div>
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm text-destructive">
           {state.error}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Đang gửi...' : 'Gửi link đặt lại mật khẩu'}
-      </button>
+      </Button>
     </form>
   );
 }

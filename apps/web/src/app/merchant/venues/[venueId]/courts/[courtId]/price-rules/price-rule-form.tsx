@@ -1,6 +1,9 @@
 'use client';
 
 import { useActionState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { addPriceRule, type PriceRuleActionState } from './actions';
 
 const DAY_LABELS = [
@@ -21,15 +24,13 @@ export function PriceRuleForm({ venueId, courtId }: { venueId: string; courtId: 
 
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="dayOfWeek" className="text-xs font-medium">
-          Ngày trong tuần
-        </label>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="dayOfWeek">Ngày trong tuần</Label>
         <select
           id="dayOfWeek"
           name="dayOfWeek"
           required
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="h-8 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
         >
           {DAY_LABELS.map((label, value) => (
             <option key={value} value={value}>
@@ -38,53 +39,23 @@ export function PriceRuleForm({ venueId, courtId }: { venueId: string; courtId: 
           ))}
         </select>
       </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="startTime" className="text-xs font-medium">
-          Giờ bắt đầu
-        </label>
-        <input
-          id="startTime"
-          name="startTime"
-          type="time"
-          required
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="startTime">Giờ bắt đầu</Label>
+        <Input id="startTime" name="startTime" type="time" required />
       </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="endTime" className="text-xs font-medium">
-          Giờ kết thúc
-        </label>
-        <input
-          id="endTime"
-          name="endTime"
-          type="time"
-          required
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="endTime">Giờ kết thúc</Label>
+        <Input id="endTime" name="endTime" type="time" required />
       </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="price" className="text-xs font-medium">
-          Giá (đ)
-        </label>
-        <input
-          id="price"
-          name="price"
-          type="number"
-          min="0"
-          step="1000"
-          required
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="price">Giá (đ)</Label>
+        <Input id="price" name="price" type="number" min="0" step="1000" required />
       </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Đang thêm...' : 'Thêm giá'}
-      </button>
+      </Button>
       {state?.error && (
-        <p role="alert" className="w-full text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="w-full text-sm text-destructive">
           {state.error}
         </p>
       )}
