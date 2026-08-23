@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 import { handleApiError } from '@/lib/handle-api-error';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { PriceRuleForm } from './price-rule-form';
 import { removePriceRule } from './actions';
 
@@ -36,7 +38,7 @@ export default async function PriceRulesPage({
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           <Link href={`/merchant/venues/${venueId}/courts`} className="hover:underline">
             Sân con
           </Link>{' '}
@@ -45,32 +47,33 @@ export default async function PriceRulesPage({
         <h1 className="text-xl font-semibold">Giá theo khung giờ — {courtName}</h1>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         {priceRules.length === 0 && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Chưa có khung giá nào.</p>
+          <p className="text-sm text-muted-foreground">Chưa có khung giá nào.</p>
         )}
         {priceRules.map((rule) => (
-          <div
-            key={rule.id}
-            className="flex items-center justify-between rounded border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-800"
-          >
-            <span>
-              {DAY_LABELS[rule.dayOfWeek]} {formatTime(rule.startTime)}–{formatTime(rule.endTime)}:{' '}
-              {Number(rule.price).toLocaleString('vi-VN')}đ
-            </span>
-            <form action={removePriceRule.bind(null, venueId, courtId, rule.id)}>
-              <button type="submit" className="text-red-600 hover:underline dark:text-red-400">
-                Xoá
-              </button>
-            </form>
-          </div>
+          <Card key={rule.id}>
+            <CardContent className="flex items-center justify-between text-sm">
+              <span>
+                {DAY_LABELS[rule.dayOfWeek]} {formatTime(rule.startTime)}–
+                {formatTime(rule.endTime)}: {Number(rule.price).toLocaleString('vi-VN')}đ
+              </span>
+              <form action={removePriceRule.bind(null, venueId, courtId, rule.id)}>
+                <Button type="submit" variant="destructive">
+                  Xoá
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      <div className="rounded border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
-        <h2 className="mb-3 text-sm font-medium">Thêm khung giá mới</h2>
-        <PriceRuleForm venueId={venueId} courtId={courtId} />
-      </div>
+      <Card>
+        <CardContent className="flex flex-col gap-3 text-sm">
+          <h2 className="font-medium">Thêm khung giá mới</h2>
+          <PriceRuleForm venueId={venueId} courtId={courtId} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

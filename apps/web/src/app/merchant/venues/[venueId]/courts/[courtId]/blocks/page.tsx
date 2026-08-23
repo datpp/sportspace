@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 import { handleApiError } from '@/lib/handle-api-error';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { BlockForm } from './block-form';
 import { removeBlock } from './actions';
 
@@ -34,7 +36,7 @@ export default async function BlocksPage({
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           <Link href={`/merchant/venues/${venueId}/courts`} className="hover:underline">
             Sân con
           </Link>{' '}
@@ -43,31 +45,33 @@ export default async function BlocksPage({
         <h1 className="text-xl font-semibold">Chặn giờ — {courtName}</h1>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         {blocks.length === 0 && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Chưa có khoảng giờ nào bị chặn.</p>
+          <p className="text-sm text-muted-foreground">Chưa có khoảng giờ nào bị chặn.</p>
         )}
         {blocks.map((block) => (
-          <div
-            key={block.id}
-            className="flex items-center justify-between rounded border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-800"
-          >
-            <span>
-              {block.blockDate} {formatTime(block.startTime)}–{formatTime(block.endTime)}: {block.reason}
-            </span>
-            <form action={removeBlock.bind(null, venueId, courtId, block.id)}>
-              <button type="submit" className="text-red-600 hover:underline dark:text-red-400">
-                Xoá
-              </button>
-            </form>
-          </div>
+          <Card key={block.id}>
+            <CardContent className="flex items-center justify-between text-sm">
+              <span>
+                {block.blockDate} {formatTime(block.startTime)}–{formatTime(block.endTime)}:{' '}
+                {block.reason}
+              </span>
+              <form action={removeBlock.bind(null, venueId, courtId, block.id)}>
+                <Button type="submit" variant="destructive">
+                  Xoá
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      <div className="rounded border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
-        <h2 className="mb-3 text-sm font-medium">Chặn khoảng giờ mới</h2>
-        <BlockForm venueId={venueId} courtId={courtId} />
-      </div>
+      <Card>
+        <CardContent className="flex flex-col gap-3 text-sm">
+          <h2 className="font-medium">Chặn khoảng giờ mới</h2>
+          <BlockForm venueId={venueId} courtId={courtId} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
