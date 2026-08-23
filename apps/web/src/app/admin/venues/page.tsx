@@ -92,7 +92,7 @@ export default async function AdminVenuesPage({
       <div className="flex flex-col gap-3">
         {venueList.map((venue) => (
           <Card key={venue.id}>
-            <CardContent className="flex flex-col gap-2 p-4 text-sm">
+            <CardContent className="flex flex-col gap-2 text-sm">
               <p className="font-medium">{venue.name}</p>
               <p className="text-muted-foreground">
                 {venue.address}
@@ -123,12 +123,10 @@ export default async function AdminVenuesPage({
               {venue.status === VenueStatus.PENDING && (
                 <div className="flex gap-3">
                   <form action={approveVenue.bind(null, venue.id)}>
-                    <Button type="submit" size="sm">
-                      Duyệt
-                    </Button>
+                    <Button type="submit">Duyệt</Button>
                   </form>
                   <form action={rejectVenue.bind(null, venue.id)}>
-                    <Button type="submit" variant="destructive" size="sm">
+                    <Button type="submit" variant="destructive">
                       Từ chối
                     </Button>
                   </form>

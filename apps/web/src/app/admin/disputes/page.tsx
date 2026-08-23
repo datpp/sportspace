@@ -78,7 +78,7 @@ export default async function AdminDisputesPage({
       <div className="flex flex-col gap-4">
         {disputeList.map((dispute) => (
           <Card key={dispute.id}>
-            <CardContent className="flex flex-col gap-3 p-4 text-sm">
+            <CardContent className="flex flex-col gap-3 text-sm">
               <div className="flex items-center gap-2 font-medium">
                 <span>Đơn #{dispute.booking.id}</span>
                 <StatusBadge variant={DISPUTE_STATUS_VARIANT[dispute.status]}>
@@ -115,12 +115,7 @@ export default async function AdminDisputesPage({
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      type="submit"
-                      name="status"
-                      value={ResolveDisputeDtoStatus.RESOLVED}
-                      size="sm"
-                    >
+                    <Button type="submit" name="status" value={ResolveDisputeDtoStatus.RESOLVED}>
                       Chấp nhận
                     </Button>
                     <Button
@@ -128,7 +123,6 @@ export default async function AdminDisputesPage({
                       name="status"
                       value={ResolveDisputeDtoStatus.REJECTED}
                       variant="destructive"
-                      size="sm"
                     >
                       Từ chối
                     </Button>

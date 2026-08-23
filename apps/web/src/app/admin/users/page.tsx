@@ -68,7 +68,7 @@ export default async function AdminUsersPage({
       <div className="flex flex-col gap-3">
         {userList.map((user) => (
           <Card key={user.id}>
-            <CardContent className="flex items-center justify-between gap-3 p-4 text-sm">
+            <CardContent className="flex items-center justify-between gap-3 text-sm">
               <div className="flex flex-col gap-1">
                 <p className="font-medium">{user.fullName}</p>
                 <p className="text-muted-foreground">
@@ -79,7 +79,7 @@ export default async function AdminUsersPage({
                 </StatusBadge>
               </div>
               <form action={(user.isLocked ? unlockUser : lockUser).bind(null, user.id)}>
-                <Button type="submit" variant={user.isLocked ? 'outline' : 'destructive'} size="sm">
+                <Button type="submit" variant={user.isLocked ? 'outline' : 'destructive'}>
                   {user.isLocked ? 'Mở khóa' : 'Khóa'}
                 </Button>
               </form>
