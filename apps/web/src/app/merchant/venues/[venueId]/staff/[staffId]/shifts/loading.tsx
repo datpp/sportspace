@@ -1,3 +1,5 @@
+import { PageLoading } from '@/components/page-state';
+
 export default function ShiftsLoading() {
-  return <p className="text-sm text-zinc-500">Đang tải danh sách ca làm...</p>;
+  return <PageLoading message="Đang tải danh sách ca làm..." />;
 }

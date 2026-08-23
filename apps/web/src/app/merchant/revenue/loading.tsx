@@ -1,3 +1,5 @@
+import { PageLoading } from '@/components/page-state';
+
 export default function RevenueLoading() {
-  return <p className="text-sm text-zinc-500">Đang tải thống kê doanh thu...</p>;
+  return <PageLoading message="Đang tải thống kê doanh thu..." />;
 }

@@ -1,3 +1,5 @@
+import { PageLoading } from '@/components/page-state';
+
 export default function AdminConfigLoading() {
-  return <p className="text-sm text-zinc-500">Đang tải cấu hình hệ thống...</p>;
+  return <PageLoading message="Đang tải cấu hình hệ thống..." />;
 }
