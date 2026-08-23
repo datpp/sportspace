@@ -7,47 +7,54 @@ vi.mock('react', async (importOriginal) => {
   return { ...actual, useActionState: vi.fn(actual.useActionState) };
 });
 
-vi.mock('./actions', () => ({ addPriceRule: vi.fn() }));
+vi.mock('./actions', () => ({ addBlock: vi.fn() }));
 
-const { PriceRuleForm } = await import('./price-rule-form');
+const { BlockForm } = await import('./block-form');
 
-describe('PriceRuleForm', () => {
-  it('render đủ field và nút thêm giá', () => {
+describe('BlockForm', () => {
+  it('render đủ field và nút chặn khoảng giờ', () => {
     vi.mocked(useActionState).mockReturnValue([{}, vi.fn(), false]);
 
-    render(<PriceRuleForm venueId="venue-1" courtId="court-1" />);
+    render(<BlockForm venueId="venue-1" courtId="court-1" />);
 
-    expect(screen.getByLabelText(/ngày trong tuần/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/ngày/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/giờ bắt đầu/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/giờ kết thúc/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^giá/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /thêm giá/i })).toBeEnabled();
+    expect(screen.getByLabelText(/lý do/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /chặn khoảng giờ/i })).toBeEnabled();
   });
 
   it('disable nút khi pending', () => {
     vi.mocked(useActionState).mockReturnValue([{}, vi.fn(), true]);
 
-    render(<PriceRuleForm venueId="venue-1" courtId="court-1" />);
+    render(<BlockForm venueId="venue-1" courtId="court-1" />);
 
-    expect(screen.getByRole('button', { name: /đang thêm/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /đang chặn/i })).toBeDisabled();
   });
 
   it('hiển thị lỗi từ action state', () => {
     vi.mocked(useActionState).mockReturnValue([
-      { error: 'Giờ bắt đầu phải trước giờ kết thúc' },
+      { error: 'Đã có đơn đặt sân trong khung giờ này, không thể chặn' },
       vi.fn(),
       false,
     ]);
 
-    render(<PriceRuleForm venueId="venue-1" courtId="court-1" />);
+    render(<BlockForm venueId="venue-1" courtId="court-1" />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Giờ bắt đầu phải trước giờ kết thúc');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Đã có đơn đặt sân trong khung giờ này, không thể chặn',
+    );
   });
 
   it('giữ nguyên các thuộc tính name/type mà Server Action phụ thuộc', () => {
     vi.mocked(useActionState).mockReturnValue([{}, vi.fn(), false]);
 
-    const { container } = render(<PriceRuleForm venueId="venue-1" courtId="court-1" />);
+    const { container } = render(<BlockForm venueId="venue-1" courtId="court-1" />);
+
+    const blockDate = screen.getByLabelText(/ngày/i);
+    expect(blockDate).toHaveAttribute('name', 'blockDate');
+    expect(blockDate).toHaveAttribute('type', 'date');
+    expect(blockDate).toBeRequired();
 
     const startTime = screen.getByLabelText(/giờ bắt đầu/i);
     expect(startTime).toHaveAttribute('name', 'startTime');
@@ -59,17 +66,14 @@ describe('PriceRuleForm', () => {
     expect(endTime).toHaveAttribute('type', 'time');
     expect(endTime).toBeRequired();
 
-    const price = screen.getByLabelText(/^giá/i);
-    expect(price).toHaveAttribute('name', 'price');
-    expect(price).toHaveAttribute('type', 'number');
-    expect(price).toHaveAttribute('min', '0');
-    expect(price).toHaveAttribute('step', '1000');
-    expect(price).toBeRequired();
+    const reason = screen.getByLabelText(/lý do/i);
+    expect(reason).toHaveAttribute('name', 'reason');
+    expect(reason).toBeRequired();
 
     const form = container.querySelector('form')!;
     const fd = new FormData(form);
-    // Khớp đúng các key mà addPriceRule trong ./actions.ts đọc qua formData.get().
-    for (const key of ['dayOfWeek', 'startTime', 'endTime', 'price']) {
+    // Khớp đúng các key mà addBlock trong ./actions.ts đọc qua formData.get().
+    for (const key of ['blockDate', 'startTime', 'endTime', 'reason']) {
       expect(fd.get(key)).not.toBeNull();
     }
   });
