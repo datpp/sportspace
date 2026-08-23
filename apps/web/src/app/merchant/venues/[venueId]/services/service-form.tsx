@@ -1,6 +1,9 @@
 'use client';
 
 import { useActionState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { addService, type ServiceActionState } from './actions';
 
 const initialState: ServiceActionState = {};
@@ -11,51 +14,23 @@ export function ServiceForm({ venueId }: { venueId: string }) {
 
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="name" className="text-xs font-medium">
-          Tên dịch vụ
-        </label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          required
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="name">Tên dịch vụ</Label>
+        <Input id="name" name="name" type="text" required />
       </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="price" className="text-xs font-medium">
-          Giá
-        </label>
-        <input
-          id="price"
-          name="price"
-          type="number"
-          min={0}
-          required
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="price">Giá</Label>
+        <Input id="price" name="price" type="number" min={0} required />
       </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="description" className="text-xs font-medium">
-          Mô tả
-        </label>
-        <input
-          id="description"
-          name="description"
-          type="text"
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="description">Mô tả</Label>
+        <Input id="description" name="description" type="text" />
       </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Đang thêm...' : 'Thêm dịch vụ'}
-      </button>
+      </Button>
       {state?.error && (
-        <p role="alert" className="w-full text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="w-full text-sm text-destructive">
           {state.error}
         </p>
       )}

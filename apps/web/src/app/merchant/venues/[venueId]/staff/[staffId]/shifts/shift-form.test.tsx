@@ -42,4 +42,32 @@ describe('ShiftForm', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Ca làm bị trùng giờ với ca đã có');
   });
+
+  it('giữ nguyên các thuộc tính name/type mà Server Action phụ thuộc', () => {
+    vi.mocked(useActionState).mockReturnValue([{}, vi.fn(), false]);
+
+    const { container } = render(<ShiftForm venueId="venue-1" staffId="staff-1" />);
+
+    const shiftDate = screen.getByLabelText(/ngày/i);
+    expect(shiftDate).toHaveAttribute('name', 'shiftDate');
+    expect(shiftDate).toHaveAttribute('type', 'date');
+    expect(shiftDate).toBeRequired();
+
+    const startTime = screen.getByLabelText(/giờ bắt đầu/i);
+    expect(startTime).toHaveAttribute('name', 'startTime');
+    expect(startTime).toHaveAttribute('type', 'time');
+    expect(startTime).toBeRequired();
+
+    const endTime = screen.getByLabelText(/giờ kết thúc/i);
+    expect(endTime).toHaveAttribute('name', 'endTime');
+    expect(endTime).toHaveAttribute('type', 'time');
+    expect(endTime).toBeRequired();
+
+    const form = container.querySelector('form')!;
+    const fd = new FormData(form);
+    // Khớp đúng các key mà addShift trong ./actions.ts đọc qua formData.get().
+    for (const key of ['shiftDate', 'startTime', 'endTime']) {
+      expect(fd.get(key)).not.toBeNull();
+    }
+  });
 });

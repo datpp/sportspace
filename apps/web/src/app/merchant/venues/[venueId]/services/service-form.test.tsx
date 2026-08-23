@@ -42,4 +42,31 @@ describe('ServiceForm', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Tên dịch vụ không hợp lệ');
   });
+
+  it('giữ nguyên các thuộc tính name/type mà Server Action phụ thuộc', () => {
+    vi.mocked(useActionState).mockReturnValue([{}, vi.fn(), false]);
+
+    const { container } = render(<ServiceForm venueId="venue-1" />);
+
+    const name = screen.getByLabelText(/tên dịch vụ/i);
+    expect(name).toHaveAttribute('name', 'name');
+    expect(name).toBeRequired();
+
+    const price = screen.getByLabelText(/giá/i);
+    expect(price).toHaveAttribute('name', 'price');
+    expect(price).toHaveAttribute('type', 'number');
+    expect(price).toHaveAttribute('min', '0');
+    expect(price).toBeRequired();
+
+    const description = screen.getByLabelText(/mô tả/i);
+    expect(description).toHaveAttribute('name', 'description');
+    expect(description).not.toBeRequired();
+
+    const form = container.querySelector('form')!;
+    const fd = new FormData(form);
+    // Khớp đúng các key mà addService trong ./actions.ts đọc qua formData.get().
+    for (const key of ['name', 'price', 'description']) {
+      expect(fd.get(key)).not.toBeNull();
+    }
+  });
 });

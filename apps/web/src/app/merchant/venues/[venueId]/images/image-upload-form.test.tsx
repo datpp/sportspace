@@ -38,4 +38,20 @@ describe('ImageUploadForm', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Ảnh vượt quá 5MB');
   });
+
+  it('giữ nguyên các thuộc tính name/accept/required mà Server Action phụ thuộc', () => {
+    vi.mocked(useActionState).mockReturnValue([{}, vi.fn(), false]);
+
+    const { container } = render(<ImageUploadForm venueId="venue-1" />);
+
+    const input = screen.getByDisplayValue('') as HTMLInputElement;
+    expect(input).toHaveAttribute('name', 'file');
+    expect(input).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp');
+    expect(input).toBeRequired();
+
+    const form = container.querySelector('form')!;
+    const fd = new FormData(form);
+    // Khớp đúng key 'file' mà uploadImage trong ./actions.ts đọc qua formData.get().
+    expect(fd.has('file')).toBe(true);
+  });
 });
