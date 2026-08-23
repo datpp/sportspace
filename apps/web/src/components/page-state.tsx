@@ -18,7 +18,7 @@ export function PageError({
       <p role="alert" className="text-sm text-destructive">
         {message}
       </p>
-      <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+      <Button type="button" variant="outline" size="sm" className="h-8" onClick={onRetry}>
         Thử lại
       </Button>
     </div>

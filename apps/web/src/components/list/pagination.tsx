@@ -28,6 +28,7 @@ export function Pagination({
         type="button"
         variant="outline"
         size="sm"
+        className="h-8"
         disabled={page <= 1}
         onClick={() => goTo(page - 1)}
       >
@@ -40,6 +41,7 @@ export function Pagination({
         type="button"
         variant="outline"
         size="sm"
+        className="h-8"
         disabled={page >= totalPages}
         onClick={() => goTo(page + 1)}
       >

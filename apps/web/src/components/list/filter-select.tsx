@@ -28,7 +28,7 @@ export function FilterSelect({
       <select
         value={current}
         onChange={(e) => handleChange(e.target.value)}
-        className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+        className="h-8 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
