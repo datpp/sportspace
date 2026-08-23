@@ -159,10 +159,19 @@ function AppTabs() {
 
 export function RootNavigator() {
   const { user, isLoading } = useAuth();
+  const { colors } = useTheme();
 
   if (isLoading) {
     return (
-      <View testID="root-loading" style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        testID="root-loading"
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.background,
+        }}
+      >
         <ActivityIndicator />
       </View>
     );

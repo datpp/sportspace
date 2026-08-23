@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 
 export interface ScreenHeaderProps {
@@ -9,6 +10,7 @@ export interface ScreenHeaderProps {
 
 export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
   const { colors, spacing } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <View
@@ -16,7 +18,7 @@ export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
       style={{
         backgroundColor: colors.sidebar,
         paddingHorizontal: spacing.lg,
-        paddingTop: spacing.xl,
+        paddingTop: insets.top + spacing.md,
         paddingBottom: spacing.lg,
       }}
     >

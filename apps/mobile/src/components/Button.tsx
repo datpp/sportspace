@@ -41,6 +41,8 @@ export function Button({
       testID={testID}
       onPress={onPress}
       disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled }}
       style={[
         styles.base,
         {

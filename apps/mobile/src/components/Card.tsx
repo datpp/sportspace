@@ -24,7 +24,7 @@ export function Card({ testID, onPress, children, style }: CardProps) {
 
   if (onPress) {
     return (
-      <Pressable testID={testID} onPress={onPress} style={cardStyle}>
+      <Pressable testID={testID} onPress={onPress} accessibilityRole="button" style={cardStyle}>
         {children}
       </Pressable>
     );
