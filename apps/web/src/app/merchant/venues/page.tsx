@@ -7,6 +7,21 @@ import { handleApiError } from '@/lib/handle-api-error';
 import { SearchInput } from '@/components/list/search-input';
 import { FilterSelect } from '@/components/list/filter-select';
 import { Pagination } from '@/components/list/pagination';
+import { Button } from '@/components/ui/button';
+import { StatusBadge, type StatusBadgeVariant } from '@/components/status-badge';
+
+// Nhãn và biến thể lấy từ FilterSelect "Trạng thái" phía trên — không tự đặt chữ mới.
+const VENUE_STATUS_LABEL: Record<VenueStatus, string> = {
+  [VenueStatus.PENDING]: 'Chờ duyệt',
+  [VenueStatus.APPROVED]: 'Đã duyệt',
+  [VenueStatus.REJECTED]: 'Từ chối',
+};
+
+const VENUE_STATUS_VARIANT: Record<VenueStatus, StatusBadgeVariant> = {
+  [VenueStatus.PENDING]: 'warning',
+  [VenueStatus.APPROVED]: 'success',
+  [VenueStatus.REJECTED]: 'danger',
+};
 
 export default async function VenuesPage({
   searchParams,
@@ -40,12 +55,9 @@ export default async function VenuesPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Cụm sân của tôi</h1>
-        <Link
-          href="/merchant/venues/new"
-          className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
-        >
+        <Button render={<Link href="/merchant/venues/new" />} nativeButton={false}>
           Tạo cụm sân mới
-        </Link>
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -63,7 +75,7 @@ export default async function VenuesPage({
       </div>
 
       {venueList.length === 0 && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-muted-foreground">
           Không có cụm sân nào phù hợp. Bấm &quot;Tạo cụm sân mới&quot; để bắt đầu.
         </p>
       )}
@@ -73,11 +85,13 @@ export default async function VenuesPage({
           <Link
             key={venue.id}
             href={`/merchant/venues/${venue.id}/courts`}
-            className="flex flex-col gap-1 rounded border border-zinc-200 p-4 text-sm hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+            className="flex flex-col gap-1 rounded-lg border border-border bg-card p-4 text-sm shadow-sm transition-colors hover:bg-muted"
           >
             <span className="font-medium">{venue.name}</span>
-            <span className="text-zinc-500">{venue.address}</span>
-            <span className="text-xs uppercase text-zinc-400">{venue.status}</span>
+            <span className="text-muted-foreground">{venue.address}</span>
+            <StatusBadge variant={VENUE_STATUS_VARIANT[venue.status]}>
+              {VENUE_STATUS_LABEL[venue.status]}
+            </StatusBadge>
           </Link>
         ))}
       </div>

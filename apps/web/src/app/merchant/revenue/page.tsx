@@ -7,6 +7,8 @@ import {
 import { createAuthenticatedApiClient } from '@/lib/api-client';
 import { requireSession } from '@/lib/require-session';
 import { handleApiError } from '@/lib/handle-api-error';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { RevenueTrendChart } from './revenue-trend-chart';
 
 const RANGE_ORDER = ['day', 'week', 'month', 'year'] as const;
@@ -73,11 +75,12 @@ export default async function RevenuePage({
             <Link
               key={range}
               href={`/merchant/revenue?range=${range}`}
-              className={`rounded px-3 py-1.5 text-sm ${
+              className={cn(
+                'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
                 range === selectedRange
-                  ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900'
-                  : 'border border-zinc-300 dark:border-zinc-700'
-              }`}
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-border hover:bg-muted',
+              )}
             >
               {RANGE_LABELS[range]}
             </Link>
@@ -85,32 +88,36 @@ export default async function RevenuePage({
         </nav>
       </div>
 
-      <div className="flex flex-wrap gap-8">
-        <div>
-          <p className="text-sm text-zinc-500">Doanh thu — {RANGE_LABELS[selectedRange]}</p>
-          <p className="text-5xl font-semibold tabular-nums">{formatVnd(totalRevenue)}</p>
-        </div>
-        <div>
-          <p className="text-sm text-zinc-500">Số đơn đã xác nhận</p>
-          <p className="text-2xl font-semibold tabular-nums">{totalBookings}</p>
-        </div>
+      <div className="flex flex-wrap gap-4">
+        <Card className="min-w-56">
+          <CardContent className="flex flex-col gap-1">
+            <p className="text-sm text-muted-foreground">
+              Doanh thu — {RANGE_LABELS[selectedRange]}
+            </p>
+            <p className="text-5xl font-semibold tabular-nums">{formatVnd(totalRevenue)}</p>
+          </CardContent>
+        </Card>
+        <Card className="min-w-56">
+          <CardContent className="flex flex-col gap-1">
+            <p className="text-sm text-muted-foreground">Số đơn đã xác nhận</p>
+            <p className="text-2xl font-semibold tabular-nums">{totalBookings}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {totalRevenue === 0 && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-muted-foreground">
           Chưa có doanh thu trong khoảng thời gian này.
         </p>
       )}
 
       {hasTimeseries(selectedRange) && timeseries ? (
         <div>
-          <h2 className="mb-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-            Xu hướng doanh thu
-          </h2>
+          <h2 className="mb-2 text-sm font-medium text-muted-foreground">Xu hướng doanh thu</h2>
           <RevenueTrendChart data={timeseries} range={selectedRange} />
         </div>
       ) : (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           Chọn Tuần này, Tháng này hoặc Năm nay để xem biểu đồ xu hướng.
         </p>
       )}

@@ -6,7 +6,24 @@ import { handleApiError } from '@/lib/handle-api-error';
 import { SearchInput } from '@/components/list/search-input';
 import { FilterSelect } from '@/components/list/filter-select';
 import { Pagination } from '@/components/list/pagination';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { StatusBadge, type StatusBadgeVariant } from '@/components/status-badge';
 import { confirmBooking, rejectBooking } from './actions';
+
+// Nhãn và biến thể lấy từ FilterSelect "Trạng thái" phía trên — không tự đặt chữ mới.
+const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
+  [BookingStatus.PENDING]: 'Cần xử lý',
+  [BookingStatus.CONFIRMED]: 'Đã xác nhận',
+  [BookingStatus.CANCELLED]: 'Đã hủy',
+};
+
+const BOOKING_STATUS_VARIANT: Record<BookingStatus, StatusBadgeVariant> = {
+  [BookingStatus.PENDING]: 'warning',
+  [BookingStatus.CONFIRMED]: 'success',
+  [BookingStatus.CANCELLED]: 'danger',
+};
 
 export default async function MerchantBookingsPage({
   searchParams,
@@ -71,58 +88,45 @@ export default async function MerchantBookingsPage({
       </div>
 
       {bookingList.length === 0 && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Không có đơn đặt sân nào phù hợp.
-        </p>
+        <p className="text-sm text-muted-foreground">Không có đơn đặt sân nào phù hợp.</p>
       )}
 
       <div className="flex flex-col gap-3">
         {bookingList.map((booking) => (
-          <div
-            key={booking.id}
-            className="flex flex-col gap-2 rounded border border-zinc-200 p-4 text-sm dark:border-zinc-800"
-          >
-            <p className="font-medium">{booking.court.name}</p>
-            <p className="text-zinc-500">
-              {booking.bookingDate} · {booking.startTime}–{booking.endTime}
-            </p>
-            <p className="text-zinc-500">
-              Người đặt: {booking.user.fullName} ({booking.user.email})
-            </p>
-            <p className="text-xs text-zinc-400">Trạng thái: {booking.status}</p>
-            <div className="flex gap-3">
-              {booking.status === BookingStatus.PENDING && (
-                <form action={confirmBooking.bind(null, booking.id)}>
-                  <button
-                    type="submit"
-                    className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+          <Card key={booking.id}>
+            <CardContent className="flex flex-col gap-2 text-sm">
+              <p className="font-medium">{booking.court.name}</p>
+              <p className="text-muted-foreground">
+                {booking.bookingDate} · {booking.startTime}–{booking.endTime}
+              </p>
+              <p className="text-muted-foreground">
+                Người đặt: {booking.user.fullName} ({booking.user.email})
+              </p>
+              <StatusBadge variant={BOOKING_STATUS_VARIANT[booking.status]}>
+                {BOOKING_STATUS_LABEL[booking.status]}
+              </StatusBadge>
+              <div className="flex gap-3">
+                {booking.status === BookingStatus.PENDING && (
+                  <form action={confirmBooking.bind(null, booking.id)}>
+                    <Button type="submit" size="sm">
+                      Xác nhận
+                    </Button>
+                  </form>
+                )}
+                {booking.status !== BookingStatus.CANCELLED && (
+                  <form
+                    action={rejectBooking.bind(null, booking.id)}
+                    className="flex items-center gap-2"
                   >
-                    Xác nhận
-                  </button>
-                </form>
-              )}
-              {booking.status !== BookingStatus.CANCELLED && (
-                <form
-                  action={rejectBooking.bind(null, booking.id)}
-                  className="flex items-center gap-2"
-                >
-                  <input
-                    type="text"
-                    name="reason"
-                    required
-                    placeholder="Lý do từ chối"
-                    className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded border border-red-300 px-3 py-1.5 text-sm text-red-600 dark:border-red-800 dark:text-red-400"
-                  >
-                    Từ chối
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
+                    <Input type="text" name="reason" required placeholder="Lý do từ chối" />
+                    <Button type="submit" variant="destructive" size="sm">
+                      Từ chối
+                    </Button>
+                  </form>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
