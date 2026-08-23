@@ -14,7 +14,7 @@
 - **Preserve every form input's `id`, `name`, `type`, `required`, `min`, `max`, `step`, `accept`, and `autoComplete` attribute exactly.** Server Actions read `formData.get('<name>')`, so a dropped `name` breaks submission silently and `tsc` will not catch it. This is the single highest-risk failure mode in this plan.
 - **Preserve every `role="alert"`, `testID`, and any `aria-*` attribute** already present.
 - **Preserve all Vietnamese copy exactly** — no rewording while restyling.
-- Base UI (not Radix) backs shadcn here: `Button` has **no `asChild`**. To render a button-styled link, use `<Button render={<Link href="..." />}>Text</Button>`. Do not copy `asChild` examples from the internet.
+- Base UI (not Radix) backs shadcn here: `Button` has **no `asChild`**. Do not copy `asChild` examples from the internet. **Never wrap a link in `Button` at all** — not via `asChild`, not via `render={<Link/>}`. Base UI's own docs state: *"Links (`<a>`) have distinct semantics and should not be rendered as buttons using the render prop. To make a link appear like a button, it is recommended to style the `<a>` element directly with CSS."* Doing it anyway emits `<a role="button">`, which overrides the native `link` role and is an accessibility regression. For a button-styled link, use the exported variant helper instead: `<Link href="..." className={cn(buttonVariants())}>Text</Link>` (`buttonVariants` is exported from `@/components/ui/button`, `cn` from `@/lib/utils`).
 - `StatusBadge` variants map to domain states as: `APPROVED`/`CONFIRMED`/`PAID`/`RESOLVED` → `success`; `PENDING` → `warning`; `REJECTED`/`CANCELLED`/`FAILED` → `danger`; `REFUNDED`/inactive/locked → `neutral`; sport/category tags → `info`.
 - `pnpm test -- --run` and `pnpm exec tsc --noEmit` must both be clean in `apps/web` at the end of **every** task. `pnpm build` must be clean at the end of the final task.
 - Vietnamese-only git commit messages; zero AI/Claude/Co-Authored-By mentions in any commit.
@@ -124,7 +124,6 @@ import { Button } from '@/components/ui/button';
       <Button
         type="button"
         variant="outline"
-        size="sm"
         disabled={page <= 1}
         onClick={() => goTo(page - 1)}
       >
@@ -136,7 +135,6 @@ import { Button } from '@/components/ui/button';
       <Button
         type="button"
         variant="outline"
-        size="sm"
         disabled={page >= totalPages}
         onClick={() => goTo(page + 1)}
       >
@@ -241,7 +239,7 @@ export function PageError({
       <p role="alert" className="text-sm text-destructive">
         {message}
       </p>
-      <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+      <Button type="button" variant="outline" onClick={onRetry}>
         Thử lại
       </Button>
     </div>
@@ -357,7 +355,7 @@ git commit -m "feat(web): áp dụng hệ thống thiết kế cho trang chủ v
 This page currently renders `Đăng ký lúc {…} — {venue.status}` as raw text and has approve/reject buttons. Convert:
 - Each venue's `<div className="flex flex-col gap-2 rounded border border-zinc-200 p-4 …">` → `<Card>` with `<CardContent className="flex flex-col gap-2 text-sm">` (no `p-4` — see the CardContent padding trap warning in the Substitution Table).
 - `{venue.status}` → `<StatusBadge variant={…}>{…}</StatusBadge>` using the Global Constraints mapping (`APPROVED` → `success`, `PENDING` → `warning`, `REJECTED` → `danger`). Render a Vietnamese label inside the badge, matching the labels already used in this page's own `FilterSelect` options (`Chờ duyệt` / `Đã duyệt` / `Từ chối`) — read them from the file, do not invent new wording.
-- Approve button → `<Button size="sm">`; reject button → `<Button variant="destructive" size="sm">`.
+- Approve button → `<Button>`; reject button → `<Button variant="destructive">`.
 - The existing thumbnail strip's `<img>` block and its `venue.images.length > 0` guard: leave the logic alone, only swap any `zinc-*` classes.
 
 Keep both `<form action={approveVenue.bind(null, venue.id)}>` wrappers exactly as they are — the buttons stay `type="submit"` inside them.
@@ -368,7 +366,7 @@ Same card + `StatusBadge` treatment for `{dispute.status}`. Read the file's exis
 
 - [ ] **Step 3: Migrate `admin/users/page.tsx`**
 
-This page has lock/unlock actions and an `isLocked` filter. Locked state → `<StatusBadge variant="neutral">`, active → `variant="success"`. Lock button → `<Button variant="destructive" size="sm">`, unlock → `<Button variant="outline" size="sm">`.
+This page has lock/unlock actions and an `isLocked` filter. Locked state → `<StatusBadge variant="neutral">`, active → `variant="success"`. Lock button → `<Button variant="destructive">`, unlock → `<Button variant="outline">`.
 
 - [ ] **Step 4: Migrate `admin/config/page.tsx` and `admin/page.tsx`**
 
@@ -408,7 +406,7 @@ git commit -m "feat(web): áp dụng hệ thống thiết kế cho các trang qu
 
 - [ ] **Step 1: Migrate `merchant/bookings/page.tsx`**
 
-Currently shows `Trạng thái: {booking.status}` as raw text plus confirm/reject forms. Convert the booking rows to `<Card>`, the status to `<StatusBadge>` (`CONFIRMED` → `success`, `PENDING` → `warning`, `CANCELLED` → `danger`), the "Xác nhận" button to `<Button size="sm">`, and the reject form's text input to `<Input>` with `<Button variant="destructive" size="sm">`. The reject form's `<input type="text" name="reason" required>` must keep `name="reason"` and `required` — the Server Action reads it.
+Currently shows `Trạng thái: {booking.status}` as raw text plus confirm/reject forms. Convert the booking rows to `<Card>`, the status to `<StatusBadge>` (`CONFIRMED` → `success`, `PENDING` → `warning`, `CANCELLED` → `danger`), the "Xác nhận" button to `<Button>`, and the reject form's text input to `<Input>` with `<Button variant="destructive">`. The reject form's `<input type="text" name="reason" required>` must keep `name="reason"` and `required` — the Server Action reads it.
 
 - [ ] **Step 2: Migrate `merchant/venues/page.tsx`**
 
@@ -458,7 +456,7 @@ git commit -m "feat(web): áp dụng hệ thống thiết kế cho các trang ch
 
 - [ ] **Step 1: Migrate `courts/page.tsx` and `court-form.tsx`**
 
-`courts/page.tsx` has per-court rows with a status toggle button, a "Chặn giờ" link, a "Bảng giá" link, and an "Ảnh cụm sân"/"Dịch vụ đi kèm" nav link pair at the top. Convert rows to `<Card>`, court status (`ACTIVE`/`MAINTENANCE`) to `<StatusBadge>` (`ACTIVE` → `success`, `MAINTENANCE` → `warning`), the toggle to `<Button variant="outline" size="sm">`. The nav links stay `<Link>` with `text-sm text-primary hover:underline`.
+`courts/page.tsx` has per-court rows with a status toggle button, a "Chặn giờ" link, a "Bảng giá" link, and an "Ảnh cụm sân"/"Dịch vụ đi kèm" nav link pair at the top. Convert rows to `<Card>`, court status (`ACTIVE`/`MAINTENANCE`) to `<StatusBadge>` (`ACTIVE` → `success`, `MAINTENANCE` → `warning`), the toggle to `<Button variant="outline">`. The nav links stay `<Link>` with `text-sm text-primary hover:underline`.
 
 `court-form.tsx` — `Label`/`Input`/`Button`, preserving every attribute including the sport `<select>` and `basePrice` numeric input's `min`/`step`.
 
@@ -485,7 +483,7 @@ it('giữ nguyên các thuộc tính name/required mà Server Action phụ thu�
 
 - [ ] **Step 3: Migrate `price-rules/{page,price-rule-form}.tsx`**
 
-Rows → `<Card>`; the form's day-of-week `<select>`, time inputs, and price input keep every attribute; delete buttons → `<Button variant="destructive" size="sm">`.
+Rows → `<Card>`; the form's day-of-week `<select>`, time inputs, and price input keep every attribute; delete buttons → `<Button variant="destructive">`.
 
 - [ ] **Step 4: Migrate `blocks/{page,block-form}.tsx`**
 
@@ -526,7 +524,7 @@ git commit -m "feat(web): áp dụng hệ thống thiết kế cho trang sân co
 
 - [ ] **Step 1: Migrate `services/{page,service-form}.tsx`**
 
-Service rows → `<Card>`; inactive services (`!s.isActive`, currently rendered as the text `— đã vô hiệu hoá`) → `<StatusBadge variant="neutral">Đã vô hiệu hoá</StatusBadge>`; the "Vô hiệu hoá" button → `<Button variant="destructive" size="sm">`. `service-form.tsx` gets `Label`/`Input`/`Button` with every attribute preserved.
+Service rows → `<Card>`; inactive services (`!s.isActive`, currently rendered as the text `— đã vô hiệu hoá`) → `<StatusBadge variant="neutral">Đã vô hiệu hoá</StatusBadge>`; the "Vô hiệu hoá" button → `<Button variant="destructive">`. `service-form.tsx` gets `Label`/`Input`/`Button` with every attribute preserved.
 
 - [ ] **Step 2: Migrate `staff/{page,staff-form}.tsx` and `staff/[staffId]/shifts/{page,shift-form}.tsx`**
 
@@ -534,7 +532,7 @@ Same patterns. The shift form's time inputs keep `type="time"` and their `name` 
 
 - [ ] **Step 3: Migrate `images/{page,image-upload-form}.tsx`**
 
-`image-upload-form.tsx` has `<input type="file" name="file" accept="image/jpeg,image/png,image/webp" required>` — **this one keeps its native `<input type="file">`**, do not convert it to `<Input>` (shadcn's Input styling on a file picker renders poorly and the `accept`/`required` contract is load-bearing for the upload Server Action). Restyle only its wrapper and the submit `<Button>`. The thumbnail grid's `<img>` elements and the `deleteImage` forms keep their structure; convert the "Xoá" button to `<Button variant="destructive" size="sm">`.
+`image-upload-form.tsx` has `<input type="file" name="file" accept="image/jpeg,image/png,image/webp" required>` — **this one keeps its native `<input type="file">`**, do not convert it to `<Input>` (shadcn's Input styling on a file picker renders poorly and the `accept`/`required` contract is load-bearing for the upload Server Action). Restyle only its wrapper and the submit `<Button>`. The thumbnail grid's `<img>` elements and the `deleteImage` forms keep their structure; convert the "Xoá" button to `<Button variant="destructive">`.
 
 Note this file also currently has no `multiple` attribute on the file input — that is deliberate (it prevents concurrent uploads racing the backend). Do not add one.
 
