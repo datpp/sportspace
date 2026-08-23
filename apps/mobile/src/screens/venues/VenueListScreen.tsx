@@ -14,6 +14,10 @@ import type { Venue } from '@sportspace/shared';
 import { venuesApi } from '../../api/client';
 import { useCurrentLocation } from '../../hooks/useCurrentLocation';
 import { haversineDistanceKm } from '../../utils/distance';
+import { useTheme } from '../../theme';
+import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
+import { ScreenHeader } from '../../components/ScreenHeader';
 import type { VenuesStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<VenuesStackParamList, 'VenueList'>;
@@ -24,6 +28,7 @@ interface VenueWithDistance {
 }
 
 export function VenueListScreen({ navigation }: Props) {
+  const { colors, statusColors, spacing, radius } = useTheme();
   const location = useCurrentLocation();
   const [sportInput, setSportInput] = useState('');
   const [appliedSport, setAppliedSport] = useState('');
@@ -72,32 +77,38 @@ export function VenueListScreen({ navigation }: Props) {
   }, [venues, location]);
 
   return (
-    <View style={styles.container} testID="venue-list-screen">
-      <View style={styles.searchRow}>
+    <View style={[styles.container, { backgroundColor: colors.background }]} testID="venue-list-screen">
+      <ScreenHeader title="Tìm sân" />
+      <View style={[styles.searchRow, { padding: spacing.lg }]}>
         <TextInput
           testID="venue-sport-input"
-          style={styles.input}
+          style={[
+            styles.input,
+            {
+              borderColor: colors.border,
+              borderRadius: radius.md,
+              padding: spacing.sm,
+              color: colors.foreground,
+            },
+          ]}
           placeholder="Lọc theo bộ môn (vd: bóng đá)"
+          placeholderTextColor={colors.mutedForeground}
           value={sportInput}
           onChangeText={setSportInput}
           onSubmitEditing={() => setAppliedSport(sportInput.trim())}
         />
-        <Pressable
-          testID="venue-search-submit"
-          style={styles.searchButton}
-          onPress={() => setAppliedSport(sportInput.trim())}
-        >
-          <Text style={styles.searchButtonText}>Tìm</Text>
-        </Pressable>
+        <Button testID="venue-search-submit" onPress={() => setAppliedSport(sportInput.trim())} variant="secondary">
+          Tìm
+        </Button>
       </View>
 
       {location.status === 'denied' || location.status === 'error' ? (
-        <View testID="venue-location-banner" style={styles.banner}>
-          <Text style={styles.bannerText}>
+        <View testID="venue-location-banner" style={[styles.banner, { paddingHorizontal: spacing.lg }]}>
+          <Text style={{ color: statusColors.warning.text }}>
             Chưa có quyền vị trí — danh sách sẽ không sắp xếp theo khoảng cách.
           </Text>
           <Pressable testID="venue-location-retry" onPress={() => void location.retry()}>
-            <Text style={styles.bannerLink}>Cấp quyền vị trí</Text>
+            <Text style={[styles.bannerLink, { color: colors.primary }]}>Cấp quyền vị trí</Text>
           </Pressable>
         </View>
       ) : null}
@@ -108,14 +119,14 @@ export function VenueListScreen({ navigation }: Props) {
         </View>
       ) : error ? (
         <View style={styles.centerFill} testID="venue-list-error">
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={{ color: colors.danger }}>{error}</Text>
           <Pressable testID="venue-list-retry" onPress={() => void fetchVenues()}>
-            <Text style={styles.bannerLink}>Thử lại</Text>
+            <Text style={[styles.bannerLink, { color: colors.primary }]}>Thử lại</Text>
           </Pressable>
         </View>
       ) : sortedVenues.length === 0 ? (
         <View style={styles.centerFill} testID="venue-list-empty">
-          <Text>Không tìm thấy sân nào phù hợp</Text>
+          <Text style={{ color: colors.foreground }}>Không tìm thấy sân nào phù hợp</Text>
         </View>
       ) : (
         <FlatList
@@ -123,10 +134,10 @@ export function VenueListScreen({ navigation }: Props) {
           data={sortedVenues}
           keyExtractor={(item) => item.venue.id}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+          contentContainerStyle={{ padding: spacing.lg, gap: spacing.sm }}
           renderItem={({ item }) => (
-            <Pressable
+            <Card
               testID={`venue-item-${item.venue.id}`}
-              style={styles.card}
               onPress={() =>
                 navigation.navigate('VenueDetail', {
                   venueId: item.venue.id,
@@ -134,12 +145,14 @@ export function VenueListScreen({ navigation }: Props) {
                 })
               }
             >
-              <Text style={styles.cardTitle}>{item.venue.name}</Text>
-              <Text style={styles.cardSubtitle}>{item.venue.address}</Text>
+              <Text style={[styles.cardTitle, { color: colors.cardForeground }]}>{item.venue.name}</Text>
+              <Text style={{ color: colors.mutedForeground }}>{item.venue.address}</Text>
               {item.distanceKm !== null ? (
-                <Text style={styles.cardDistance}>{item.distanceKm.toFixed(1)} km</Text>
+                <Text style={[styles.cardDistance, { color: colors.primary }]}>
+                  {item.distanceKm.toFixed(1)} km
+                </Text>
               ) : null}
-            </Pressable>
+            </Card>
           )}
         />
       )}
@@ -149,22 +162,11 @@ export function VenueListScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  searchRow: { flexDirection: 'row', gap: 8, padding: 16 },
-  input: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10 },
-  searchButton: {
-    backgroundColor: '#1d4ed8',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-  },
-  searchButtonText: { color: '#fff', fontWeight: '600' },
-  banner: { paddingHorizontal: 16, paddingBottom: 8, gap: 4 },
-  bannerText: { color: '#92400e' },
-  bannerLink: { color: '#1d4ed8', fontWeight: '600' },
+  searchRow: { flexDirection: 'row', gap: 8 },
+  input: { flex: 1, borderWidth: 1 },
+  banner: { paddingBottom: 8, gap: 4 },
+  bannerLink: { fontWeight: '600' },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  errorText: { color: '#dc2626' },
-  card: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
   cardTitle: { fontSize: 16, fontWeight: '700' },
-  cardSubtitle: { color: '#555', marginTop: 2 },
-  cardDistance: { color: '#1d4ed8', marginTop: 4, fontWeight: '600' },
+  cardDistance: { fontWeight: '600' },
 });

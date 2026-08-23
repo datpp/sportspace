@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View, Pressable } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../auth/AuthContext';
+import { useTheme } from '../../theme';
+import { Button } from '../../components/Button';
 import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
+  const { colors, spacing, radius, typography } = useTheme();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,19 +41,24 @@ export function RegisterScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container} testID="register-screen">
-      <Text style={styles.title}>Đăng ký</Text>
+    <View
+      style={[styles.container, { backgroundColor: colors.background, padding: spacing.xl, gap: spacing.md }]}
+      testID="register-screen"
+    >
+      <Text style={[typography.title, { color: colors.foreground, marginBottom: spacing.md }]}>Đăng ký</Text>
       <TextInput
         testID="register-fullName"
-        style={styles.input}
+        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Họ và tên"
+        placeholderTextColor={colors.mutedForeground}
         value={fullName}
         onChangeText={setFullName}
       />
       <TextInput
         testID="register-email"
-        style={styles.input}
+        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Email"
+        placeholderTextColor={colors.mutedForeground}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -58,50 +66,39 @@ export function RegisterScreen({ navigation }: Props) {
       />
       <TextInput
         testID="register-password"
-        style={styles.input}
+        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Mật khẩu"
+        placeholderTextColor={colors.mutedForeground}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
       <TextInput
         testID="register-phone"
-        style={styles.input}
+        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Số điện thoại (không bắt buộc)"
+        placeholderTextColor={colors.mutedForeground}
         keyboardType="phone-pad"
         value={phone}
         onChangeText={setPhone}
       />
       {error ? (
-        <Text testID="register-error" style={styles.error}>
+        <Text testID="register-error" style={{ color: colors.danger }}>
           {error}
         </Text>
       ) : null}
-      <Pressable
-        testID="register-submit"
-        style={styles.button}
-        onPress={handleSubmit}
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Đăng ký</Text>
-        )}
-      </Pressable>
+      <Button testID="register-submit" onPress={() => void handleSubmit()} loading={isSubmitting}>
+        Đăng ký
+      </Button>
       <Pressable testID="register-go-login" onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.link}>Đã có tài khoản? Đăng nhập</Text>
+        <Text style={[styles.link, { color: colors.primary }]}>Đã có tài khoản? Đăng nhập</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 12 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 12 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
-  button: { backgroundColor: '#1d4ed8', borderRadius: 8, padding: 14, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  error: { color: '#dc2626' },
-  link: { color: '#1d4ed8', textAlign: 'center', marginTop: 8 },
+  container: { flex: 1, justifyContent: 'center' },
+  input: { borderWidth: 1 },
+  link: { textAlign: 'center', marginTop: 8 },
 });

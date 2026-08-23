@@ -1,5 +1,9 @@
 import 'react-native-gesture-handler/jestSetup';
 
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
+
 jest.mock('expo-secure-store', () => {
   const store = new Map<string, string>();
   return {

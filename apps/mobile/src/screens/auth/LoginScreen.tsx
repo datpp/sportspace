@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View, Pressable } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../auth/AuthContext';
+import { useTheme } from '../../theme';
+import { Button } from '../../components/Button';
 import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
+  const { colors, spacing, radius, typography } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -30,12 +33,16 @@ export function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container} testID="login-screen">
-      <Text style={styles.title}>Đăng nhập</Text>
+    <View
+      style={[styles.container, { backgroundColor: colors.background, padding: spacing.xl, gap: spacing.md }]}
+      testID="login-screen"
+    >
+      <Text style={[typography.title, { color: colors.foreground, marginBottom: spacing.md }]}>Đăng nhập</Text>
       <TextInput
         testID="login-email"
-        style={styles.input}
+        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Email"
+        placeholderTextColor={colors.mutedForeground}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -43,45 +50,33 @@ export function LoginScreen({ navigation }: Props) {
       />
       <TextInput
         testID="login-password"
-        style={styles.input}
+        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Mật khẩu"
+        placeholderTextColor={colors.mutedForeground}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
       {error ? (
-        <Text testID="login-error" style={styles.error}>
+        <Text testID="login-error" style={{ color: colors.danger }}>
           {error}
         </Text>
       ) : null}
-      <Pressable
-        testID="login-submit"
-        style={styles.button}
-        onPress={handleSubmit}
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Đăng nhập</Text>
-        )}
-      </Pressable>
+      <Button testID="login-submit" onPress={() => void handleSubmit()} loading={isSubmitting}>
+        Đăng nhập
+      </Button>
       <Pressable testID="login-go-register" onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.link}>Chưa có tài khoản? Đăng ký</Text>
+        <Text style={[styles.link, { color: colors.primary }]}>Chưa có tài khoản? Đăng ký</Text>
       </Pressable>
       <Pressable testID="login-go-forgot-password" onPress={() => navigation.navigate('ForgotPassword')}>
-        <Text style={styles.link}>Quên mật khẩu?</Text>
+        <Text style={[styles.link, { color: colors.primary }]}>Quên mật khẩu?</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 12 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 12 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
-  button: { backgroundColor: '#1d4ed8', borderRadius: 8, padding: 14, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  error: { color: '#dc2626' },
-  link: { color: '#1d4ed8', textAlign: 'center', marginTop: 8 },
+  container: { flex: 1, justifyContent: 'center' },
+  input: { borderWidth: 1 },
+  link: { textAlign: 'center', marginTop: 8 },
 });

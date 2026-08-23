@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../auth/AuthContext';
+import { useTheme } from '../theme';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
 import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
@@ -43,9 +44,20 @@ function AuthNavigator() {
 }
 
 function VenuesNavigator() {
+  const { colors } = useTheme();
   return (
-    <VenuesStack.Navigator>
-      <VenuesStack.Screen name="VenueList" component={VenueListScreen} options={{ title: 'Tìm sân' }} />
+    <VenuesStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.card },
+        headerTintColor: colors.foreground,
+        headerTitleStyle: { color: colors.foreground, fontWeight: '700' },
+      }}
+    >
+      <VenuesStack.Screen
+        name="VenueList"
+        component={VenueListScreen}
+        options={{ title: 'Tìm sân', headerShown: false }}
+      />
       <VenuesStack.Screen
         name="VenueDetail"
         component={VenueDetailScreen}
@@ -66,8 +78,15 @@ function VenuesNavigator() {
 }
 
 function MyBookingsNavigator() {
+  const { colors } = useTheme();
   return (
-    <MyBookingsStack.Navigator>
+    <MyBookingsStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.card },
+        headerTintColor: colors.foreground,
+        headerTitleStyle: { color: colors.foreground, fontWeight: '700' },
+      }}
+    >
       <MyBookingsStack.Screen
         name="MyBookingsList"
         component={MyBookingsScreen}
@@ -88,8 +107,15 @@ function MyBookingsNavigator() {
 }
 
 function MatchesNavigator() {
+  const { colors } = useTheme();
   return (
-    <MatchesStack.Navigator>
+    <MatchesStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.card },
+        headerTintColor: colors.foreground,
+        headerTitleStyle: { color: colors.foreground, fontWeight: '700' },
+      }}
+    >
       <MatchesStack.Screen name="MatchList" component={MatchListScreen} options={{ title: 'Tìm kèo' }} />
       <MatchesStack.Screen
         name="MatchDetail"
@@ -101,8 +127,15 @@ function MatchesNavigator() {
 }
 
 function AppTabs() {
+  const { colors } = useTheme();
   return (
-    <RootTab.Navigator>
+    <RootTab.Navigator
+      screenOptions={{
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
+      }}
+    >
       <RootTab.Screen name="Venues" component={VenuesNavigator} options={{ headerShown: false, title: 'Tìm sân' }} />
       <RootTab.Screen
         name="MyBookings"
@@ -126,10 +159,19 @@ function AppTabs() {
 
 export function RootNavigator() {
   const { user, isLoading } = useAuth();
+  const { colors } = useTheme();
 
   if (isLoading) {
     return (
-      <View testID="root-loading" style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        testID="root-loading"
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.background,
+        }}
+      >
         <ActivityIndicator />
       </View>
     );
