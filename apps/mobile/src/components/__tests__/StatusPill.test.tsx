@@ -24,4 +24,24 @@ describe('StatusPill', () => {
       expect(screen.getByTestId('pill')).toHaveStyle({ backgroundColor: EXPECTED_BACKGROUND[variant] });
     },
   );
+
+  it('viết hoa nhãn theo mặc định khi không truyền prop uppercase', async () => {
+    await render(
+      <StatusPill testID="pill-default" variant="info">
+        Bóng đá
+      </StatusPill>,
+    );
+
+    expect(screen.getByText('Bóng đá')).toHaveStyle({ textTransform: 'uppercase' });
+  });
+
+  it('giữ nguyên chữ hoa/thường khi truyền uppercase={false} (vd nhãn bộ môn tự do)', async () => {
+    await render(
+      <StatusPill testID="pill-no-uppercase" variant="info" uppercase={false}>
+        Bóng đá
+      </StatusPill>,
+    );
+
+    expect(screen.getByText('Bóng đá')).not.toHaveStyle({ textTransform: 'uppercase' });
+  });
 });
