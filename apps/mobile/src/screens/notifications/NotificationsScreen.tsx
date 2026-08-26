@@ -8,7 +8,7 @@ import { Card } from '../../components/Card';
 import { ScreenHeader } from '../../components/ScreenHeader';
 
 export function NotificationsScreen() {
-  const { colors, spacing } = useTheme();
+  const { colors, statusColors, spacing } = useTheme();
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -99,7 +99,7 @@ export function NotificationsScreen() {
           <Card
             testID={`notification-item-${item.id}`}
             onPress={markingId === item.id ? undefined : () => void handlePress(item)}
-            style={styles.card}
+            style={[styles.card, !item.isRead && { backgroundColor: statusColors.info.bg }]}
           >
             {!item.isRead ? (
               <View
