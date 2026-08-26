@@ -21,7 +21,7 @@ const DAY_OPTIONS = Array.from({ length: 4 }, (_, i) => {
 
 export function CourtSlotsScreen({ route, navigation }: Props) {
   const { venueId, courtId, courtName, venueName } = route.params;
-  const { colors, spacing } = useTheme();
+  const { colors } = useTheme();
   const [selectedDate, setSelectedDate] = useState<Date>(DAY_OPTIONS[0]);
   const [slots, setSlots] = useState<SlotDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +128,6 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
           numColumns={3}
           keyExtractor={(item) => item.startTime}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-          contentContainerStyle={{ gap: spacing.xs }}
           renderItem={({ item }) => (
             <Pressable
               testID={`slot-${item.startTime}`}
@@ -156,7 +155,12 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
               <Text style={{ color: item.available ? colors.primary : colors.mutedForeground, fontWeight: '600' }}>
                 {item.startTime}
               </Text>
-              <Text style={[styles.slotPrice, { color: colors.mutedForeground }]}>
+              <Text
+                style={[
+                  styles.slotPrice,
+                  { color: item.available ? colors.foreground : colors.mutedForeground },
+                ]}
+              >
                 {item.price.toLocaleString('vi-VN')} đ
               </Text>
             </Pressable>

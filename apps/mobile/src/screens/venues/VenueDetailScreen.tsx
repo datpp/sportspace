@@ -133,7 +133,9 @@ export function VenueDetailScreen({ route, navigation }: Props) {
               }
             >
               <Text style={[styles.cardTitle, { color: colors.cardForeground }]}>{item.name}</Text>
-              <StatusPill variant="info">{item.sport}</StatusPill>
+              <StatusPill variant="info" uppercase={false}>
+                {item.sport}
+              </StatusPill>
               <Text style={[styles.cardPrice, { color: colors.primary }]}>
                 {item.basePrice.toLocaleString('vi-VN')} đ/giờ
               </Text>
