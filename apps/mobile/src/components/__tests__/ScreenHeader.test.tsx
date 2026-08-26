@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { render, screen } from '@testing-library/react-native';
 import { ScreenHeader } from '../ScreenHeader';
 
@@ -35,5 +36,15 @@ describe('ScreenHeader', () => {
     expect(
       StyleSheet.flatten(screen.getByTestId('screen-header-subtitle').props.style).color,
     ).toBe('#94a3b8');
+  });
+
+  it('cộng safe-area inset vào paddingTop thay vì dùng hằng số', async () => {
+    await render(
+      <SafeAreaInsetsContext.Provider value={{ top: 59, bottom: 0, left: 0, right: 0 }}>
+        <ScreenHeader title="Tìm sân" />
+      </SafeAreaInsetsContext.Provider>,
+    );
+    const header = screen.getByTestId('screen-header');
+    expect(StyleSheet.flatten(header.props.style).paddingTop).toBe(59 + 12); // insets.top + spacing.md
   });
 });
