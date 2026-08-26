@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { isAxiosError } from 'axios';
 import { matchesApi } from '../../api/client';
+import { useTheme } from '../../theme';
+import { Button } from '../../components/Button';
+import { Input } from '../../components/Input';
 import type { MyBookingsStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<MyBookingsStackParamList, 'CreateMatch'>;
 
 export function CreateMatchScreen({ route, navigation }: Props) {
   const { bookingId, courtName, bookingDate, startTime, endTime } = route.params;
+  const { colors, spacing } = useTheme();
   const [slotsTotal, setSlotsTotal] = useState('4');
   const [skillLevel, setSkillLevel] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -38,53 +42,38 @@ export function CreateMatchScreen({ route, navigation }: Props) {
   };
 
   return (
-    <View style={styles.container} testID="create-match-screen">
-      <Text style={styles.title}>Tạo kèo</Text>
-      <Text style={styles.subtitle}>
+    <View style={[styles.container, { backgroundColor: colors.background, gap: spacing.md }]} testID="create-match-screen">
+      <Text style={[styles.title, { color: colors.foreground }]}>Tạo kèo</Text>
+      <Text style={[styles.subtitle, { color: colors.mutedForeground, marginBottom: spacing.sm }]}>
         {courtName} — {bookingDate} {startTime}-{endTime}
       </Text>
-      <TextInput
+      <Input
         testID="create-match-slots"
-        style={styles.input}
         placeholder="Số chỗ cần tuyển"
         keyboardType="number-pad"
         value={slotsTotal}
         onChangeText={setSlotsTotal}
       />
-      <TextInput
+      <Input
         testID="create-match-skill"
-        style={styles.input}
         placeholder="Trình độ (không bắt buộc)"
         value={skillLevel}
         onChangeText={setSkillLevel}
       />
       {error ? (
-        <Text testID="create-match-error" style={styles.errorText}>
+        <Text testID="create-match-error" style={{ color: colors.danger }}>
           {error}
         </Text>
       ) : null}
-      <Pressable
-        testID="create-match-submit"
-        style={styles.button}
-        onPress={handleSubmit}
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Tạo kèo</Text>
-        )}
-      </Pressable>
+      <Button testID="create-match-submit" onPress={() => void handleSubmit()} loading={isSubmitting}>
+        Tạo kèo
+      </Button>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, gap: 12 },
+  container: { flex: 1, padding: 24 },
   title: { fontSize: 20, fontWeight: '700' },
-  subtitle: { color: '#555', marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
-  errorText: { color: '#dc2626' },
-  button: { backgroundColor: '#1d4ed8', borderRadius: 8, padding: 14, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '600' },
+  subtitle: {},
 });
