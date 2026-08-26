@@ -199,5 +199,5 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700' },
   cardPrice: { fontWeight: '600' },
   cardRefund: { fontWeight: '600' },
-  cardActions: { flexDirection: 'row' },
+  cardActions: { flexDirection: 'row', flexWrap: 'wrap' },
 });

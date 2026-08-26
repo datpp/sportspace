@@ -46,14 +46,18 @@ describe('RootNavigator', () => {
     await user.press(await screen.findByText('Kèo')); // tab Kèo
     await user.press((await screen.findAllByTestId(/^match-item-/))[0]); // mở MatchDetail
     await user.press(await screen.findByText('Thông báo')); // tab Thông báo
+    // Phải bấm trước khi màn mount: sau khi mount, ScreenHeader trùng chữ với nhãn tab.
+    await user.press(await screen.findByText('Tài khoản')); // tab Tài khoản
 
     const headers = collectNavHeaders(screen.toJSON());
-    // Ba màn gốc của tab đều tự render ScreenHeader -> không được có thêm header điều hướng.
+    // Cả 5 màn gốc của tab đều tự render ScreenHeader -> không được có thêm header điều hướng.
     expect(headers.stack).toMatchObject({
+      'Tìm sân': true, // chính là màn từng dính lỗi tiêu đề đôi lần đầu
       'Lịch của tôi': true,
       'Tìm kèo': true,
       'Chi tiết kèo': false, // màn con trong stack vẫn phải giữ header gốc
     });
-    expect(headers.tab).toEqual([]); // Thông báo là màn tab trần, header bottom-tab phải tắt
+    // Thông báo và Tài khoản là màn tab trần -> header bottom-tab của cả hai phải tắt.
+    expect(headers.tab).toEqual([]);
   });
 });
