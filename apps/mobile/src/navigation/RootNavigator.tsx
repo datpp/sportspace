@@ -116,7 +116,11 @@ function MatchesNavigator() {
         headerTitleStyle: { color: colors.foreground, fontWeight: '700' },
       }}
     >
-      <MatchesStack.Screen name="MatchList" component={MatchListScreen} options={{ title: 'Tìm kèo' }} />
+      <MatchesStack.Screen
+        name="MatchList"
+        component={MatchListScreen}
+        options={{ title: 'Tìm kèo', headerShown: false }}
+      />
       <MatchesStack.Screen
         name="MatchDetail"
         component={MatchDetailScreen}
@@ -150,7 +154,7 @@ function AppTabs() {
       <RootTab.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={{ title: 'Thông báo' }}
+        options={{ headerShown: false, title: 'Thông báo' }}
       />
       <RootTab.Screen
         name="Account"

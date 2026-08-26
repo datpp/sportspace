@@ -1,18 +1,14 @@
 import React, { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Notification } from '@sportspace/shared';
 import { notificationsApi } from '../../api/client';
+import { useTheme } from '../../theme';
+import { Card } from '../../components/Card';
+import { ScreenHeader } from '../../components/ScreenHeader';
 
 export function NotificationsScreen() {
+  const { colors, spacing } = useTheme();
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -56,76 +52,82 @@ export function NotificationsScreen() {
 
   if (notifications === null && !error) {
     return (
-      <View style={styles.centerFill} testID="notifications-loading">
-        <ActivityIndicator />
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
+        <ScreenHeader title="Thông báo" />
+        <View style={styles.centerFill} testID="notifications-loading">
+          <ActivityIndicator />
+        </View>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centerFill} testID="notifications-error">
-        <Text style={styles.errorText}>{error}</Text>
-        <Pressable testID="notifications-retry" onPress={() => void fetchNotifications()}>
-          <Text style={styles.link}>Thử lại</Text>
-        </Pressable>
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
+        <ScreenHeader title="Thông báo" />
+        <View style={styles.centerFill} testID="notifications-error">
+          <Text style={{ color: colors.danger }}>{error}</Text>
+          <Pressable testID="notifications-retry" onPress={() => void fetchNotifications()}>
+            <Text style={[styles.link, { color: colors.primary }]}>Thử lại</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
 
   if (!notifications || notifications.length === 0) {
     return (
-      <View style={styles.centerFill} testID="notifications-empty">
-        <Text>Bạn chưa có thông báo nào</Text>
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
+        <ScreenHeader title="Thông báo" />
+        <View style={styles.centerFill} testID="notifications-empty">
+          <Text style={{ color: colors.foreground }}>Bạn chưa có thông báo nào</Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <FlatList
-      testID="notifications-list"
-      data={notifications}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.list}
-      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-      renderItem={({ item }) => (
-        <Pressable
-          testID={`notification-item-${item.id}`}
-          style={[styles.card, !item.isRead && styles.cardUnread]}
-          disabled={markingId === item.id}
-          onPress={() => void handlePress(item)}
-        >
-          {!item.isRead ? <View testID={`notification-dot-${item.id}`} style={styles.unreadDot} /> : null}
-          <View style={styles.cardBody}>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardMessage}>{item.body}</Text>
-            <Text style={styles.cardTime}>{new Date(item.createdAt).toLocaleString('vi-VN')}</Text>
-          </View>
-        </Pressable>
-      )}
-    />
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScreenHeader title="Thông báo" />
+      <FlatList
+        testID="notifications-list"
+        data={notifications}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+        renderItem={({ item }) => (
+          <Card
+            testID={`notification-item-${item.id}`}
+            onPress={markingId === item.id ? undefined : () => void handlePress(item)}
+            style={styles.card}
+          >
+            {!item.isRead ? (
+              <View
+                testID={`notification-dot-${item.id}`}
+                style={[styles.unreadDot, { backgroundColor: colors.primary }]}
+              />
+            ) : null}
+            <View style={styles.cardBody}>
+              <Text style={[styles.cardTitle, { color: colors.cardForeground }]}>{item.title}</Text>
+              <Text style={{ color: colors.cardForeground }}>{item.body}</Text>
+              <Text style={[styles.cardTime, { color: colors.mutedForeground }]}>
+                {new Date(item.createdAt).toLocaleString('vi-VN')}
+              </Text>
+            </View>
+          </Card>
+        )}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 16, gap: 12 },
+  screen: { flex: 1 },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  errorText: { color: '#dc2626' },
-  link: { color: '#1d4ed8', fontWeight: '600' },
-  card: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    gap: 8,
-    alignItems: 'flex-start',
-  },
-  cardUnread: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#1d4ed8', marginTop: 6 },
+  link: { fontWeight: '600' },
+  card: { flexDirection: 'row', alignItems: 'flex-start' },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
   cardBody: { flex: 1, gap: 2 },
   cardTitle: { fontSize: 16, fontWeight: '700' },
-  cardMessage: { color: '#333' },
-  cardTime: { color: '#888', fontSize: 12, marginTop: 4 },
+  cardTime: { fontSize: 12, marginTop: 4 },
 });

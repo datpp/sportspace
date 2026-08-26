@@ -1,23 +1,22 @@
 import React, { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Match } from '@sportspace/shared';
+import { MatchStatus } from '@sportspace/shared';
 import { matchesApi } from '../../api/client';
+import { useTheme } from '../../theme';
+import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
+import { Input } from '../../components/Input';
+import { ScreenHeader } from '../../components/ScreenHeader';
+import { StatusPill } from '../../components/StatusPill';
 import type { MatchesStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<MatchesStackParamList, 'MatchList'>;
 
 export function MatchListScreen({ navigation }: Props) {
+  const { colors, spacing } = useTheme();
   const [sportInput, setSportInput] = useState('');
   const [appliedSport, setAppliedSport] = useState('');
   const [matches, setMatches] = useState<Match[] | null>(null);
@@ -50,9 +49,10 @@ export function MatchListScreen({ navigation }: Props) {
   }, [fetchMatches]);
 
   return (
-    <View style={styles.container} testID="match-list-screen">
-      <View style={styles.searchRow}>
-        <TextInput
+    <View style={[styles.container, { backgroundColor: colors.background }]} testID="match-list-screen">
+      <ScreenHeader title="Tìm kèo" />
+      <View style={[styles.searchRow, { padding: spacing.lg }]}>
+        <Input
           testID="match-sport-input"
           style={styles.input}
           placeholder="Lọc theo bộ môn (vd: bóng đá)"
@@ -60,20 +60,20 @@ export function MatchListScreen({ navigation }: Props) {
           onChangeText={setSportInput}
           onSubmitEditing={() => setAppliedSport(sportInput.trim())}
         />
-        <Pressable
+        <Button
           testID="match-search-submit"
-          style={styles.searchButton}
           onPress={() => setAppliedSport(sportInput.trim())}
+          variant="secondary"
         >
-          <Text style={styles.searchButtonText}>Tìm</Text>
-        </Pressable>
+          Tìm
+        </Button>
       </View>
 
       {error ? (
         <View style={styles.centerFill} testID="match-list-error">
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={{ color: colors.danger }}>{error}</Text>
           <Pressable testID="match-list-retry" onPress={() => void fetchMatches()}>
-            <Text style={styles.link}>Thử lại</Text>
+            <Text style={[styles.link, { color: colors.primary }]}>Thử lại</Text>
           </Pressable>
         </View>
       ) : matches === null ? (
@@ -82,7 +82,7 @@ export function MatchListScreen({ navigation }: Props) {
         </View>
       ) : matches.length === 0 ? (
         <View style={styles.centerFill} testID="match-list-empty">
-          <Text>Chưa có kèo nào đang mở</Text>
+          <Text style={{ color: colors.foreground }}>Chưa có kèo nào đang mở</Text>
         </View>
       ) : (
         <FlatList
@@ -90,24 +90,35 @@ export function MatchListScreen({ navigation }: Props) {
           data={matches}
           keyExtractor={(item) => item.id}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-          renderItem={({ item }) => (
-            <Pressable
-              testID={`match-item-${item.id}`}
-              style={styles.card}
-              onPress={() => navigation.navigate('MatchDetail', { matchId: item.id })}
-            >
-              <Text style={styles.cardTitle}>{item.booking.court.sport}</Text>
-              <Text style={styles.cardSubtitle}>
-                {item.booking.court.name} — {item.booking.bookingDate} {item.booking.startTime}-
-                {item.booking.endTime}
-              </Text>
-              <Text style={styles.cardHost}>Chủ kèo: {item.host.fullName}</Text>
-              <Text style={styles.cardSlots}>
-                {item.slotsFilled}/{item.slotsTotal} chỗ đã ghép
-                {item.skillLevel ? ` — Trình độ: ${item.skillLevel}` : ''}
-              </Text>
-            </Pressable>
-          )}
+          contentContainerStyle={{ padding: spacing.lg, gap: spacing.sm }}
+          renderItem={({ item }) => {
+            // Chỗ đã đầy dù kèo vẫn ở trạng thái OPEN thì cũng coi như đóng —
+            // pill phải phản ánh khả năng ghép thực tế, không chỉ status thô.
+            const isOpen = item.status === MatchStatus.OPEN && item.slotsFilled < item.slotsTotal;
+            return (
+              <Card
+                testID={`match-item-${item.id}`}
+                onPress={() => navigation.navigate('MatchDetail', { matchId: item.id })}
+              >
+                <Text style={[styles.cardTitle, { color: colors.cardForeground }]}>
+                  {item.booking.court.sport}
+                </Text>
+                <Text style={{ color: colors.mutedForeground }}>
+                  {item.booking.court.name} — {item.booking.bookingDate} {item.booking.startTime}-
+                  {item.booking.endTime}
+                </Text>
+                <Text style={{ color: colors.cardForeground }}>Chủ kèo: {item.host.fullName}</Text>
+                <View style={[styles.cardFooter, { gap: spacing.sm }]}>
+                  <StatusPill variant={isOpen ? 'warning' : 'neutral'}>
+                    {item.slotsFilled}/{item.slotsTotal} chỗ đã ghép
+                  </StatusPill>
+                  {item.skillLevel ? (
+                    <Text style={{ color: colors.mutedForeground }}>Trình độ: {item.skillLevel}</Text>
+                  ) : null}
+                </View>
+              </Card>
+            );
+          }}
         />
       )}
     </View>
@@ -116,21 +127,10 @@ export function MatchListScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  searchRow: { flexDirection: 'row', gap: 8, padding: 16 },
-  input: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10 },
-  searchButton: {
-    backgroundColor: '#1d4ed8',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-  },
-  searchButtonText: { color: '#fff', fontWeight: '600' },
+  searchRow: { flexDirection: 'row', gap: 8 },
+  input: { flex: 1 },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  errorText: { color: '#dc2626' },
-  link: { color: '#1d4ed8', fontWeight: '600' },
-  card: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee', gap: 2 },
+  link: { fontWeight: '600' },
   cardTitle: { fontSize: 16, fontWeight: '700' },
-  cardSubtitle: { color: '#555', marginTop: 2 },
-  cardHost: { color: '#333', marginTop: 4 },
-  cardSlots: { color: '#1d4ed8', marginTop: 4, fontWeight: '600' },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 2 },
 });

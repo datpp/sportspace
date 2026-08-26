@@ -6,6 +6,11 @@ import type { Match } from '@sportspace/shared';
 import { MatchParticipantStatus, MatchStatus } from '@sportspace/shared';
 import { matchesApi } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { useTheme } from '../../theme';
+import type { StatusVariant } from '../../theme';
+import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
+import { StatusPill } from '../../components/StatusPill';
 import type { MatchesStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<MatchesStackParamList, 'MatchDetail'>;
@@ -19,9 +24,16 @@ const PARTICIPANT_STATUS_LABEL: Record<string, string> = {
   [MatchParticipantStatus.REJECTED]: 'Đã từ chối',
 };
 
+const PARTICIPANT_STATUS_VARIANT: Record<string, StatusVariant> = {
+  [MatchParticipantStatus.REQUESTED]: 'warning',
+  [MatchParticipantStatus.ACCEPTED]: 'success',
+  [MatchParticipantStatus.REJECTED]: 'danger',
+};
+
 export function MatchDetailScreen({ route }: Props) {
   const { matchId } = route.params;
   const { user } = useAuth();
+  const { colors, statusColors, spacing } = useTheme();
   const [match, setMatch] = useState<Match | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [joinState, setJoinState] = useState<JoinState>('idle');
@@ -92,9 +104,9 @@ export function MatchDetailScreen({ route }: Props) {
   if (error) {
     return (
       <View style={styles.centerFill} testID="match-detail-error">
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={{ color: colors.danger }}>{error}</Text>
         <Pressable testID="match-detail-retry" onPress={() => void fetchMatch()}>
-          <Text style={styles.link}>Thử lại</Text>
+          <Text style={[styles.link, { color: colors.primary }]}>Thử lại</Text>
         </Pressable>
       </View>
     );
@@ -112,91 +124,97 @@ export function MatchDetailScreen({ route }: Props) {
   const isFull = match.status === MatchStatus.CLOSED || match.slotsFilled >= match.slotsTotal;
 
   return (
-    <ScrollView contentContainerStyle={styles.container} testID="match-detail-screen">
-      <Text style={styles.title}>{match.booking.court.sport}</Text>
-      <Text style={styles.subtitle}>{match.booking.court.name}</Text>
-      <Text style={styles.subtitle}>
+    <ScrollView
+      contentContainerStyle={[
+        styles.container,
+        { padding: spacing.xl, gap: spacing.sm, backgroundColor: colors.background },
+      ]}
+      testID="match-detail-screen"
+    >
+      <Text style={[styles.title, { color: colors.foreground }]}>{match.booking.court.sport}</Text>
+      <Text style={{ color: colors.mutedForeground }}>{match.booking.court.name}</Text>
+      <Text style={{ color: colors.mutedForeground }}>
         {match.booking.bookingDate} {match.booking.startTime}-{match.booking.endTime}
       </Text>
-      <Text style={styles.host}>Chủ kèo: {match.host.fullName}</Text>
-      <Text style={styles.slots}>
+      <Text style={[styles.host, { color: colors.foreground }]}>Chủ kèo: {match.host.fullName}</Text>
+      <StatusPill variant={isFull ? 'neutral' : 'warning'}>
         {match.slotsFilled}/{match.slotsTotal} chỗ đã ghép
-      </Text>
-      {match.skillLevel ? <Text style={styles.skill}>Trình độ: {match.skillLevel}</Text> : null}
+      </StatusPill>
+      {match.skillLevel ? (
+        <Text style={{ color: colors.foreground }}>Trình độ: {match.skillLevel}</Text>
+      ) : null}
 
       {isHost ? (
-        <View style={styles.participantsSection} testID="match-participants-section">
-          <Text style={styles.sectionTitle}>Người xin ghép</Text>
+        <View
+          style={[styles.participantsSection, { marginTop: spacing.lg, gap: spacing.sm }]}
+          testID="match-participants-section"
+        >
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Người xin ghép</Text>
           {match.participants.length === 0 ? (
-            <Text testID="match-participants-empty">Chưa có ai xin ghép</Text>
+            <Text testID="match-participants-empty" style={{ color: colors.mutedForeground }}>
+              Chưa có ai xin ghép
+            </Text>
           ) : (
             match.participants.map((participant) => (
-              <View
+              <Card
                 key={participant.id}
                 testID={`participant-item-${participant.id}`}
-                style={styles.participantRow}
+                style={{ gap: spacing.sm }}
               >
                 <View style={styles.participantInfo}>
-                  <Text style={styles.participantName}>{participant.user.fullName}</Text>
-                  <Text style={styles.participantStatus}>
-                    {PARTICIPANT_STATUS_LABEL[participant.status] ?? participant.status}
+                  <Text style={[styles.participantName, { color: colors.cardForeground }]}>
+                    {participant.user.fullName}
                   </Text>
+                  <StatusPill variant={PARTICIPANT_STATUS_VARIANT[participant.status] ?? 'neutral'}>
+                    {PARTICIPANT_STATUS_LABEL[participant.status] ?? participant.status}
+                  </StatusPill>
                 </View>
                 {participant.status === MatchParticipantStatus.REQUESTED ? (
-                  <View style={styles.participantActions}>
-                    <Pressable
+                  <View style={[styles.participantActions, { gap: spacing.sm }]}>
+                    <Button
                       testID={`participant-accept-${participant.id}`}
-                      style={styles.acceptButton}
                       disabled={!!participantActions[participant.id]}
                       onPress={() => void handleAccept(participant.id)}
                     >
-                      <Text style={styles.acceptButtonText}>
-                        {participantActions[participant.id] === 'accepting' ? 'Đang duyệt...' : 'Duyệt'}
-                      </Text>
-                    </Pressable>
-                    <Pressable
+                      {participantActions[participant.id] === 'accepting' ? 'Đang duyệt...' : 'Duyệt'}
+                    </Button>
+                    <Button
                       testID={`participant-reject-${participant.id}`}
-                      style={styles.rejectButton}
+                      variant="destructive"
                       disabled={!!participantActions[participant.id]}
                       onPress={() => void handleReject(participant.id)}
                     >
-                      <Text style={styles.rejectButtonText}>
-                        {participantActions[participant.id] === 'rejecting' ? 'Đang từ chối...' : 'Từ chối'}
-                      </Text>
-                    </Pressable>
+                      {participantActions[participant.id] === 'rejecting' ? 'Đang từ chối...' : 'Từ chối'}
+                    </Button>
                   </View>
                 ) : null}
-              </View>
+              </Card>
             ))
           )}
         </View>
       ) : joinState === 'requested' ? (
-        <Text testID="match-join-success" style={styles.success}>
+        <Text testID="match-join-success" style={[styles.success, { color: statusColors.success.text }]}>
           Đã gửi yêu cầu ghép kèo, chờ chủ kèo duyệt.
         </Text>
       ) : isFull ? (
-        <Text testID="match-full" style={styles.note}>
+        <Text testID="match-full" style={[styles.note, { color: colors.mutedForeground }]}>
           Kèo đã đủ người.
         </Text>
       ) : (
         <>
           {joinError ? (
-            <Text testID="match-join-error" style={styles.errorText}>
+            <Text testID="match-join-error" style={{ color: colors.danger }}>
               {joinError}
             </Text>
           ) : null}
-          <Pressable
+          <Button
             testID="match-join-submit"
-            style={styles.button}
             onPress={handleJoin}
-            disabled={joinState === 'submitting'}
+            loading={joinState === 'submitting'}
+            style={{ marginTop: spacing.lg }}
           >
-            {joinState === 'submitting' ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Xin ghép</Text>
-            )}
-          </Pressable>
+            Xin ghép
+          </Button>
         </>
       )}
     </ScrollView>
@@ -204,44 +222,16 @@ export function MatchDetailScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 24, gap: 8 },
-  title: { fontSize: 20, fontWeight: '700' },
-  subtitle: { color: '#555' },
-  host: { color: '#333', marginTop: 8 },
-  slots: { color: '#1d4ed8', fontWeight: '600' },
-  skill: { color: '#333' },
-  note: { color: '#888', marginTop: 16 },
-  success: { color: '#16a34a', marginTop: 16, fontWeight: '600' },
+  container: { flexGrow: 1 },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  errorText: { color: '#dc2626' },
-  link: { color: '#1d4ed8', fontWeight: '600' },
-  button: { backgroundColor: '#1d4ed8', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 16 },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  participantsSection: { marginTop: 16, gap: 8 },
+  link: { fontWeight: '600' },
+  title: { fontSize: 20, fontWeight: '700' },
+  host: { marginTop: 8 },
+  note: { marginTop: 16 },
+  success: { marginTop: 16, fontWeight: '600' },
+  participantsSection: {},
   sectionTitle: { fontSize: 16, fontWeight: '700' },
-  participantRow: {
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 8,
-    padding: 12,
-    gap: 8,
-  },
   participantInfo: { gap: 2 },
   participantName: { fontWeight: '600' },
-  participantStatus: { color: '#555', fontSize: 12 },
-  participantActions: { flexDirection: 'row', gap: 8 },
-  acceptButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  acceptButtonText: { color: '#fff', fontWeight: '600' },
-  rejectButton: {
-    backgroundColor: '#dc2626',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  rejectButtonText: { color: '#fff', fontWeight: '600' },
+  participantActions: { flexDirection: 'row', flexWrap: 'wrap' },
 });
