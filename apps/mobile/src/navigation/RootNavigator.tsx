@@ -90,7 +90,7 @@ function MyBookingsNavigator() {
       <MyBookingsStack.Screen
         name="MyBookingsList"
         component={MyBookingsScreen}
-        options={{ title: 'Lịch của tôi' }}
+        options={{ title: 'Lịch của tôi', headerShown: false }}
       />
       <MyBookingsStack.Screen
         name="CreateMatch"
@@ -152,7 +152,11 @@ function AppTabs() {
         component={NotificationsScreen}
         options={{ title: 'Thông báo' }}
       />
-      <RootTab.Screen name="Account" component={AccountScreen} options={{ title: 'Tài khoản' }} />
+      <RootTab.Screen
+        name="Account"
+        component={AccountScreen}
+        options={{ headerShown: false, title: 'Tài khoản' }}
+      />
     </RootTab.Navigator>
   );
 }
