@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, View, Pressable } from 'react-native';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { authApi } from '../../api/client';
 import { useTheme } from '../../theme';
 import { Button } from '../../components/Button';
+import { Input } from '../../components/Input';
 import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
@@ -11,7 +12,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function ForgotPasswordScreen({ navigation }: Props) {
-  const { colors, spacing, radius, typography } = useTheme();
+  const { colors, spacing, typography } = useTheme();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,11 +67,9 @@ export function ForgotPasswordScreen({ navigation }: Props) {
       <Text style={[typography.title, { color: colors.foreground, marginBottom: spacing.md }]}>
         Quên mật khẩu
       </Text>
-      <TextInput
+      <Input
         testID="forgot-password-email"
-        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Email"
-        placeholderTextColor={colors.mutedForeground}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -90,6 +89,5 @@ export function ForgotPasswordScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center' },
-  input: { borderWidth: 1 },
   link: { textAlign: 'center', marginTop: 8 },
 });

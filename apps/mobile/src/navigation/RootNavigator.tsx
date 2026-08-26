@@ -90,7 +90,7 @@ function MyBookingsNavigator() {
       <MyBookingsStack.Screen
         name="MyBookingsList"
         component={MyBookingsScreen}
-        options={{ title: 'Lịch của tôi' }}
+        options={{ title: 'Lịch của tôi', headerShown: false }}
       />
       <MyBookingsStack.Screen
         name="CreateMatch"
@@ -116,7 +116,11 @@ function MatchesNavigator() {
         headerTitleStyle: { color: colors.foreground, fontWeight: '700' },
       }}
     >
-      <MatchesStack.Screen name="MatchList" component={MatchListScreen} options={{ title: 'Tìm kèo' }} />
+      <MatchesStack.Screen
+        name="MatchList"
+        component={MatchListScreen}
+        options={{ title: 'Tìm kèo', headerShown: false }}
+      />
       <MatchesStack.Screen
         name="MatchDetail"
         component={MatchDetailScreen}
@@ -150,9 +154,13 @@ function AppTabs() {
       <RootTab.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={{ title: 'Thông báo' }}
+        options={{ headerShown: false, title: 'Thông báo' }}
       />
-      <RootTab.Screen name="Account" component={AccountScreen} options={{ title: 'Tài khoản' }} />
+      <RootTab.Screen
+        name="Account"
+        component={AccountScreen}
+        options={{ headerShown: false, title: 'Tài khoản' }}
+      />
     </RootTab.Navigator>
   );
 }

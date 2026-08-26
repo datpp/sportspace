@@ -6,7 +6,6 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -17,6 +16,7 @@ import { haversineDistanceKm } from '../../utils/distance';
 import { useTheme } from '../../theme';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { Input } from '../../components/Input';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import type { VenuesStackParamList } from '../../navigation/types';
 
@@ -28,7 +28,7 @@ interface VenueWithDistance {
 }
 
 export function VenueListScreen({ navigation }: Props) {
-  const { colors, statusColors, spacing, radius } = useTheme();
+  const { colors, statusColors, spacing } = useTheme();
   const location = useCurrentLocation();
   const [sportInput, setSportInput] = useState('');
   const [appliedSport, setAppliedSport] = useState('');
@@ -80,19 +80,10 @@ export function VenueListScreen({ navigation }: Props) {
     <View style={[styles.container, { backgroundColor: colors.background }]} testID="venue-list-screen">
       <ScreenHeader title="Tìm sân" />
       <View style={[styles.searchRow, { padding: spacing.lg }]}>
-        <TextInput
+        <Input
           testID="venue-sport-input"
-          style={[
-            styles.input,
-            {
-              borderColor: colors.border,
-              borderRadius: radius.md,
-              padding: spacing.sm,
-              color: colors.foreground,
-            },
-          ]}
+          style={styles.input}
           placeholder="Lọc theo bộ môn (vd: bóng đá)"
-          placeholderTextColor={colors.mutedForeground}
           value={sportInput}
           onChangeText={setSportInput}
           onSubmitEditing={() => setAppliedSport(sportInput.trim())}
@@ -163,7 +154,7 @@ export function VenueListScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   searchRow: { flexDirection: 'row', gap: 8 },
-  input: { flex: 1, borderWidth: 1 },
+  input: { flex: 1 },
   banner: { paddingBottom: 8, gap: 4 },
   bannerLink: { fontWeight: '600' },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },

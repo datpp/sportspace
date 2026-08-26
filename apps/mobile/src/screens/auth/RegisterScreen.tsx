@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, View, Pressable } from 'react-native';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../auth/AuthContext';
 import { useTheme } from '../../theme';
 import { Button } from '../../components/Button';
+import { Input } from '../../components/Input';
 import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
-  const { colors, spacing, radius, typography } = useTheme();
+  const { colors, spacing, typography } = useTheme();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,38 +47,30 @@ export function RegisterScreen({ navigation }: Props) {
       testID="register-screen"
     >
       <Text style={[typography.title, { color: colors.foreground, marginBottom: spacing.md }]}>Đăng ký</Text>
-      <TextInput
+      <Input
         testID="register-fullName"
-        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Họ và tên"
-        placeholderTextColor={colors.mutedForeground}
         value={fullName}
         onChangeText={setFullName}
       />
-      <TextInput
+      <Input
         testID="register-email"
-        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Email"
-        placeholderTextColor={colors.mutedForeground}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
+      <Input
         testID="register-password"
-        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Mật khẩu"
-        placeholderTextColor={colors.mutedForeground}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
-      <TextInput
+      <Input
         testID="register-phone"
-        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Số điện thoại (không bắt buộc)"
-        placeholderTextColor={colors.mutedForeground}
         keyboardType="phone-pad"
         value={phone}
         onChangeText={setPhone}
@@ -99,6 +92,5 @@ export function RegisterScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center' },
-  input: { borderWidth: 1 },
   link: { textAlign: 'center', marginTop: 8 },
 });

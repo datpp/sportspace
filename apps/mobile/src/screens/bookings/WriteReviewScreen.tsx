@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { isAxiosError } from 'axios';
 import { reviewsApi } from '../../api/client';
+import { useTheme } from '../../theme';
+import { Button } from '../../components/Button';
+import { Input } from '../../components/Input';
 import type { MyBookingsStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<MyBookingsStackParamList, 'WriteReview'>;
@@ -11,6 +14,7 @@ const STARS = [1, 2, 3, 4, 5];
 
 export function WriteReviewScreen({ route, navigation }: Props) {
   const { bookingId, courtName } = route.params;
+  const { colors, statusColors, spacing } = useTheme();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -42,48 +46,40 @@ export function WriteReviewScreen({ route, navigation }: Props) {
   };
 
   return (
-    <View style={styles.container} testID="write-review-screen">
-      <Text style={styles.title}>Đánh giá {courtName}</Text>
-      <View style={styles.stars}>
+    <View style={[styles.container, { backgroundColor: colors.background, gap: spacing.md }]} testID="write-review-screen">
+      <Text style={[styles.title, { color: colors.foreground }]}>Đánh giá {courtName}</Text>
+      <View style={[styles.stars, { gap: spacing.sm }]}>
         {STARS.map((value) => (
           <Pressable key={value} testID={`write-review-star-${value}`} onPress={() => setRating(value)}>
-            <Text style={value <= rating ? styles.starActive : styles.starInactive}>★</Text>
+            <Text style={[styles.star, { color: value <= rating ? statusColors.warning.text : colors.border }]}>
+              ★
+            </Text>
           </Pressable>
         ))}
       </View>
-      <TextInput
+      <Input
         testID="write-review-comment"
-        style={styles.input}
+        style={{ minHeight: 80 }}
         placeholder="Nhận xét (không bắt buộc)"
         value={comment}
         onChangeText={setComment}
         multiline
       />
       {error ? (
-        <Text testID="write-review-error" style={styles.errorText}>
+        <Text testID="write-review-error" style={{ color: colors.danger }}>
           {error}
         </Text>
       ) : null}
-      <Pressable
-        testID="write-review-submit"
-        style={styles.button}
-        onPress={handleSubmit}
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Gửi đánh giá</Text>}
-      </Pressable>
+      <Button testID="write-review-submit" onPress={() => void handleSubmit()} loading={isSubmitting}>
+        Gửi đánh giá
+      </Button>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, gap: 12 },
+  container: { flex: 1, padding: 24 },
   title: { fontSize: 20, fontWeight: '700' },
-  stars: { flexDirection: 'row', gap: 8 },
-  starActive: { fontSize: 32, color: '#f59e0b' },
-  starInactive: { fontSize: 32, color: '#d1d5db' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, minHeight: 80 },
-  errorText: { color: '#dc2626' },
-  button: { backgroundColor: '#1d4ed8', borderRadius: 8, padding: 14, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '600' },
+  stars: { flexDirection: 'row' },
+  star: { fontSize: 32 },
 });
