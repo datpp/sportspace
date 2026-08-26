@@ -3,12 +3,16 @@ import { ActivityIndicator, FlatList, Image, Pressable, RefreshControl, StyleShe
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Venue, VenueReviewsDto } from '@sportspace/shared';
 import { API_BASE_URL, reviewsApi, venuesApi } from '../../api/client';
+import { useTheme } from '../../theme';
+import { Card } from '../../components/Card';
+import { StatusPill } from '../../components/StatusPill';
 import type { VenuesStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<VenuesStackParamList, 'VenueDetail'>;
 
 export function VenueDetailScreen({ route, navigation }: Props) {
   const { venueId, venueName } = route.params;
+  const { colors, statusColors, spacing, radius } = useTheme();
   const [venue, setVenue] = useState<Venue | null>(null);
   const [reviews, setReviews] = useState<VenueReviewsDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,10 +51,10 @@ export function VenueDetailScreen({ route, navigation }: Props) {
 
   if (error) {
     return (
-      <View style={styles.centerFill} testID="venue-detail-error">
-        <Text style={styles.errorText}>{error}</Text>
+      <View style={[styles.centerFill, { backgroundColor: colors.background }]} testID="venue-detail-error">
+        <Text style={{ color: colors.danger }}>{error}</Text>
         <Pressable testID="venue-detail-retry" onPress={() => void fetchVenue()}>
-          <Text style={styles.link}>Thử lại</Text>
+          <Text style={[styles.link, { color: colors.primary }]}>Thử lại</Text>
         </Pressable>
       </View>
     );
@@ -58,22 +62,26 @@ export function VenueDetailScreen({ route, navigation }: Props) {
 
   if (!venue) {
     return (
-      <View style={styles.centerFill} testID="venue-detail-loading">
+      <View style={[styles.centerFill, { backgroundColor: colors.background }]} testID="venue-detail-loading">
         <ActivityIndicator />
       </View>
     );
   }
 
   return (
-    <View style={styles.container} testID="venue-detail-screen">
-      <View style={styles.header}>
-        <Text style={styles.title}>{venue.name || venueName}</Text>
-        <Text style={styles.subtitle}>{venue.address}</Text>
-        {venue.description ? <Text style={styles.description}>{venue.description}</Text> : null}
+    <View style={[styles.container, { backgroundColor: colors.background }]} testID="venue-detail-screen">
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.foreground }]}>{venue.name || venueName}</Text>
+        <Text style={{ color: colors.mutedForeground }}>{venue.address}</Text>
+        {venue.description ? (
+          <Text style={[styles.description, { color: colors.mutedForeground }]}>{venue.description}</Text>
+        ) : null}
         {reviews && reviews.total > 0 ? (
           <View testID="venue-average-rating" style={styles.ratingRow}>
-            <Text style={styles.ratingValue}>{reviews.averageRating.toFixed(1)} ★</Text>
-            <Text style={styles.ratingCount}>({reviews.total} đánh giá)</Text>
+            <Text style={[styles.ratingValue, { color: statusColors.warning.text }]}>
+              {reviews.averageRating.toFixed(1)} ★
+            </Text>
+            <Text style={{ color: colors.mutedForeground }}>({reviews.total} đánh giá)</Text>
           </View>
         ) : null}
       </View>
@@ -89,18 +97,21 @@ export function VenueDetailScreen({ route, navigation }: Props) {
             <Image
               testID={`venue-image-${index}`}
               source={{ uri: `${API_BASE_URL}${item}` }}
-              style={styles.venueImage}
+              style={[styles.venueImage, { borderRadius: radius.md, backgroundColor: colors.border }]}
             />
           )}
         />
       ) : (
-        <View testID="venue-image-placeholder" style={styles.venueImagePlaceholder}>
-          <Text style={styles.venueImagePlaceholderText}>Chưa có ảnh</Text>
+        <View
+          testID="venue-image-placeholder"
+          style={[styles.venueImagePlaceholder, { borderRadius: radius.md, backgroundColor: colors.border }]}
+        >
+          <Text style={{ color: colors.mutedForeground }}>Chưa có ảnh</Text>
         </View>
       )}
       {venue.courts.length === 0 ? (
-        <View style={styles.centerFill} testID="venue-detail-no-courts">
-          <Text>Sân này chưa có sân con nào</Text>
+        <View style={[styles.centerFill, { backgroundColor: colors.background }]} testID="venue-detail-no-courts">
+          <Text style={{ color: colors.foreground }}>Sân này chưa có sân con nào</Text>
         </View>
       ) : (
         <FlatList
@@ -108,10 +119,10 @@ export function VenueDetailScreen({ route, navigation }: Props) {
           data={venue.courts}
           keyExtractor={(item) => item.id}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+          contentContainerStyle={{ padding: spacing.lg, gap: spacing.sm }}
           renderItem={({ item }) => (
-            <Pressable
+            <Card
               testID={`court-item-${item.id}`}
-              style={styles.card}
               onPress={() =>
                 navigation.navigate('CourtSlots', {
                   venueId,
@@ -121,20 +132,26 @@ export function VenueDetailScreen({ route, navigation }: Props) {
                 })
               }
             >
-              <Text style={styles.cardTitle}>{item.name}</Text>
-              <Text style={styles.cardSubtitle}>{item.sport}</Text>
-              <Text style={styles.cardPrice}>{item.basePrice.toLocaleString('vi-VN')} đ/giờ</Text>
-            </Pressable>
+              <Text style={[styles.cardTitle, { color: colors.cardForeground }]}>{item.name}</Text>
+              <StatusPill variant="info">{item.sport}</StatusPill>
+              <Text style={[styles.cardPrice, { color: colors.primary }]}>
+                {item.basePrice.toLocaleString('vi-VN')} đ/giờ
+              </Text>
+            </Card>
           )}
         />
       )}
       {reviews && reviews.items.length > 0 ? (
         <View style={styles.reviewsSection}>
-          <Text style={styles.reviewsTitle}>Đánh giá</Text>
+          <Text style={[styles.reviewsTitle, { color: colors.foreground }]}>Đánh giá</Text>
           {reviews.items.map((review) => (
-            <View key={review.id} testID={`review-item-${review.id}`} style={styles.reviewItem}>
-              <Text style={styles.reviewRating}>{review.rating} ★</Text>
-              {review.comment ? <Text>{review.comment}</Text> : null}
+            <View
+              key={review.id}
+              testID={`review-item-${review.id}`}
+              style={[styles.reviewItem, { borderTopColor: colors.border }]}
+            >
+              <Text style={[styles.reviewRating, { color: statusColors.warning.text }]}>{review.rating} ★</Text>
+              {review.comment ? <Text style={{ color: colors.foreground }}>{review.comment}</Text> : null}
             </View>
           ))}
         </View>
@@ -145,33 +162,25 @@ export function VenueDetailScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee', gap: 4 },
+  header: { padding: 16, borderBottomWidth: 1, gap: 4 },
   title: { fontSize: 20, fontWeight: '700' },
-  subtitle: { color: '#555' },
-  description: { color: '#777', marginTop: 4 },
+  description: { marginTop: 4 },
   ratingRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 },
-  ratingValue: { fontSize: 16, fontWeight: '700', color: '#f59e0b' },
-  ratingCount: { color: '#777' },
+  ratingValue: { fontSize: 16, fontWeight: '700' },
   reviewsSection: { padding: 16, gap: 8 },
   reviewsTitle: { fontSize: 16, fontWeight: '700' },
-  reviewItem: { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, gap: 2 },
-  reviewRating: { color: '#f59e0b', fontWeight: '600' },
+  reviewItem: { borderTopWidth: 1, paddingTop: 8, gap: 2 },
+  reviewRating: { fontWeight: '600' },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  errorText: { color: '#dc2626' },
-  link: { color: '#1d4ed8', fontWeight: '600' },
-  card: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  link: { fontWeight: '600' },
   cardTitle: { fontSize: 16, fontWeight: '700' },
-  cardSubtitle: { color: '#555', marginTop: 2 },
-  cardPrice: { color: '#1d4ed8', marginTop: 4, fontWeight: '600' },
+  cardPrice: { marginTop: 4, fontWeight: '600' },
   imageCarousel: { gap: 8, paddingVertical: 8 },
-  venueImage: { width: 240, height: 160, borderRadius: 8, backgroundColor: '#eee' },
+  venueImage: { width: 240, height: 160 },
   venueImagePlaceholder: {
     height: 160,
-    borderRadius: 8,
-    backgroundColor: '#eee',
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 8,
   },
-  venueImagePlaceholderText: { color: '#999' },
 });

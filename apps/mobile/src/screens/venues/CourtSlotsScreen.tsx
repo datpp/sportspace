@@ -8,6 +8,7 @@ import { courtsApi } from '../../api/client';
 import { toDateOnlyString } from '../../utils/date';
 import { useCourtSlotUpdates } from '../../hooks/useCourtSlotUpdates';
 import type { SlotUpdatePayload } from '../../realtime/socket';
+import { useTheme } from '../../theme';
 import type { VenuesStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<VenuesStackParamList, 'CourtSlots'>;
@@ -20,6 +21,7 @@ const DAY_OPTIONS = Array.from({ length: 4 }, (_, i) => {
 
 export function CourtSlotsScreen({ route, navigation }: Props) {
   const { venueId, courtId, courtName, venueName } = route.params;
+  const { colors, spacing } = useTheme();
   const [selectedDate, setSelectedDate] = useState<Date>(DAY_OPTIONS[0]);
   const [slots, setSlots] = useState<SlotDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -75,9 +77,9 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
   useCourtSlotUpdates(courtId, dateString, handleSlotUpdate);
 
   return (
-    <View style={styles.container} testID="court-slots-screen">
-      <Text style={styles.title}>{courtName}</Text>
-      <Text style={styles.subtitle}>{venueName}</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]} testID="court-slots-screen">
+      <Text style={[styles.title, { color: colors.foreground }]}>{courtName}</Text>
+      <Text style={{ color: colors.mutedForeground }}>{venueName}</Text>
 
       <View style={styles.dayRow}>
         {DAY_OPTIONS.map((date) => {
@@ -87,10 +89,16 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
             <Pressable
               key={iso}
               testID={`date-option-${iso}`}
-              style={[styles.dayButton, isSelected && styles.dayButtonSelected]}
+              style={[
+                styles.dayButton,
+                {
+                  borderColor: isSelected ? colors.primary : colors.border,
+                  backgroundColor: isSelected ? colors.primary : 'transparent',
+                },
+              ]}
               onPress={() => setSelectedDate(date)}
             >
-              <Text style={isSelected ? styles.dayButtonTextSelected : styles.dayButtonText}>
+              <Text style={{ color: isSelected ? colors.primaryForeground : colors.foreground, fontWeight: isSelected ? '600' : '400' }}>
                 {date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
               </Text>
             </Pressable>
@@ -100,9 +108,9 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
 
       {error ? (
         <View style={styles.centerFill} testID="court-slots-error">
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={{ color: colors.danger }}>{error}</Text>
           <Pressable testID="court-slots-retry" onPress={() => void fetchSlots()}>
-            <Text style={styles.link}>Thử lại</Text>
+            <Text style={[styles.link, { color: colors.primary }]}>Thử lại</Text>
           </Pressable>
         </View>
       ) : slots === null ? (
@@ -111,7 +119,7 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
         </View>
       ) : slots.length === 0 ? (
         <View style={styles.centerFill} testID="court-slots-empty">
-          <Text>Không có ô giờ nào trong ngày này</Text>
+          <Text style={{ color: colors.foreground }}>Không có ô giờ nào trong ngày này</Text>
         </View>
       ) : (
         <FlatList
@@ -120,11 +128,18 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
           numColumns={3}
           keyExtractor={(item) => item.startTime}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+          contentContainerStyle={{ gap: spacing.xs }}
           renderItem={({ item }) => (
             <Pressable
               testID={`slot-${item.startTime}`}
               disabled={!item.available}
-              style={[styles.slot, !item.available && styles.slotDisabled]}
+              style={[
+                styles.slot,
+                {
+                  borderColor: item.available ? colors.primary : colors.border,
+                  backgroundColor: item.available ? 'transparent' : colors.card,
+                },
+              ]}
               onPress={() =>
                 navigation.navigate('BookingConfirm', {
                   venueId,
@@ -138,10 +153,10 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
                 })
               }
             >
-              <Text style={!item.available ? styles.slotTextDisabled : styles.slotText}>
+              <Text style={{ color: item.available ? colors.primary : colors.mutedForeground, fontWeight: '600' }}>
                 {item.startTime}
               </Text>
-              <Text style={!item.available ? styles.slotTextDisabled : styles.slotPrice}>
+              <Text style={[styles.slotPrice, { color: colors.mutedForeground }]}>
                 {item.price.toLocaleString('vi-VN')} đ
               </Text>
             </Pressable>
@@ -155,32 +170,22 @@ export function CourtSlotsScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 8 },
   title: { fontSize: 18, fontWeight: '700' },
-  subtitle: { color: '#555' },
-  dayRow: { flexDirection: 'row', gap: 8, marginVertical: 8 },
+  dayRow: { flexDirection: 'row', gap: 8, marginVertical: 8, flexWrap: 'wrap' },
   dayButton: {
     borderWidth: 1,
-    borderColor: '#ccc',
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  dayButtonSelected: { backgroundColor: '#1d4ed8', borderColor: '#1d4ed8' },
-  dayButtonText: { color: '#111' },
-  dayButtonTextSelected: { color: '#fff', fontWeight: '600' },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  errorText: { color: '#dc2626' },
-  link: { color: '#1d4ed8', fontWeight: '600' },
+  link: { fontWeight: '600' },
   slot: {
     flex: 1,
     margin: 4,
     borderWidth: 1,
-    borderColor: '#1d4ed8',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
   },
-  slotDisabled: { borderColor: '#ccc', backgroundColor: '#f3f4f6' },
-  slotText: { color: '#1d4ed8', fontWeight: '600' },
-  slotPrice: { color: '#555', fontSize: 12, marginTop: 2 },
-  slotTextDisabled: { color: '#999' },
+  slotPrice: { fontSize: 12, marginTop: 2 },
 });
