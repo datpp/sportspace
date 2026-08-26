@@ -44,7 +44,7 @@ export function CreateMatchScreen({ route, navigation }: Props) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background, gap: spacing.md }]} testID="create-match-screen">
       <Text style={[styles.title, { color: colors.foreground }]}>Tạo kèo</Text>
-      <Text style={[styles.subtitle, { color: colors.mutedForeground, marginBottom: spacing.sm }]}>
+      <Text style={{ color: colors.mutedForeground, marginBottom: spacing.sm }}>
         {courtName} — {bookingDate} {startTime}-{endTime}
       </Text>
       <Input
@@ -75,5 +75,4 @@ export function CreateMatchScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24 },
   title: { fontSize: 20, fontWeight: '700' },
-  subtitle: {},
 });

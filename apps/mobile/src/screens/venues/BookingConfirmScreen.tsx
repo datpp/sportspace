@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { isAxiosError } from 'axios';
 import type { AddOnService, Booking } from '@sportspace/shared';
@@ -242,22 +242,26 @@ export function BookingConfirmScreen({ route, navigation }: Props) {
         <View style={{ gap: spacing.sm }}>
           <Text style={[styles.servicesTitle, { color: colors.foreground }]}>Dịch vụ đi kèm</Text>
           {services.map((s) => (
-            <Card key={s.id} testID={`service-item-${s.id}`} onPress={() => toggleService(s.id)}>
-              <View style={[styles.serviceRow, { gap: spacing.sm }]}>
-                <View
-                  testID={`service-checkbox-${s.id}`}
-                  style={[
-                    styles.checkbox,
-                    { borderColor: colors.primary },
-                    selectedQuantities[s.id] ? { backgroundColor: colors.primary } : null,
-                  ]}
-                />
-                <Text style={[styles.serviceName, { color: colors.cardForeground }]}>{s.name}</Text>
-                <Text style={{ color: colors.mutedForeground }}>
-                  {Number(s.price).toLocaleString('vi-VN')} đ
-                </Text>
-              </View>
-            </Card>
+            <Pressable
+              key={s.id}
+              testID={`service-item-${s.id}`}
+              onPress={() => toggleService(s.id)}
+              accessibilityRole="button"
+              style={[styles.serviceRow, { gap: spacing.sm }]}
+            >
+              <View
+                testID={`service-checkbox-${s.id}`}
+                style={[
+                  styles.checkbox,
+                  { borderColor: colors.primary },
+                  selectedQuantities[s.id] ? { backgroundColor: colors.primary } : null,
+                ]}
+              />
+              <Text style={[styles.serviceName, { color: colors.foreground }]}>{s.name}</Text>
+              <Text style={{ color: colors.mutedForeground }}>
+                {Number(s.price).toLocaleString('vi-VN')} đ
+              </Text>
+            </Pressable>
           ))}
         </View>
       ) : null}
