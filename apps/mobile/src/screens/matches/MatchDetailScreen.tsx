@@ -103,7 +103,7 @@ export function MatchDetailScreen({ route }: Props) {
 
   if (error) {
     return (
-      <View style={styles.centerFill} testID="match-detail-error">
+      <View style={[styles.centerFill, { backgroundColor: colors.background }]} testID="match-detail-error">
         <Text style={{ color: colors.danger }}>{error}</Text>
         <Pressable testID="match-detail-retry" onPress={() => void fetchMatch()}>
           <Text style={[styles.link, { color: colors.primary }]}>Thử lại</Text>
@@ -114,7 +114,7 @@ export function MatchDetailScreen({ route }: Props) {
 
   if (!match) {
     return (
-      <View style={styles.centerFill} testID="match-detail-loading">
+      <View style={[styles.centerFill, { backgroundColor: colors.background }]} testID="match-detail-loading">
         <ActivityIndicator />
       </View>
     );
@@ -145,10 +145,7 @@ export function MatchDetailScreen({ route }: Props) {
       ) : null}
 
       {isHost ? (
-        <View
-          style={[styles.participantsSection, { marginTop: spacing.lg, gap: spacing.sm }]}
-          testID="match-participants-section"
-        >
+        <View style={{ marginTop: spacing.lg, gap: spacing.sm }} testID="match-participants-section">
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Người xin ghép</Text>
           {match.participants.length === 0 ? (
             <Text testID="match-participants-empty" style={{ color: colors.mutedForeground }}>
@@ -229,7 +226,6 @@ const styles = StyleSheet.create({
   host: { marginTop: 8 },
   note: { marginTop: 16 },
   success: { marginTop: 16, fontWeight: '600' },
-  participantsSection: {},
   sectionTitle: { fontSize: 16, fontWeight: '700' },
   participantInfo: { gap: 2 },
   participantName: { fontWeight: '600' },
