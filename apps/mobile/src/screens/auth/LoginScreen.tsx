@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, View, Pressable } from 'react-native';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../auth/AuthContext';
 import { useTheme } from '../../theme';
 import { Button } from '../../components/Button';
+import { Input } from '../../components/Input';
 import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
-  const { colors, spacing, radius, typography } = useTheme();
+  const { colors, spacing, typography } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -38,21 +39,17 @@ export function LoginScreen({ navigation }: Props) {
       testID="login-screen"
     >
       <Text style={[typography.title, { color: colors.foreground, marginBottom: spacing.md }]}>Đăng nhập</Text>
-      <TextInput
+      <Input
         testID="login-email"
-        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Email"
-        placeholderTextColor={colors.mutedForeground}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
+      <Input
         testID="login-password"
-        style={[styles.input, { borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.foreground }]}
         placeholder="Mật khẩu"
-        placeholderTextColor={colors.mutedForeground}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -77,6 +74,5 @@ export function LoginScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center' },
-  input: { borderWidth: 1 },
   link: { textAlign: 'center', marginTop: 8 },
 });
