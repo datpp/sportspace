@@ -22,6 +22,10 @@ describe('Input', () => {
         secureTextEntry
         keyboardType="email-address"
         autoCapitalize="none"
+        multiline
+        onSubmitEditing={() => {}}
+        editable={false}
+        maxLength={10}
       />,
     );
 
@@ -29,5 +33,23 @@ describe('Input', () => {
     expect(input.props.secureTextEntry).toBe(true);
     expect(input.props.keyboardType).toBe('email-address');
     expect(input.props.autoCapitalize).toBe('none');
+    expect(input.props.multiline).toBe(true);
+    expect(typeof input.props.onSubmitEditing).toBe('function');
+    expect(input.props.editable).toBe(false);
+    expect(input.props.maxLength).toBe(10);
+  });
+
+  it('caller ghi đè được placeholderTextColor', async () => {
+    await render(
+      <Input testID="i" value="" onChangeText={() => {}} placeholderTextColor="#ff0000" />,
+    );
+    expect(screen.getByTestId('i').props.placeholderTextColor).toBe('#ff0000');
+  });
+
+  it('style của caller thắng token theme', async () => {
+    await render(<Input testID="i" value="" onChangeText={() => {}} style={{ padding: 99 }} />);
+    const flat = screen.getByTestId('i').props.style;
+    const merged = Object.assign({}, ...[flat].flat(Infinity).filter(Boolean));
+    expect(merged.padding).toBe(99);
   });
 });

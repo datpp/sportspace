@@ -2,7 +2,7 @@ import React from 'react';
 import { TextInput, StyleSheet, type TextInputProps } from 'react-native';
 import { useTheme } from '../theme';
 
-export type InputProps = TextInputProps;
+export type InputProps = TextInputProps & { ref?: React.Ref<TextInput> };
 
 export function Input({ style, ...props }: InputProps) {
   const { colors, radius, spacing } = useTheme();
