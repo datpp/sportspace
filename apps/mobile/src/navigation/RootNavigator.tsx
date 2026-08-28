@@ -3,6 +3,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../auth/AuthContext';
 import { useTheme } from '../theme';
 import { LoginScreen } from '../screens/auth/LoginScreen';
@@ -26,6 +27,17 @@ import type {
   RootTabParamList,
   VenuesStackParamList,
 } from './types';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+// Icon từng tab: bản đặc khi đang chọn, bản viền khi không — theo quy ước iOS.
+const TAB_ICONS: Record<keyof RootTabParamList, { active: IoniconName; inactive: IoniconName }> = {
+  Venues: { active: 'search', inactive: 'search-outline' },
+  MyBookings: { active: 'calendar', inactive: 'calendar-outline' },
+  Matches: { active: 'football', inactive: 'football-outline' },
+  Notifications: { active: 'notifications', inactive: 'notifications-outline' },
+  Account: { active: 'person', inactive: 'person-outline' },
+};
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const RootTab = createBottomTabNavigator<RootTabParamList>();
@@ -134,11 +146,15 @@ function AppTabs() {
   const { colors } = useTheme();
   return (
     <RootTab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
-      }}
+        tabBarIcon: ({ focused, color, size }) => {
+          const name = focused ? TAB_ICONS[route.name].active : TAB_ICONS[route.name].inactive;
+          return <Ionicons name={name} color={color} size={size} />;
+        },
+      })}
     >
       <RootTab.Screen name="Venues" component={VenuesNavigator} options={{ headerShown: false, title: 'Tìm sân' }} />
       <RootTab.Screen
